@@ -6,7 +6,6 @@ import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Science
 import androidx.compose.material3.*
@@ -230,12 +229,6 @@ private fun ChapterRow(
             (chapter.progress * 100).toInt().toString() + "%",
             color = TextMuted,
             fontSize = 11.sp
-        )
-        Icon(
-            Icons.Filled.ChevronRight,
-            null,
-            tint = TextMuted,
-            modifier = Modifier.size(16.dp)
         )
     }
 }
