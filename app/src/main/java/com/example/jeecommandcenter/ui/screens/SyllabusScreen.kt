@@ -24,7 +24,7 @@ fun SyllabusScreen(
     repo: JeeRepository,
     selectedTab: AppTab,
     onTabSelected: (AppTab) -> Unit,
-    onFabClick: () -> Unit = {},
+    onAiClick: () -> Unit = {},
     onOpenPlanner: () -> Unit = {},
     onOpenRevision: () -> Unit = {}
 ) {
@@ -47,12 +47,13 @@ fun SyllabusScreen(
 
     Scaffold(
         containerColor = BgApp,
-        bottomBar = { BottomNavBar(selectedTab, onTabSelected, onFabClick) }
+        bottomBar = { BottomNavBar(selectedTab, onTabSelected, onAiClick) }
     ) { padding ->
         Column(
             Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .statusBarsPadding()
                 .padding(horizontal = 16.dp)
         ) {
             Spacer(Modifier.height(12.dp))
