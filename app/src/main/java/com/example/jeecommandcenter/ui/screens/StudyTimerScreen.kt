@@ -107,7 +107,7 @@ fun StudyTimerScreen(
                 .padding(padding)
                 .padding(horizontal = 16.dp)
         ) {
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(JeeSpacing.md))
             Row(
                 Modifier.fillMaxWidth(),
                 Arrangement.SpaceBetween,
@@ -115,7 +115,7 @@ fun StudyTimerScreen(
             ) {
                 Text(
                     "Study session",
-                    style = MaterialTheme.typography.headlineMedium.copy(fontSize = 22.sp)
+                    style = MaterialTheme.typography.headlineSmall
                 )
                 Text(
                     remember(refresh) { repo.getTodayMinutes() }.toString() + " min today",
