@@ -29,7 +29,9 @@ fun DashboardScreen(
     repo: JeeRepository,
     selectedTab: AppTab,
     onTabSelected: (AppTab) -> Unit,
-    onFabClick: () -> Unit = {}
+    onFabClick: () -> Unit = {},
+    onOpenPlanner: () -> Unit = {},
+    onOpenRevision: () -> Unit = {}
 ) {
     var refresh by remember { mutableIntStateOf(0) }
 
@@ -204,6 +206,46 @@ fun DashboardScreen(
                         fontSize = 10.sp,
                         color = AccentGreen,
                         fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(
+                    Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(BgCard)
+                        .premiumClick(onOpenPlanner)
+                        .padding(14.dp)
+                ) {
+                    Text("Today's plan", color = TextSecondary, fontSize = 11.sp)
+                    Spacer(Modifier.height(4.dp))
+                    Text("Open planner", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        "Auto-built from your study state",
+                        color = TextMuted,
+                        fontSize = 10.sp
+                    )
+                }
+                Column(
+                    Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(BgCard)
+                        .premiumClick(onOpenRevision)
+                        .padding(14.dp)
+                ) {
+                    Text("Revision", color = TextSecondary, fontSize = 11.sp)
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        repo.getRevisionQueue().size.toString() + " due",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text(
+                        "Spaced review queue",
+                        color = TextMuted,
+                        fontSize = 10.sp
                     )
                 }
             }
