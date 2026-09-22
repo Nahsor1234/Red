@@ -28,6 +28,7 @@ fun AnalyticsScreen(
     var refresh by remember { mutableIntStateOf(0) }
     val snapshot = remember(refresh) { learning.analytics(repo) }
     val mistakes = remember(refresh) { learning.mistakeStats() }
+    val weekly = remember(refresh) { JeeIntelligence(repo, learning).weeklyReview() }
 
     Scaffold(
         containerColor = BgApp,
@@ -49,6 +50,40 @@ fun AnalyticsScreen(
         ) {
             item {
                 AnalyticsHero(snapshot)
+            }
+            item {
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(BgCard)
+                        .padding(14.dp)
+                ) {
+                    Text("Weekly review", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        weekly.studyMinutes.toString() + "m study · " +
+                            weekly.sessions + " sessions · " +
+                            weekly.revisions + " revisions · " +
+                            weekly.tests + " tests",
+                        color = TextSecondary,
+                        fontSize = 11.sp
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        if (weekly.averageAccuracy == 0f) "No recent question baseline"
+                        else (weekly.averageAccuracy * 100).toInt().toString() + "% recent accuracy",
+                        color = TextMuted,
+                        fontSize = 11.sp
+                    )
+                    if (weekly.improvementFocus.isNotEmpty()) {
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            "Focus: " + weekly.improvementFocus.joinToString(" · "),
+                            color = TextMuted,
+                            fontSize = 10.sp
+                        )
+                    }
+                }
             }
             item {
                 Text("Subjects", style = MaterialTheme.typography.titleMedium)

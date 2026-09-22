@@ -35,6 +35,14 @@ fun SyllabusScreen(
     val subjects = listOf("Physics", "Chemistry", "Mathematics")
     val filters = listOf("All", "Not started", "In progress", "Completed")
     val all = remember(refresh, selectedSubject) { repo.chapters(selectedSubject) }
+    val appContext = androidx.compose.ui.platform.LocalContext.current.applicationContext
+    val intelligence = remember { JeeIntelligence(repo, LearningRepository(appContext)) }
+    val weakIds = remember(refresh, selectedSubject) {
+        intelligence.weakChapters(20).map { it.chapter.id }.toSet()
+    }
+    val dueIds = remember(refresh) {
+        repo.getRevisionQueue().map { it.chapter.id }.toSet()
+    }
     val chapters = all.filter { chapter ->
         when (selectedFilter) {
             "Not started" -> chapter.progress == 0f
@@ -147,7 +155,11 @@ fun SyllabusScreen(
             Spacer(Modifier.height(8.dp))
             LazyColumn(Modifier.weight(1f)) {
                 items(chapters, key = { it.number }) { chapter ->
-                    ChapterRow(chapter) {
+                    ChapterRow(
+                        chapter = chapter,
+                        isWeak = weakIds.contains(selectedSubject.lowercase() + "_" + chapter.number),
+                        isRevisionDue = dueIds.contains(selectedSubject.lowercase() + "_" + chapter.number)
+                    ) {
                         val next = when {
                             chapter.progress == 0f -> 0.5f
                             chapter.progress < 1f -> 1f
@@ -181,6 +193,8 @@ private fun StatLabel(value: String, label: String) {
 @Composable
 private fun ChapterRow(
     chapter: ChapterProgress,
+    isWeak: Boolean,
+    isRevisionDue: Boolean,
     onClick: () -> Unit
 ) {
     Row(
@@ -249,10 +263,19 @@ private fun ChapterRow(
         }
 
         Spacer(Modifier.width(8.dp))
-        Text(
-            (chapter.progress * 100).toInt().toString() + "%",
-            color = TextMuted,
-            fontSize = 11.sp
-        )
+        Column(horizontalAlignment = Alignment.End) {
+            Text(
+                (chapter.progress * 100).toInt().toString() + "%",
+                color = TextMuted,
+                fontSize = 11.sp
+            )
+            if (isRevisionDue || isWeak) {
+                Text(
+                    if (isRevisionDue) "Review due" else "Weak",
+                    color = if (isRevisionDue) AccentAmber else AccentBlueLight,
+                    fontSize = 9.sp
+                )
+            }
+        }
     }
 }

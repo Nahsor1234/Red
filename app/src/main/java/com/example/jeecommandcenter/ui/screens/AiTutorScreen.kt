@@ -27,6 +27,7 @@ fun AiTutorScreen(
     onBack: () -> Unit
 ) {
     val settings = remember { AiSettingsRepository(context) }
+    val orchestrator = remember { AiOrchestrator(context) }
     val scope = rememberCoroutineScope()
     var input by remember { mutableStateOf("") }
     var response by remember { mutableStateOf("") }
@@ -61,18 +62,45 @@ fun AiTutorScreen(
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     AssistChip(
-                        onClick = { send("Analyze my recent performance and identify my biggest study bottleneck.") },
+                        onClick = {
+                            if (!busy && settings.hasApiKey()) {
+                                busy = true
+                                scope.launch {
+                                    val result = orchestrator.analyzePerformance()
+                                    response = if (result.success) result.text else (result.error ?: "AI request failed.")
+                                    busy = false
+                                }
+                            }
+                        },
                         label = { Text("Analyze me") }
                     )
                     AssistChip(
-                        onClick = { send("Based on my mistakes, what should I revise today? Give me a concrete 60-minute sequence.") },
-                        label = { Text("Plan 60 min") }
+                        onClick = {
+                            if (!busy && settings.hasApiKey()) {
+                                busy = true
+                                scope.launch {
+                                    val result = orchestrator.buildDailyStudyPlan()
+                                    response = if (result.success) result.text else (result.error ?: "AI request failed.")
+                                    busy = false
+                                }
+                            }
+                        },
+                        label = { Text("Plan my day") }
                     )
                 }
             }
             item {
                 AssistChip(
-                    onClick = { send("Explain my recurring mistakes and give me two practical ways to prevent them.") },
+                    onClick = {
+                        if (!busy && settings.hasApiKey()) {
+                            busy = true
+                            scope.launch {
+                                val result = orchestrator.explainMistakes()
+                                response = if (result.success) result.text else (result.error ?: "AI request failed.")
+                                busy = false
+                            }
+                        }
+                    },
                     label = { Text("Analyze mistakes") }
                 )
             }

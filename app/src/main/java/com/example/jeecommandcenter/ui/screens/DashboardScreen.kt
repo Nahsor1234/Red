@@ -18,6 +18,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.jeecommandcenter.data.JeeRepository
+import com.example.jeecommandcenter.data.JeeIntelligence
+import com.example.jeecommandcenter.data.LearningRepository
 import com.example.jeecommandcenter.ui.components.*
 import com.example.jeecommandcenter.ui.theme.*
 import java.time.LocalDate
@@ -35,6 +37,9 @@ fun DashboardScreen(
     onOpenSettings: () -> Unit = {}
 ) {
     var refresh by remember { mutableIntStateOf(0) }
+    val appContext = androidx.compose.ui.platform.LocalContext.current.applicationContext
+    val learning = remember { LearningRepository(appContext) }
+    val intelligence = remember { JeeIntelligence(repo, learning) }
 
     val tasks = remember(refresh) { repo.getTasks() }
     val today = remember(refresh) { repo.getTodayMinutes() }
@@ -59,6 +64,7 @@ fun DashboardScreen(
     val todayTasks = tasks.filter { it.dueDay == "Today" }
     val nextTask = todayTasks.firstOrNull { !it.done }
         ?: tasks.firstOrNull { !it.done }
+    val priorities = remember(refresh) { intelligence.dailyPriorities(3) }
 
     Scaffold(
         containerColor = BgApp,
@@ -253,6 +259,39 @@ fun DashboardScreen(
                         color = TextMuted,
                         fontSize = 10.sp
                     )
+                }
+            }
+
+            if (priorities.isNotEmpty()) {
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(BgCard)
+                        .padding(14.dp)
+                ) {
+                    Text("Today's priorities", style = MaterialTheme.typography.titleMedium)
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "Deterministic recommendations from revisions, mistakes, tasks and performance.",
+                        color = TextMuted,
+                        fontSize = 10.sp
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    priorities.forEachIndexed { index, priority ->
+                        Row(
+                            Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("${index + 1}", color = AccentBlue, fontSize = 11.sp)
+                            Spacer(Modifier.width(8.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(priority.title, color = TextOnCard, fontSize = 12.sp)
+                                Text(priority.reason, color = TextMuted, fontSize = 10.sp)
+                            }
+                            Text(priority.durationMin.toString() + "m", color = TextSecondary, fontSize = 10.sp)
+                        }
+                    }
                 }
             }
 
