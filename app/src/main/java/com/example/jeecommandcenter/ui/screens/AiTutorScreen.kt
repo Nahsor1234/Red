@@ -50,19 +50,7 @@ fun AiTutorScreen(
     Scaffold(
         containerColor = BgApp,
         topBar = {
-            Row(
-                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                TextButton(onClick = onBack) { Text("Back") }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Filled.AutoAwesome, null, tint = AccentPurple, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text("AI Tutor", style = MaterialTheme.typography.titleLarge)
-                }
-                Spacer(Modifier.width(48.dp))
-            }
+            JeeTopBar(title = "AI Tutor", onBack = onBack)
         }
     ) { padding ->
         LazyColumn(
