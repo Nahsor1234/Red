@@ -61,18 +61,7 @@ fun AiHubScreen(
     Scaffold(
         containerColor = BgApp,
         topBar = {
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .statusBarsPadding()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                TextButton(onClick = onBack) { Text("Back") }
-                Text("AI Hub", style = MaterialTheme.typography.titleLarge)
-                Spacer(Modifier.width(48.dp))
-            }
+            JeeTopBar(title = "AI Hub", onBack = onBack)
         }
     ) { padding ->
         LazyColumn(
