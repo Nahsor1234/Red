@@ -31,7 +31,8 @@ fun DashboardScreen(
     onTabSelected: (AppTab) -> Unit,
     onFabClick: () -> Unit = {},
     onOpenPlanner: () -> Unit = {},
-    onOpenRevision: () -> Unit = {}
+    onOpenRevision: () -> Unit = {},
+    onOpenSettings: () -> Unit = {}
 ) {
     var refresh by remember { mutableIntStateOf(0) }
 
