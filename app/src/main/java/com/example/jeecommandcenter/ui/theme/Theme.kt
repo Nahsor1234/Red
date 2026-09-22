@@ -1,6 +1,5 @@
 package com.example.jeecommandcenter.ui.theme
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
@@ -21,10 +20,7 @@ private val JeeDarkColorScheme = darkColorScheme(
 )
 
 @Composable
-fun JeePrepTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    content: @Composable () -> Unit
-) {
+fun JeePrepTheme(content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = JeeDarkColorScheme,
         typography = AppTypography,
