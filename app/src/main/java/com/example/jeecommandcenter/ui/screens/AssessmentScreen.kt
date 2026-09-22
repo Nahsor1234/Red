@@ -79,15 +79,14 @@ fun AssessmentScreen(
     Scaffold(
         containerColor = BgApp,
         topBar = {
-            Row(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 16.dp, vertical = 12.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                TextButton(onClick = onBack) { Text("Back") }
-                Text(when (state) {
+            JeeTopBar(
+                title = when (state) {
                     AssessmentState.SETUP -> "Assessment"
                     AssessmentState.RUNNING -> if (mode == TestMode.MOCK) "Starter mock" else "Practice test"
                     AssessmentState.RESULT -> "Result"
-                }, style = MaterialTheme.typography.titleLarge)
-                Spacer(Modifier.width(48.dp))
-            }
+                },
+                onBack = onBack
+            )
         }
     ) { padding ->
         when (state) {
