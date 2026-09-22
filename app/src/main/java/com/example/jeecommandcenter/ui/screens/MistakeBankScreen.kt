@@ -28,14 +28,11 @@ fun MistakeBankScreen(
     Scaffold(
         containerColor = BgApp,
         topBar = {
-            Row(
-                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                TextButton(onClick = onBack) { Text("Back") }
-                Text("Mistake bank", style = MaterialTheme.typography.titleLarge)
-                Text(mistakes.size.toString(), color = AccentAmber, modifier = Modifier.padding(top = 12.dp))
-            }
+            JeeTopBar(
+                title = "Mistake bank",
+                onBack = onBack,
+                trailing = { Text(mistakes.size.toString(), color = AccentAmber) }
+            )
         }
     ) { padding ->
         LazyColumn(
