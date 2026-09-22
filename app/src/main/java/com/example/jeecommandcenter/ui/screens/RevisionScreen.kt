@@ -33,27 +33,11 @@ fun RevisionScreen(
     Scaffold(
         containerColor = BgApp,
         topBar = {
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .statusBarsPadding()
-                    .padding(horizontal = 16.dp, vertical = 12.dp)
-            ) {
-                TextButton(onClick = onBack, modifier = Modifier.align(Alignment.CenterStart)) {
-                    Text("Back")
-                }
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.align(Alignment.Center)
-                ) {
-                    Text("Revision engine", style = MaterialTheme.typography.titleLarge)
-                    Text(
-                        if (dueCount == 0) "Nothing due right now" else dueCount.toString() + " reviews due",
-                        color = if (dueCount == 0) AccentGreen else TextMuted,
-                        fontSize = 10.sp
-                    )
-                }
-            }
+            JeeTopBar(
+                title = "Revision engine",
+                subtitle = if (dueCount == 0) "Nothing due right now" else dueCount.toString() + " reviews due",
+                onBack = onBack
+            )
         }
     ) { padding ->
         LazyColumn(
