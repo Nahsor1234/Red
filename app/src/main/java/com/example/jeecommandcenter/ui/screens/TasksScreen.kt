@@ -28,7 +28,7 @@ fun TasksScreen(
     repo: JeeRepository,
     selectedTab: AppTab,
     onTabSelected: (AppTab) -> Unit,
-    onFabClick: () -> Unit = {}
+    onAiClick: () -> Unit = {}
 ) {
     var selectedFilter by remember { mutableStateOf("All") }
     var refresh by remember { mutableIntStateOf(0) }
@@ -48,7 +48,7 @@ fun TasksScreen(
 
     Scaffold(
         containerColor = BgApp,
-        bottomBar = { BottomNavBar(selectedTab, onTabSelected) { showAdd = true } },
+        bottomBar = { BottomNavBar(selectedTab, onTabSelected, onAiClick) },
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = { showAdd = true },
