@@ -8,7 +8,7 @@ import com.example.jeecommandcenter.ui.components.AppTab
 import com.example.jeecommandcenter.ui.screens.*
 
 private enum class SecondaryPage {
-    PLANNER, REVISION, SETTINGS, AI_HUB, AI_TUTOR, ANALYTICS, ASSESSMENT, MISTAKES
+    PLANNER, REVISION, SETTINGS, AI_SETTINGS, AI_HUB, AI_TUTOR, ANALYTICS, ASSESSMENT, MISTAKES
 }
 
 @Composable
@@ -43,18 +43,25 @@ fun AppRoot() {
             onBack = { secondaryPage = null },
             onOpenAnalytics = { secondaryPage = SecondaryPage.ANALYTICS },
             onOpenAssessment = { secondaryPage = SecondaryPage.ASSESSMENT },
-            onOpenMistakes = { secondaryPage = SecondaryPage.MISTAKES }
+            onOpenMistakes = { secondaryPage = SecondaryPage.MISTAKES },
+            onOpenAiSettings = { secondaryPage = SecondaryPage.AI_SETTINGS }
+        )
+        SecondaryPage.AI_SETTINGS -> AiSettingsScreen(
+            context = context,
+            onBack = { secondaryPage = SecondaryPage.SETTINGS }
         )
         SecondaryPage.AI_HUB -> AiHubScreen(
             context = context,
             onBack = { secondaryPage = null },
-            onOpenTutor = { secondaryPage = SecondaryPage.AI_TUTOR }
+            onOpenTutor = { secondaryPage = SecondaryPage.AI_TUTOR },
+            onOpenSettings = { secondaryPage = SecondaryPage.AI_SETTINGS }
         )
         SecondaryPage.AI_TUTOR -> AiTutorScreen(
             context = context,
             jee = repo,
             learning = learning,
-            onBack = { secondaryPage = SecondaryPage.AI_HUB }
+            onBack = { secondaryPage = SecondaryPage.AI_HUB },
+            onOpenSettings = { secondaryPage = SecondaryPage.AI_SETTINGS }
         )
         SecondaryPage.ANALYTICS -> AnalyticsScreen(
             repo = repo,

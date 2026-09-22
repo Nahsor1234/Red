@@ -24,7 +24,8 @@ fun AiTutorScreen(
     context: android.content.Context,
     jee: JeeRepository,
     learning: LearningRepository,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onOpenSettings: () -> Unit = {}
 ) {
     val settings = remember { AiSettingsRepository(context) }
     val orchestrator = remember { AiOrchestrator(context) }
@@ -140,11 +141,21 @@ fun AiTutorScreen(
             }
             item {
                 Text(
-                    if (!settings.hasApiKey()) "Configure an AI provider in Settings → AI Hub first."
+                    if (!settings.hasApiKey()) "Configure an AI provider in Settings → AI configuration."
                     else "AI uses your current analytics, mistakes and revision state as context.",
                     color = TextMuted,
                     fontSize = 10.sp
                 )
+            }
+            if (!settings.hasApiKey()) {
+                item {
+                    OutlinedButton(
+                        onClick = onOpenSettings,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Open AI configuration")
+                    }
+                }
             }
             item { Spacer(Modifier.height(24.dp)) }
         }

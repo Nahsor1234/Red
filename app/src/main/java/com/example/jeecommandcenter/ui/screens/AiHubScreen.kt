@@ -1,5 +1,11 @@
 package com.example.jeecommandcenter.ui.screens
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -10,358 +16,140 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.jeecommandcenter.data.*
 import com.example.jeecommandcenter.ui.theme.*
-import com.example.jeecommandcenter.ui.components.*
 import kotlinx.coroutines.launch
 
 @Composable
 fun AiHubScreen(
     context: android.content.Context,
     onBack: () -> Unit,
-    onOpenTutor: () -> Unit
+    onOpenTutor: () -> Unit,
+    onOpenSettings: () -> Unit
 ) {
     val settings = remember { AiSettingsRepository(context) }
+    val orchestrator = remember { AiOrchestrator(context) }
     val scope = rememberCoroutineScope()
-
-    var config by remember { mutableStateOf(settings.getConfig()) }
-    var key by remember { mutableStateOf("") }
-    var model by remember { mutableStateOf(config.model) }
-    var endpoint by remember { mutableStateOf(config.endpoint) }
-    var providerExpanded by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
-    var status by remember { mutableStateOf<String?>(null) }
+    var resultTitle by remember { mutableStateOf<String?>(null) }
+    var result by remember { mutableStateOf("") }
+    val config = remember { settings.getConfig() }
+    val hasKey = settings.hasApiKey()
 
-    val needsCustomEndpoint =
-        config.provider == AiProvider.CUSTOM_OPENAI_COMPATIBLE
+    val pulse = rememberInfiniteTransition(label = "ai-hub-pulse").animateFloat(
+        initialValue = 0.97f,
+        targetValue = 1.04f,
+        animationSpec = infiniteRepeatable(
+            tween(1100, easing = FastOutSlowInEasing),
+            RepeatMode.Reverse
+        ),
+        label = "ai-icon-pulse"
+    )
 
-    fun saveConfiguration(): Boolean {
-        if (model.isBlank()) {
-            status = "Enter a model ID."
-            return false
+    fun runAction(title: String, action: suspend () -> AiResult) {
+        if (!hasKey || busy) return
+        busy = true
+        resultTitle = title
+        result = ""
+        scope.launch {
+            val response = action()
+            result = if (response.success) response.text else (response.error ?: "AI request failed.")
+            busy = false
         }
-        if (needsCustomEndpoint && !endpoint.trim().startsWith("https://")) {
-            status = "Enter a valid HTTPS API endpoint."
-            return false
-        }
-
-        settings.saveConfig(
-            provider = config.provider,
-            model = model,
-            endpoint = endpoint
-        )
-        config = settings.getConfig()
-        status = "AI configuration saved."
-        return true
     }
 
     Scaffold(
         containerColor = BgApp,
-        topBar = {
-            JeeTopBar(title = "AI Hub", onBack = onBack)
-        }
+        topBar = { com.example.jeecommandcenter.ui.theme.JeeTopBar(title = "AI Hub", onBack = onBack) }
     ) { padding ->
         LazyColumn(
-            Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 16.dp),
+            Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
-                HubSection(
-                    title = "Provider",
-                    subtitle = "Choose the AI service JeE should call."
-                ) {
-                    Box {
-                        OutlinedButton(
-                            onClick = { providerExpanded = true },
-                            modifier = Modifier.fillMaxWidth()
+                ElevatedCard(colors = CardDefaults.elevatedCardColors(containerColor = BgCardAlt), modifier = Modifier.fillMaxWidth()) {
+                    Row(Modifier.fillMaxWidth().padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            Modifier.size(52.dp).graphicsLayer(scaleX = pulse.value, scaleY = pulse.value)
+                                .background(AccentBlue, RoundedCornerShape(16.dp)),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Text(config.provider.label)
-                            Spacer(Modifier.weight(1f))
-                            Icon(Icons.Filled.ExpandMore, null)
+                            Icon(Icons.Filled.AutoAwesome, null, tint = Color.White)
                         }
-
-                        DropdownMenu(
-                            expanded = providerExpanded,
-                            onDismissRequest = { providerExpanded = false }
-                        ) {
-                            AiProvider.entries.forEach { provider ->
-                                DropdownMenuItem(
-                                    text = { Text(provider.label) },
-                                    onClick = {
-                                        val newModel = settings.defaultModel(provider)
-                                        val newEndpoint = settings.defaultEndpoint(provider)
-
-                                        config = AiConfig(provider, newModel, newEndpoint)
-                                        model = newModel
-                                        endpoint = newEndpoint
-                                        settings.saveConfig(
-                                            provider,
-                                            newModel,
-                                            newEndpoint
-                                        )
-                                        providerExpanded = false
-                                        status = "Provider changed to " +
-                                            provider.label +
-                                            "."
-                                    }
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            item {
-                HubSection(
-                    title = "Model",
-                    subtitle = "Type any model ID supported by the selected provider."
-                ) {
-                    OutlinedTextField(
-                        value = model,
-                        onValueChange = { model = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        label = { Text("Model ID") },
-                        placeholder = { Text("e.g. provider/model-name") },
-                        singleLine = true
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        "JeE no longer limits you to a fixed model list.",
-                        color = TextMuted,
-                        fontSize = 10.sp
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    OutlinedButton(
-                        onClick = { saveConfiguration() },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Save model settings")
-                    }
-                }
-            }
-
-            if (needsCustomEndpoint) {
-                item {
-                    HubSection(
-                        title = "API endpoint",
-                        subtitle = "For a custom OpenAI-compatible server."
-                    ) {
-                        OutlinedTextField(
-                            value = endpoint,
-                            onValueChange = { endpoint = it },
-                            modifier = Modifier.fillMaxWidth(),
-                            label = { Text("HTTPS endpoint") },
-                            placeholder = {
-                                Text("https://your-host/v1/chat/completions")
-                            },
-                            singleLine = true
-                        )
-                    }
-                }
-            }
-
-            item {
-                HubSection(
-                    title = "API key",
-                    subtitle = "Stored locally using Android Keystore encryption."
-                ) {
-                    OutlinedTextField(
-                        value = key,
-                        onValueChange = { key = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        label = { Text(config.provider.label + " API key") },
-                        visualTransformation = PasswordVisualTransformation(),
-                        singleLine = true
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(
-                            onClick = {
-                                if (key.isNotBlank()) {
-                                    runCatching {
-                                        settings.saveApiKey(key)
-                                        settings.saveConfig(
-                                            config.provider,
-                                            model,
-                                            endpoint
-                                        )
-                                    }.onSuccess {
-                                        key = ""
-                                        status = "API key saved securely on this device."
-                                    }.onFailure { error ->
-                                        status =
-                                            "Could not save API key: " +
-                                                (error.message ?: "secure storage failed")
-                                    }
+                        Spacer(Modifier.width(14.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("Study intelligence", style = MaterialTheme.typography.titleLarge)
+                            Text("Analysis and planning from your real JeE data.", color = TextMuted, fontSize = 11.sp)
+                            Spacer(Modifier.height(7.dp))
+                            AssistChip(
+                                onClick = onOpenSettings,
+                                label = { Text(if (hasKey) config.provider.label + " · " + config.model else "Configure AI") },
+                                leadingIcon = {
+                                    Icon(if (hasKey) Icons.Filled.Insights else Icons.Filled.Settings, null, modifier = Modifier.size(16.dp))
                                 }
-                            },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = AccentBlue
                             )
-                        ) {
-                            Text("Save key")
-                        }
-
-                        OutlinedButton(
-                            onClick = {
-                                settings.clearApiKey()
-                                key = ""
-                                status = "API key removed."
-                            },
-                            enabled = settings.hasApiKey()
-                        ) {
-                            Text("Remove")
                         }
                     }
                 }
             }
+            item { Text("Quick analysis", style = MaterialTheme.typography.titleMedium) }
+            item { AiActionCard("Analyze me", "Understand your preparation, strengths and risks.", Icons.Filled.Insights, hasKey && !busy) { runAction("Performance analysis") { orchestrator.analyzePerformance() } } }
+            item { AiActionCard("Plan my day", "Turn today's deterministic priorities into a practical plan.", Icons.Filled.Today, hasKey && !busy) { runAction("Today's study plan") { orchestrator.buildDailyStudyPlan() } } }
+            item { AiActionCard("Analyze mistakes", "Find recurring error patterns and the next practice action.", Icons.Filled.ErrorOutline, hasKey && !busy) { runAction("Mistake analysis") { orchestrator.explainMistakes() } } }
+            item { AiActionCard("Chat with AI Tutor", "Ask questions, learn concepts and work through problems.", Icons.Filled.Chat, hasKey) { onOpenTutor() } }
 
-            item {
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(BgCard)
-                        .padding(14.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        if (settings.hasApiKey()) {
-                            Icons.Filled.CheckCircle
-                        } else {
-                            Icons.Filled.CloudOff
-                        },
-                        null,
-                        tint = if (settings.hasApiKey()) AccentGreen else TextMuted
-                    )
-                    Spacer(Modifier.width(10.dp))
-                    Text(
-                        if (settings.hasApiKey()) {
-                            "Provider key configured"
-                        } else {
-                            "No API key configured"
-                        },
-                        color = TextSecondary,
-                        fontSize = 12.sp
-                    )
-                }
-            }
-
-            item {
-                Button(
-                    onClick = {
-                        if (!saveConfiguration()) return@Button
-                        busy = true
-                        status = null
-
-                        scope.launch {
-                            val result = AiEngine(settings).ask(
-                                "Reply with exactly: JeE AI connection OK"
-                            )
-                            busy = false
-                            status = if (result.success) {
-                                result.text.trim()
-                            } else {
-                                "Connection failed: " + result.error
+            if (!hasKey) {
+                item {
+                    Card(colors = CardDefaults.cardColors(containerColor = BgCard), modifier = Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(16.dp)) {
+                            Text("AI isn't configured", style = MaterialTheme.typography.titleMedium)
+                            Text("Your planner, revision and analytics still work locally without AI.", color = TextMuted, fontSize = 11.sp)
+                            Spacer(Modifier.height(10.dp))
+                            Button(onClick = onOpenSettings) {
+                                Icon(Icons.Filled.Settings, null)
+                                Spacer(Modifier.width(7.dp))
+                                Text("Configure AI in Settings")
                             }
                         }
-                    },
-                    enabled = settings.hasApiKey() &&
-                        !busy &&
-                        model.isNotBlank() &&
-                        (!needsCustomEndpoint ||
-                            endpoint.trim().startsWith("https://")),
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = AccentPurple
-                    )
-                ) {
-                    if (busy) {
-                        CircularProgressIndicator(
-                            Modifier.size(16.dp),
-                            strokeWidth = 2.dp,
-                            color = TextPrimary
-                        )
-                    } else {
-                        Icon(
-                            Icons.Filled.NetworkCheck,
-                            null,
-                            Modifier.size(17.dp)
-                        )
                     }
-                    Spacer(Modifier.width(7.dp))
-                    Text(if (busy) "Testing..." else "Test connection")
                 }
             }
 
-            status?.let { message ->
+            if (resultTitle != null) {
                 item {
-                    Text(
-                        message,
-                        color = if (
-                            message.contains("failed", true) ||
-                            message.contains("could not", true) ||
-                            message.contains("valid", true)
-                        ) {
-                            AccentAmber
-                        } else {
-                            AccentGreen
-                        },
-                        fontSize = 12.sp
-                    )
+                    Card(colors = CardDefaults.cardColors(containerColor = BgCard), modifier = Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(16.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Filled.AutoAwesome, null, tint = AccentPurple)
+                                Spacer(Modifier.width(8.dp))
+                                Text(resultTitle!!, style = MaterialTheme.typography.titleMedium)
+                            }
+                            Spacer(Modifier.height(10.dp))
+                            if (busy) LinearProgressIndicator(Modifier.fillMaxWidth(), color = AccentPurple)
+                            else Text(result, color = TextOnCard, fontSize = 13.sp)
+                        }
+                    }
                 }
             }
 
-            item {
-                Button(
-                    onClick = onOpenTutor,
-                    enabled = settings.hasApiKey(),
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = BgCardAlt
-                    )
-                ) {
-                    Icon(Icons.Filled.School, null)
-                    Spacer(Modifier.width(7.dp))
-                    Text("Open AI Tutor")
-                }
-            }
-
-            item {
-                Text(
-                    "API usage and billing are controlled by the selected provider. Keep your key private.",
-                    color = TextMuted,
-                    fontSize = 10.sp
-                )
-            }
+            item { Text("AI enhances JeE's deterministic study engine; it does not replace your stored data or priorities.", color = TextMuted, fontSize = 10.sp) }
             item { Spacer(Modifier.height(24.dp)) }
         }
     }
 }
 
 @Composable
-private fun HubSection(
-    title: String,
-    subtitle: String,
-    content: @Composable ColumnScope.() -> Unit
-) {
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(BgCard)
-            .padding(14.dp)
-    ) {
-        Text(title, style = MaterialTheme.typography.titleMedium)
-        Text(subtitle, color = TextMuted, fontSize = 10.sp)
-        Spacer(Modifier.height(10.dp))
-        content()
+private fun AiActionCard(title: String, subtitle: String, icon: androidx.compose.ui.graphics.vector.ImageVector, enabled: Boolean, onClick: () -> Unit) {
+    ElevatedCard(onClick = onClick, enabled = enabled, modifier = Modifier.fillMaxWidth()) {
+        ListItem(
+            headlineContent = { Text(title) },
+            supportingContent = { Text(subtitle) },
+            leadingContent = { Icon(icon, null, tint = if (enabled) AccentPurple else TextMuted, modifier = Modifier.size(24.dp)) },
+            colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+        )
     }
 }

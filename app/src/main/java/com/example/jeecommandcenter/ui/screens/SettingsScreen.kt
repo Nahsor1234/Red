@@ -20,7 +20,7 @@ import com.example.jeecommandcenter.ui.components.*
 import com.example.jeecommandcenter.ui.theme.*
 
 @Composable
-fun SettingsScreen(onBack: () -> Unit, onOpenAnalytics: () -> Unit, onOpenAssessment: () -> Unit, onOpenMistakes: () -> Unit) {
+fun SettingsScreen(onBack: () -> Unit, onOpenAnalytics: () -> Unit, onOpenAssessment: () -> Unit, onOpenMistakes: () -> Unit, onOpenAiSettings: () -> Unit) {
     val context = androidx.compose.ui.platform.LocalContext.current
     var backupStatus by remember { mutableStateOf<String?>(null) }
     val backup = remember { BackupRepository(context) }
@@ -47,6 +47,7 @@ fun SettingsScreen(onBack: () -> Unit, onOpenAnalytics: () -> Unit, onOpenAssess
             SettingsCard("Analytics", "Real performance and study metrics", Icons.Filled.Insights, onOpenAnalytics)
             SettingsCard("Assessment", "Practice tests and starter mocks", Icons.Filled.Quiz, onOpenAssessment)
             SettingsCard("Mistake bank", "Automatic error tracking and review", Icons.Filled.ErrorOutline, onOpenMistakes)
+            SettingsCard("AI configuration", "Provider, model and API key", Icons.Filled.AutoAwesome, onOpenAiSettings)
             Spacer(Modifier.height(8.dp))
             Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(BgCard).padding(14.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
