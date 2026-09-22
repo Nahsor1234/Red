@@ -250,7 +250,18 @@ class JeeRepository(context: Context) {
         val chapter = JeeCatalog.find(chapterId) ?: return
         val state = getChapterState(chapter.id)
         setChapterState(chapter.id, state.progress, minOf(1, state.confidence))
-        ensureRevisionItem(chapter.id)
+        val items = getRevisionItems()
+        val existing = items.firstOrNull { it.chapterId == chapter.id }
+        val updated = existing?.copy(
+            dueDate = LocalDate.now().toString(),
+            lapses = existing.lapses + 1
+        ) ?: RevisionItem(
+            id = "rev_" + chapter.id,
+            chapterId = chapter.id,
+            dueDate = LocalDate.now().toString(),
+            lapses = 1
+        )
+        saveRevisionItems(items.filterNot { it.id == updated.id } + updated)
     }
 
     fun getRevisionQueue(): List<RevisionQueueItem> {
