@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.sp
 import com.example.jeecommandcenter.data.*
 import com.example.jeecommandcenter.ui.theme.*
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChapterDetailScreen(context: android.content.Context, repo: JeeRepository, chapter: JeeChapter, onBack: () -> Unit) {
     val topicsRepo = remember { TopicRepository(context) }
@@ -35,7 +36,7 @@ fun ChapterDetailScreen(context: android.content.Context, repo: JeeRepository, c
             item {
                 Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(BgCardAlt).padding(16.dp)) {
                     Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) { Text("Topic progress", style = MaterialTheme.typography.titleMedium); Text("$completed / ${topics.size}", color = AccentBlueLight) }
-                    Spacer(Modifier.height(10.dp)); LinearProgressIndicator(progress = { progress }, Modifier.fillMaxWidth(), color = AccentBlue, trackColor = BgDivider)
+                    Spacer(Modifier.height(10.dp)); LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth(), color = AccentBlue, trackColor = BgDivider)
                     Spacer(Modifier.height(6.dp)); Text("Check topics as you complete them. Chapter progress follows this checklist.", color = TextSecondary, fontSize = 11.sp)
                 }
             }
