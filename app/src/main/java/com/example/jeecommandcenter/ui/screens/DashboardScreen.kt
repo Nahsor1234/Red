@@ -71,7 +71,7 @@ fun DashboardScreen(
                 .padding(horizontal = 16.dp)
                 .verticalScroll(rememberScrollState())
         ) {
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(JeeSpacing.md))
             Row(
                 Modifier.fillMaxWidth(),
                 Arrangement.SpaceBetween,
