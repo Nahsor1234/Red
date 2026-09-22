@@ -33,15 +33,19 @@ fun RevisionScreen(
     Scaffold(
         containerColor = BgApp,
         topBar = {
-            Row(
+            Box(
                 Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                    .statusBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
             ) {
-                TextButton(onClick = onBack) { Text("Back") }
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                TextButton(onClick = onBack, modifier = Modifier.align(Alignment.CenterStart)) {
+                    Text("Back")
+                }
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.align(Alignment.Center)
+                ) {
                     Text("Revision engine", style = MaterialTheme.typography.titleLarge)
                     Text(
                         if (dueCount == 0) "Nothing due right now" else dueCount.toString() + " reviews due",
@@ -49,12 +53,6 @@ fun RevisionScreen(
                         fontSize = 10.sp
                     )
                 }
-                Icon(
-                    Icons.Filled.Replay,
-                    "Refresh",
-                    tint = TextSecondary,
-                    modifier = Modifier.premiumClick { refresh++ }
-                )
             }
         }
     ) { padding ->
