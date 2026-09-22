@@ -44,7 +44,7 @@ fun AiHubScreen(
         containerColor = BgApp,
         topBar = {
             Row(
-                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+                Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 16.dp, vertical = 12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -126,10 +126,15 @@ fun AiHubScreen(
                         Button(
                             onClick = {
                                 if (key.isNotBlank()) {
-                                    settings.saveApiKey(key)
-                                    settings.saveConfig(config.provider, model)
-                                    key = ""
-                                    status = "API key saved securely on this device."
+                                    runCatching {
+                                        settings.saveApiKey(key)
+                                        settings.saveConfig(config.provider, model)
+                                    }.onSuccess {
+                                        key = ""
+                                        status = "API key saved securely on this device."
+                                    }.onFailure { error ->
+                                        status = "Could not save API key: " + (error.message ?: "secure storage failed")
+                                    }
                                 }
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = AccentBlue)
