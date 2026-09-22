@@ -77,19 +77,24 @@ fun DashboardScreen(
                 Alignment.CenterVertically
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        Modifier
-                            .size(38.dp)
-                            .clip(CircleShape)
-                            .background(AccentBlueSoft),
-                        contentAlignment = Alignment.Center
+                    IconButton(
+                        onClick = onOpenSettings,
+                        modifier = Modifier.size(38.dp)
                     ) {
-                        Icon(
-                            Icons.Filled.Person,
-                            null,
-                            tint = AccentBlueLight,
-                            modifier = Modifier.size(18.dp)
-                        )
+                        Box(
+                            Modifier
+                                .size(38.dp)
+                                .clip(CircleShape)
+                                .background(AccentBlueSoft),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Filled.Person,
+                                "Open settings",
+                                tint = AccentBlueLight,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
                     }
                     Spacer(Modifier.width(10.dp))
                     Column {
