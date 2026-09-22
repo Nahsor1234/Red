@@ -58,87 +58,45 @@ fun SyllabusScreen(
         bottomBar = { BottomNavBar(selectedTab, onTabSelected, onAiClick) }
     ) { padding ->
         Column(
-            Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 16.dp)
+            Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp)
         ) {
             Spacer(Modifier.height(JeeSpacing.md))
-            Row(
-                Modifier.fillMaxWidth(),
-                Arrangement.SpaceBetween,
-                Alignment.CenterVertically
-            ) {
-                Text(
-                    "Syllabus",
-                    style = MaterialTheme.typography.headlineSmall
-                )
+            Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+                Text("Syllabus", style = MaterialTheme.typography.headlineSmall)
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    TextButton(onClick = onOpenPlanner) {
-                        Text("Plan", fontSize = 12.sp)
-                    }
-                    TextButton(onClick = onOpenRevision) {
-                        Text("Review", fontSize = 12.sp)
-                    }
+                    TextButton(onClick = onOpenPlanner) { Text("Plan", fontSize = 12.sp) }
+                    TextButton(onClick = onOpenRevision) { Text("Review", fontSize = 12.sp) }
                 }
             }
 
             Spacer(Modifier.height(14.dp))
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(subjects) { subject ->
-                    FilterChip(subject, subject == selectedSubject) {
-                        selectedSubject = subject
-                    }
+                    FilterChip(subject, subject == selectedSubject) { selectedSubject = subject }
                 }
             }
 
             Spacer(Modifier.height(14.dp))
             Column(
-                Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(BgCardAlt)
-                    .padding(16.dp)
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(BgCardAlt).padding(16.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        Modifier
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(AccentBlueSoft),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.Filled.Science,
-                            null,
-                            tint = AccentBlueLight,
-                            modifier = Modifier.size(18.dp)
-                        )
+                    Box(Modifier.size(36.dp).clip(CircleShape).background(AccentBlueSoft), contentAlignment = Alignment.Center) {
+                        Icon(Icons.Filled.Science, null, tint = AccentBlueLight, modifier = Modifier.size(18.dp))
                     }
                     Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f)) {
                         Text(selectedSubject, style = MaterialTheme.typography.titleLarge)
-                        Text(
-                            all.count { it.progress >= 1f }.toString() + " / " + all.size + " chapters complete",
-                            color = TextMuted,
-                            fontSize = 12.sp
-                        )
+                        Text(all.count { it.progress >= 1f }.toString() + " / " + all.size + " chapters complete", color = TextMuted, fontSize = 12.sp)
                     }
-                    Text(
-                        (avg * 100).toInt().toString() + "%",
-                        style = MaterialTheme.typography.headlineMedium.copy(fontSize = 22.sp)
-                    )
+                    Text((avg * 100).toInt().toString() + "%", style = MaterialTheme.typography.headlineMedium.copy(fontSize = 22.sp))
                 }
-
                 Spacer(Modifier.height(10.dp))
                 LinearStatBar(avg)
                 Spacer(Modifier.height(14.dp))
                 Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
                     StatLabel(all.count { it.progress >= 1f }.toString(), "Completed")
-                    StatLabel(
-                        all.count { it.progress > 0f && it.progress < 1f }.toString(),
-                        "In progress"
-                    )
+                    StatLabel(all.count { it.progress > 0f && it.progress < 1f }.toString(), "In progress")
                     StatLabel(all.count { it.progress == 0f }.toString(), "Not started")
                 }
             }
@@ -146,9 +104,7 @@ fun SyllabusScreen(
             Spacer(Modifier.height(14.dp))
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(filters) { filter ->
-                    FilterChip(filter, filter == selectedFilter) {
-                        selectedFilter = filter
-                    }
+                    FilterChip(filter, filter == selectedFilter) { selectedFilter = filter }
                 }
             }
 
@@ -157,26 +113,20 @@ fun SyllabusScreen(
                 items(chapters, key = { it.number }) { chapter ->
                     ChapterRow(
                         chapter = chapter,
-                        isWeak = weakIds.contains(selectedSubject.lowercase() + "_" + chapter.number),
-                        isRevisionDue = dueIds.contains(selectedSubject.lowercase() + "_" + chapter.number)
+                        isWeak = weakIds.contains(JeeCatalog.forSubject(selectedSubject).firstOrNull { it.number == chapter.number }?.id),
+                        isRevisionDue = dueIds.contains(JeeCatalog.forSubject(selectedSubject).firstOrNull { it.number == chapter.number }?.id)
                     ) {
                         val next = when {
                             chapter.progress == 0f -> 0.5f
                             chapter.progress < 1f -> 1f
                             else -> 0f
                         }
-                        repo.setChapterProgress(
-                            chapter.subject,
-                            chapter.number,
-                            next
-                        )
+                        repo.setChapterProgress(chapter.subject, chapter.number, next)
                         refresh++
                     }
                     HorizontalDivider(color = BgDivider, thickness = 0.5.dp)
                 }
-                item {
-                    Spacer(Modifier.height(12.dp))
-                }
+                item { Spacer(Modifier.height(12.dp)) }
             }
         }
     }
@@ -198,53 +148,25 @@ private fun ChapterRow(
     onClick: () -> Unit
 ) {
     Row(
-        Modifier
-            .fillMaxWidth()
-            .premiumClick(onClick)
-            .padding(vertical = 12.dp),
+        Modifier.fillMaxWidth().premiumClick(onClick).padding(vertical = 12.dp),
         Arrangement.SpaceBetween,
         Alignment.CenterVertically
     ) {
-        Row(
-            Modifier.weight(1f),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
             if (chapter.progress >= 1f) {
-                Box(
-                    Modifier
-                        .size(18.dp)
-                        .clip(CircleShape)
-                        .background(AccentGreen),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        Icons.Filled.Check,
-                        "Completed",
-                        tint = AccentGreenDark,
-                        modifier = Modifier.size(12.dp)
-                    )
+                Box(Modifier.size(18.dp).clip(CircleShape).background(AccentGreen), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Filled.Check, "Completed", tint = AccentGreenDark, modifier = Modifier.size(12.dp))
                 }
             } else {
-                Box(
-                    Modifier
-                        .size(18.dp)
-                        .clip(CircleShape)
-                        .background(BgDivider)
-                )
+                Box(Modifier.size(18.dp).clip(CircleShape).background(BgDivider))
             }
-
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
-                Text(
-                    chapter.number.toString() + ". " + chapter.name,
-                    color = TextOnCard,
-                    fontSize = 13.sp
-                )
+                Text(chapter.number.toString() + ". " + chapter.name, color = TextOnCard, fontSize = 13.sp)
                 Spacer(Modifier.height(4.dp))
                 Text(
                     (chapter.estimatedMinutes / 60).toString() + "h " +
-                        ((chapter.estimatedMinutes % 60) / 15 * 15).toString() + "m · confidence " +
-                        chapter.confidence + "/5",
+                        ((chapter.estimatedMinutes % 60) / 15 * 15).toString() + "m · confidence " + chapter.confidence + "/5",
                     color = TextMuted,
                     fontSize = 9.sp
                 )
@@ -261,14 +183,9 @@ private fun ChapterRow(
                 )
             }
         }
-
         Spacer(Modifier.width(8.dp))
         Column(horizontalAlignment = Alignment.End) {
-            Text(
-                (chapter.progress * 100).toInt().toString() + "%",
-                color = TextMuted,
-                fontSize = 11.sp
-            )
+            Text((chapter.progress * 100).toInt().toString() + "%", color = TextMuted, fontSize = 11.sp)
             if (isRevisionDue || isWeak) {
                 Text(
                     if (isRevisionDue) "Review due" else "Weak",
