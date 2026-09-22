@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.jeecommandcenter.data.*
+import com.example.jeecommandcenter.ui.components.*
 import com.example.jeecommandcenter.ui.theme.*
 
 @Composable
