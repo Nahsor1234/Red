@@ -7,6 +7,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,6 +25,7 @@ fun SyllabusScreen(repo: JeeRepository, selectedTab: AppTab, onTabSelected: (App
     var subject by remember { mutableStateOf("Physics") }
     var filter by remember { mutableStateOf("All") }
     var refresh by remember { mutableIntStateOf(0) }
+    var selectedChapter by remember { mutableStateOf<ChapterProgress?>(null) }
     val subjects = listOf("Physics", "Chemistry", "Mathematics")
     val filters = listOf("All", "Weak", "In progress", "Done")
     val all = remember(refresh, subject) { repo.chapters(subject) }
@@ -83,14 +85,13 @@ fun SyllabusScreen(repo: JeeRepository, selectedTab: AppTab, onTabSelected: (App
                 }
                 items(visible, key = { it.number }) { chapter ->
                     val id = catalog.firstOrNull { it.number == chapter.number }?.id
-                    Row(Modifier.fillMaxWidth().premiumClick {
-                        repo.setChapterProgress(chapter.subject, chapter.number, when {
-                            chapter.progress == 0f -> .5f
-                            chapter.progress < 1f -> 1f
-                            else -> 0f
-                        })
-                        refresh++
-                    }.padding(vertical = 14.dp), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+                    Row(
+                        Modifier.fillMaxWidth()
+                            .premiumClick { selectedChapter = chapter }
+                            .padding(vertical = 14.dp),
+                        Arrangement.SpaceBetween,
+                        Alignment.CenterVertically
+                    ) {
                         Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
                             Box(Modifier.size(13.dp).clip(CircleShape).background(if (chapter.progress >= 1f) AccentGreen else BgDivider), Alignment.Center) {
                                 if (chapter.progress >= 1f) Icon(Icons.Filled.Check, null, tint = AccentGreenDark, modifier = Modifier.size(9.dp))
@@ -102,12 +103,40 @@ fun SyllabusScreen(repo: JeeRepository, selectedTab: AppTab, onTabSelected: (App
                                 Spacer(Modifier.height(5.dp)); LinearStatBar(chapter.progress, Modifier.width(120.dp), height = 3.dp)
                             }
                         }
-                        if (due.contains(id)) Text("Review due", color = AccentAmber, fontSize = 10.sp)
-                        else if (weak.contains(id)) Text("Weak", color = AccentBlueLight, fontSize = 10.sp)
+                        Column(horizontalAlignment = Alignment.End) {
+                            if (due.contains(id)) Text("Review due", color = AccentAmber, fontSize = 10.sp)
+                            else if (weak.contains(id)) Text("Weak", color = AccentBlueLight, fontSize = 10.sp)
+                            Icon(Icons.Filled.ChevronRight, "Open chapter", tint = TextMuted, modifier = Modifier.size(18.dp))
+                        }
                     }
                     HorizontalDivider(color = BgDivider, thickness = .5.dp)
                 }
             }
         }
+    }
+
+    selectedChapter?.let { chapter ->
+        var editProgress by remember(chapter) { mutableFloatStateOf(chapter.progress) }
+        AlertDialog(
+            onDismissRequest = { selectedChapter = null },
+            title = { Text(chapter.name) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("Chapter ${chapter.number} · ${chapter.subject}", color = TextSecondary, fontSize = 12.sp)
+                    Text("Progress ${((editProgress * 100).toInt())}%", style = MaterialTheme.typography.titleMedium)
+                    Slider(value = editProgress, onValueChange = { editProgress = it }, valueRange = 0f..1f, steps = 3)
+                    Text("Confidence: ${chapter.confidence}/5", color = TextMuted, fontSize = 11.sp)
+                    Text("Progress changes are explicit here; tapping the chapter row no longer changes it automatically.", color = TextMuted, fontSize = 11.sp)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    repo.setChapterProgress(chapter.subject, chapter.number, editProgress)
+                    selectedChapter = null
+                    refresh++
+                }) { Text("Save") }
+            },
+            dismissButton = { TextButton(onClick = { selectedChapter = null }) { Text("Cancel") } }
+        )
     }
 }
