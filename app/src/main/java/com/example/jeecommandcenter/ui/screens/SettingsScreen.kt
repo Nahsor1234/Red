@@ -18,7 +18,6 @@ import com.example.jeecommandcenter.ui.theme.*
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
-    onOpenAiHub: () -> Unit,
     onOpenAnalytics: () -> Unit,
     onOpenAssessment: () -> Unit,
     onOpenMistakes: () -> Unit
@@ -41,7 +40,6 @@ fun SettingsScreen(
             Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            SettingsCard("AI Hub", "Provider, model and API key", Icons.Filled.AutoAwesome, onOpenAiHub)
             SettingsCard("Analytics", "Real performance and study metrics", Icons.Filled.Insights, onOpenAnalytics)
             SettingsCard("Assessment", "Practice tests and starter mocks", Icons.Filled.Quiz, onOpenAssessment)
             SettingsCard("Mistake bank", "Automatic error tracking and review", Icons.Filled.ErrorOutline, onOpenMistakes)
