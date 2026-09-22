@@ -31,15 +31,15 @@ fun AnalyticsScreen(
     Scaffold(
         containerColor = BgApp,
         topBar = {
-            Row(
-                Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 16.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                TextButton(onClick = onBack) { Text("Back") }
-                Text("Analytics", style = MaterialTheme.typography.titleLarge)
-                IconButton(onClick = { refresh++ }) { Icon(Icons.Filled.Refresh, "Refresh") }
-            }
+            JeeTopBar(
+                title = "Analytics",
+                onBack = onBack,
+                trailing = {
+                    IconButton(onClick = { refresh++ }) {
+                        Icon(Icons.Filled.Refresh, "Refresh")
+                    }
+                }
+            )
         }
     ) { padding ->
         LazyColumn(
