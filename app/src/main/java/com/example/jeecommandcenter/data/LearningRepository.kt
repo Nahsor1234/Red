@@ -99,6 +99,10 @@ class LearningRepository(private val context: Context) {
                     put("score", item.score)
                     put("totalMarks", item.totalMarks)
                     put("durationSec", item.durationSec)
+                    put("name", item.name)
+                    put("attemptedCount", item.attemptedCount)
+                    put("incorrectCount", item.incorrectCount)
+                    put("skippedCount", item.skippedCount)
                     val subjectObj = JSONObject()
                     item.subjectBreakdown.forEach { (subject, pair) ->
                         subjectObj.put(subject, JSONObject().apply {
@@ -157,7 +161,11 @@ class LearningRepository(private val context: Context) {
                     score = obj.getInt("score"),
                     totalMarks = obj.getInt("totalMarks"),
                     durationSec = obj.getInt("durationSec"),
-                    subjectBreakdown = breakdown
+                    subjectBreakdown = breakdown,
+                    name = obj.optString("name"),
+                    attemptedCount = obj.optInt("attemptedCount", obj.optInt("questionCount")),
+                    incorrectCount = obj.optInt("incorrectCount", obj.optInt("questionCount") - obj.optInt("correctCount")),
+                    skippedCount = obj.optInt("skippedCount", 0)
                 )
             }
         }.getOrDefault(emptyList())
@@ -181,6 +189,8 @@ class LearningRepository(private val context: Context) {
                     mistakeType = runCatching {
                         MistakeType.valueOf(obj.optString("mistakeType", MistakeType.UNCLASSIFIED.name))
                     }.getOrDefault(MistakeType.UNCLASSIFIED),
+                    source = obj.optString("source", "assessment"),
+                    correction = obj.optString("correction", ""),
                     resolved = obj.optBoolean("resolved", false),
                     lastSeenAt = obj.optLong("lastSeenAt", System.currentTimeMillis())
                 )
@@ -260,7 +270,9 @@ class LearningRepository(private val context: Context) {
                 correctAnswer = correct,
                 lastSelectedAnswer = selected,
                 count = 1,
-                mistakeType = MistakeType.UNCLASSIFIED
+                mistakeType = MistakeType.UNCLASSIFIED,
+                source = "assessment",
+                correction = question.explanation
             )
         } else {
             existing.copy(
@@ -287,6 +299,8 @@ class LearningRepository(private val context: Context) {
                     put("lastSelectedAnswer", item.lastSelectedAnswer)
                     put("count", item.count)
                     put("mistakeType", item.mistakeType.name)
+                    put("source", item.source)
+                    put("correction", item.correction)
                     put("resolved", item.resolved)
                     put("lastSeenAt", item.lastSeenAt)
                 }
