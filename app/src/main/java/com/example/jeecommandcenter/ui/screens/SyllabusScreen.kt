@@ -24,7 +24,9 @@ fun SyllabusScreen(
     repo: JeeRepository,
     selectedTab: AppTab,
     onTabSelected: (AppTab) -> Unit,
-    onFabClick: () -> Unit = {}
+    onFabClick: () -> Unit = {},
+    onOpenPlanner: () -> Unit = {},
+    onOpenRevision: () -> Unit = {}
 ) {
     var selectedSubject by remember { mutableStateOf("Physics") }
     var selectedFilter by remember { mutableStateOf("All") }
@@ -54,10 +56,24 @@ fun SyllabusScreen(
                 .padding(horizontal = 16.dp)
         ) {
             Spacer(Modifier.height(12.dp))
-            Text(
-                "Syllabus",
-                style = MaterialTheme.typography.headlineMedium.copy(fontSize = 22.sp)
-            )
+            Row(
+                Modifier.fillMaxWidth(),
+                Arrangement.SpaceBetween,
+                Alignment.CenterVertically
+            ) {
+                Text(
+                    "Syllabus",
+                    style = MaterialTheme.typography.headlineMedium.copy(fontSize = 22.sp)
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    TextButton(onClick = onOpenPlanner) {
+                        Text("Plan", fontSize = 12.sp)
+                    }
+                    TextButton(onClick = onOpenRevision) {
+                        Text("Review", fontSize = 12.sp)
+                    }
+                }
+            }
 
             Spacer(Modifier.height(14.dp))
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -209,6 +225,14 @@ private fun ChapterRow(
                     chapter.number.toString() + ". " + chapter.name,
                     color = TextOnCard,
                     fontSize = 13.sp
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    (chapter.estimatedMinutes / 60).toString() + "h " +
+                        ((chapter.estimatedMinutes % 60) / 15 * 15).toString() + "m · confidence " +
+                        chapter.confidence + "/5",
+                    color = TextMuted,
+                    fontSize = 9.sp
                 )
                 Spacer(Modifier.height(4.dp))
                 LinearStatBar(
