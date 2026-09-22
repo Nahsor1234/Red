@@ -52,9 +52,31 @@ fun DashboardScreen(repo:JeeRepository,selectedTab:AppTab,onTabSelected:(AppTab)
     Box(Modifier.size(46.dp).clip(CircleShape).background(BgDivider),contentAlignment=Alignment.Center){CircularProgressIndicator(progress={if(goal>0)(today.toFloat()/goal).coerceIn(0f,1f)else 0f},modifier=Modifier.size(46.dp),color=AccentGreen,trackColor=BgDivider,strokeWidth=4.dp);Text((if(goal>0)(today*100/goal).coerceIn(0,100)else 0).toString()+"%",fontSize=10.sp,color=AccentGreen,fontWeight=FontWeight.Medium)}
    }
    Spacer(Modifier.height(16.dp))
-   val next=tasks.firstOrNull{!it.done}
-   if(next!=null) {Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(BgPriority).padding(14.dp)){Row(Modifier.fillMaxWidth(),Arrangement.SpaceBetween,Alignment.CenterVertically){Row(verticalAlignment=Alignment.CenterVertically){Icon(Icons.Filled.Bolt,null,tint=TextAmber,modifier=Modifier.size(14.dp));Spacer(Modifier.width(6.dp));Text("Do this now",color=TextAmber,fontSize=12.sp,fontWeight=FontWeight.Medium)}Box(Modifier.clip(RoundedCornerShape(6.dp)).background(BgPriorityBadge).padding(horizontal=8.dp,vertical=2.dp)){Text("Next task",color=TextPriorityBadge,fontSize=10.sp)}}
-    Spacer(Modifier.height(8.dp));Row(Modifier.fillMaxWidth(),Arrangement.SpaceBetween,Alignment.CenterVertically){Column{Text(next.title,style=MaterialTheme.typography.titleMedium);Text(next.subject+" · "+next.durationMin+"m",color=TextSecondary,fontSize=12.sp)}Box(Modifier.size(34.dp).clip(CircleShape).background(AccentBlue),contentAlignment=Alignment.Center){Icon(Icons.Filled.PlayArrow,"Start",tint=Color.White,modifier=Modifier.size(16.dp))}}}}
+   val nextTask = tasks.firstOrNull { !it.done }
+   if (nextTask != null) {
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(BgPriority).padding(14.dp)) {
+     Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+      Row(verticalAlignment = Alignment.CenterVertically) {
+       Icon(Icons.Filled.Bolt, null, tint = TextAmber, modifier = Modifier.size(14.dp))
+       Spacer(Modifier.width(6.dp))
+       Text("Do this now", color = TextAmber, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+      }
+      Box(Modifier.clip(RoundedCornerShape(6.dp)).background(BgPriorityBadge).padding(horizontal = 8.dp, vertical = 2.dp)) {
+       Text("Next task", color = TextPriorityBadge, fontSize = 10.sp)
+      }
+     }
+     Spacer(Modifier.height(8.dp))
+     Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+      Column {
+       Text(nextTask.title, style = MaterialTheme.typography.titleMedium)
+       Text(nextTask.subject + " · " + nextTask.durationMin + "m", color = TextSecondary, fontSize = 12.sp)
+      }
+      Box(Modifier.size(34.dp).clip(CircleShape).background(AccentBlue), contentAlignment = Alignment.Center) {
+       Icon(Icons.Filled.PlayArrow, "Start", tint = Color.White, modifier = Modifier.size(16.dp))
+      }
+     }
+    }
+   }
    Spacer(Modifier.height(8.dp));SectionHeader("Today's tasks")
    todayTasks.forEachIndexed { i,t ->
     TaskRow(TaskItem(t.id.toString(),t.title,t.subject,t.durationMin.toString()+"m",t.done)) { id -> repo.toggleTask(id.toLong()); refresh++ }
