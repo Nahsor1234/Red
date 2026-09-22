@@ -3,9 +3,6 @@ package com.example.jeecommandcenter.ui.components
 import android.view.HapticFeedbackConstants
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -76,8 +73,7 @@ fun BottomNavBar(selected: AppTab, onTabSelected: (AppTab) -> Unit, onAiClick: (
         NavIcon(Icons.Filled.Home, "Home", selected == AppTab.HOME) { onTabSelected(AppTab.HOME) }
         NavIcon(Icons.Filled.MenuBook, "Syllabus", selected == AppTab.SYLLABUS) { onTabSelected(AppTab.SYLLABUS) }
         NavigationBarItem(selected = false, onClick = { view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK); onAiClick() }, icon = {
-            val pulse by rememberInfiniteTransition(label = "ai-pulse").animateFloat(0.96f, 1.04f, infiniteRepeatable(tween(900), RepeatMode.Reverse), label = "ai-scale")
-            Box(Modifier.size(42.dp).graphicsLayer(scaleX = pulse, scaleY = pulse).clip(CircleShape).background(AccentBlue), Alignment.Center) { Icon(Icons.Filled.AutoAwesome, "AI", tint = Color(0xFF17120A), modifier = Modifier.size(20.dp)) }
+            Box(Modifier.size(42.dp).clip(CircleShape).background(AccentBlue), Alignment.Center) { Icon(Icons.Filled.AutoAwesome, "AI", tint = Color(0xFF17120A), modifier = Modifier.size(20.dp)) }
         }, label = { Text("AI", fontSize = 9.sp) }, colors = NavigationBarItemDefaults.colors(selectedIconColor = AccentBlue, unselectedIconColor = AccentBlue, selectedTextColor = AccentBlueLight, unselectedTextColor = TextSecondary, indicatorColor = Color.Transparent))
         NavIcon(Icons.Filled.CheckCircle, "Tasks", selected == AppTab.TASKS) { onTabSelected(AppTab.TASKS) }
         NavIcon(Icons.Filled.Timer, "Timer", selected == AppTab.STATS) { onTabSelected(AppTab.STATS) }
