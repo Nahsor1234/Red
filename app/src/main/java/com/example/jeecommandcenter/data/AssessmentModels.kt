@@ -43,6 +43,7 @@ enum class MistakeType {
     MISREAD,
     TIME_PRESSURE,
     GUESS,
+    METHOD,
     UNCLASSIFIED
 }
 
@@ -56,6 +57,8 @@ data class MistakeRecord(
     val lastSelectedAnswer: String,
     val count: Int,
     val mistakeType: MistakeType,
+    val source: String = "assessment",
+    val correction: String = "",
     val resolved: Boolean = false,
     val lastSeenAt: Long = System.currentTimeMillis()
 )
@@ -70,7 +73,11 @@ data class TestAttemptRecord(
     val score: Int,
     val totalMarks: Int,
     val durationSec: Int,
-    val subjectBreakdown: Map<String, Pair<Int, Int>>
+    val subjectBreakdown: Map<String, Pair<Int, Int>>,
+    val name: String = "",
+    val attemptedCount: Int = questionCount,
+    val incorrectCount: Int = (questionCount - correctCount).coerceAtLeast(0),
+    val skippedCount: Int = 0
 )
 
 data class SubjectAnalytics(
