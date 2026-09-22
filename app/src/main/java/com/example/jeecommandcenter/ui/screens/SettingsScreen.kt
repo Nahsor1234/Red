@@ -25,15 +25,7 @@ fun SettingsScreen(
     Scaffold(
         containerColor = BgApp,
         topBar = {
-            Row(
-                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                TextButton(onClick = onBack) { Text("Back") }
-                Text("Settings", style = MaterialTheme.typography.titleLarge)
-                Spacer(Modifier.width(48.dp))
-            }
+            JeeTopBar(title = "Settings", onBack = onBack)
         }
     ) { padding ->
         Column(
