@@ -5,8 +5,10 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.foundation.ExperimentalFoundationApi
 
-fun Modifier.premiumClick(onClick:()->Unit):Modifier=composed{
+@OptIn(ExperimentalFoundationApi::class)
+fun Modifier.premiumClick(onClick:()->Unit):Modifier = composed {
  val view=LocalView.current
  combinedClickable(onClick={view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);onClick()})
 }
