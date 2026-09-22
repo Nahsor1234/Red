@@ -12,6 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.jeecommandcenter.data.*
@@ -26,7 +27,8 @@ fun SyllabusScreen(repo: JeeRepository, selectedTab: AppTab, onTabSelected: (App
     val subjects = listOf("Physics", "Chemistry", "Mathematics")
     val filters = listOf("All", "Weak", "In progress", "Done")
     val all = remember(refresh, subject) { repo.chapters(subject) }
-    val intelligence = remember { JeeIntelligence(repo, LearningRepository(androidx.compose.ui.platform.LocalContext.current.applicationContext)) }
+    val context = LocalContext.current
+    val intelligence = remember(context) { JeeIntelligence(repo, LearningRepository(context.applicationContext)) }
     val weak = remember(refresh, subject) { intelligence.weakChapters(20).map { it.chapter.id }.toSet() }
     val due = remember(refresh) { repo.getRevisionQueue().map { it.chapter.id }.toSet() }
     val catalog = remember(subject) { JeeCatalog.forSubject(subject) }
