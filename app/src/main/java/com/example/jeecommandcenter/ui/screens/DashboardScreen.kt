@@ -21,6 +21,7 @@ import com.example.jeecommandcenter.data.JeeRepository
 import com.example.jeecommandcenter.ui.components.*
 import com.example.jeecommandcenter.ui.theme.*
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.temporal.ChronoUnit
 
 @Composable
@@ -35,6 +36,11 @@ fun DashboardScreen(
     val tasks = remember(refresh) { repo.getTasks() }
     val today = remember(refresh) { repo.getTodayMinutes() }
     val goal = remember(refresh) { repo.getDailyGoalMinutes() }
+    val greeting = when (LocalTime.now().hour) {
+        in 5..11 -> "Good morning"
+        in 12..16 -> "Good afternoon"
+        else -> "Good evening"
+    }
 
     val completed = tasks.count { it.done }
     val total = JeeRepository.syllabus.values.sumOf { it.size }
@@ -85,7 +91,7 @@ fun DashboardScreen(
                     }
                     Spacer(Modifier.width(10.dp))
                     Column {
-                        Text("Good morning", style = MaterialTheme.typography.titleMedium)
+                        Text(greeting, style = MaterialTheme.typography.titleMedium)
                         Text("Let's make today count", color = TextMuted, fontSize = 12.sp)
                     }
                 }
