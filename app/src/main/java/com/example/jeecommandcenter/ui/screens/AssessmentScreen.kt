@@ -25,6 +25,7 @@ private enum class AssessmentState { SETUP, RUNNING, RESULT }
 @Composable
 fun AssessmentScreen(
     learning: LearningRepository,
+    jee: JeeRepository,
     onBack: () -> Unit,
     onOpenMistakes: () -> Unit
 ) {
@@ -110,6 +111,7 @@ fun AssessmentScreen(
                         if (!answered && remaining == 0) {
                             selected = -1
                             learning.saveQuestionAttempt(testId, question, -1, 60)
+                            jee.flagChapterWeak(question.chapterId)
                             answered = true
                             if (index + 1 >= questions.size) finish() else {
                                 // Result is handled after the last recorded answer.
@@ -131,7 +133,7 @@ fun AssessmentScreen(
                                 val record = learning.saveQuestionAttempt(
                                     testId, question, selected, ((System.currentTimeMillis() - questionStartedAt) / 1000).toInt()
                                 )
-                                if (record.correct) correct++
+                                if (record.correct) correct++ else jee.flagChapterWeak(question.chapterId)
                                 answered = true
                             }
                         },
