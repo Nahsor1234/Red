@@ -52,11 +52,18 @@ fun SectionHeader(title: String, actionLabel: String? = null, onActionClick: () 
 data class TaskItem(val id: String, val title: String, val subtitle: String, val duration: String, val done: Boolean = false, val inProgress: Boolean = false)
 
 @Composable
-fun TaskRow(task: TaskItem, onToggle: (String) -> Unit) {
+fun TaskRow(task: TaskItem, onToggle: (String) -> Unit, onClick: () -> Unit = {}) {
     val alpha by animateFloatAsState(if (task.done) .62f else 1f, label = "task-alpha")
     val check by animateColorAsState(if (task.done) AccentGreen else Color.Transparent, label = "task-check")
-    Row(Modifier.fillMaxWidth().graphicsLayer(alpha = alpha).premiumClick(haptic = if (!task.done) HapticFeedbackConstants.KEYBOARD_TAP else HapticFeedbackConstants.VIRTUAL_KEY, onClick = { onToggle(task.id) }).padding(vertical = 11.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(22.dp).clip(RoundedCornerShape(7.dp)).background(check).border(1.dp, if (task.done) AccentGreen else BgCardBorder, RoundedCornerShape(7.dp)), Alignment.Center) {
+    Row(Modifier.fillMaxWidth().graphicsLayer(alpha = alpha).premiumClick(onClick = onClick).padding(vertical = 11.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            Modifier.size(22.dp)
+                .clip(RoundedCornerShape(7.dp))
+                .background(check)
+                .border(1.dp, if (task.done) AccentGreen else BgCardBorder, RoundedCornerShape(7.dp))
+                .premiumClick(haptic = if (!task.done) HapticFeedbackConstants.KEYBOARD_TAP else HapticFeedbackConstants.VIRTUAL_KEY) { onToggle(task.id) },
+            Alignment.Center
+        ) {
             if (task.done) Icon(Icons.Filled.Check, null, tint = AccentGreenDark, modifier = Modifier.size(14.dp))
         }
         Spacer(Modifier.width(12.dp))
