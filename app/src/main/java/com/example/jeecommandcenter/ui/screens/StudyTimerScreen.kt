@@ -24,6 +24,8 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.font.FontWeight
+import com.example.jeecommandcenter.data.ActivityType
+import com.example.jeecommandcenter.data.JeeCatalog
 import com.example.jeecommandcenter.data.JeeRepository
 import com.example.jeecommandcenter.ui.components.*
 import com.example.jeecommandcenter.ui.theme.*
@@ -60,6 +62,9 @@ fun StudyTimerScreen(
     var endAtMillis by remember { mutableLongStateOf(initialState.endAtMillis) }
     var sessionsTab by remember { mutableStateOf(false) }
     var refresh by remember { mutableIntStateOf(0) }
+    var sessionSubject by remember { mutableStateOf("General") }
+    var sessionChapterId by remember { mutableStateOf<String?>(null) }
+    var sessionActivity by remember { mutableStateOf(ActivityType.LEARNING) }
     val view = LocalView.current
 
     LaunchedEffect(running) {
@@ -77,7 +82,12 @@ fun StudyTimerScreen(
             if (remainingNow == 0) {
                 running = false
                 endAtMillis = 0L
-                repo.completeTimer(totalSeconds)
+                repo.completeTimer(
+                    totalSeconds = totalSeconds,
+                    subject = sessionSubject,
+                    chapterId = sessionChapterId,
+                    activityType = sessionActivity
+                )
                 refresh++
                 view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
                 break
@@ -216,12 +226,17 @@ fun StudyTimerScreen(
                     Alignment.CenterVertically
                 ) {
                     Column {
-                        Text("Session subject", color = TextMuted, fontSize = 11.sp)
-                        Text("General study", style = MaterialTheme.typography.titleMedium)
+                        Text("Session context", color = TextMuted, fontSize = 11.sp)
+                        Text(sessionSubject, style = MaterialTheme.typography.titleMedium)
                         Text(
-                            "Saved automatically when the timer completes",
-                            color = TextMuted,
+                            sessionChapterId?.let { JeeCatalog.find(it)?.name } ?: "No chapter linked",
+                            color = TextSecondary,
                             fontSize = 11.sp
+                        )
+                        Text(
+                            "Activity: " + sessionActivity.name.lowercase().replace('_', ' '),
+                            color = TextMuted,
+                            fontSize = 10.sp
                         )
                     }
                 }

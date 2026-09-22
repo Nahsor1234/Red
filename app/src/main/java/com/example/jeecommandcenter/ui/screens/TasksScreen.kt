@@ -137,8 +137,8 @@ fun TasksScreen(
     if (showAdd) {
         AddTaskDialog(
             onDismiss = { showAdd = false },
-            onAdd = { title, subject, duration, due ->
-                if (repo.addTask(title, subject, duration, due)) {
+            onAdd = { title, subject, duration, due, chapterId, activityType ->
+                if (repo.addTask(title, subject, duration, due, chapterId, activityType)) {
                     showAdd = false
                     refresh++
                 }
@@ -238,13 +238,17 @@ private fun TaskCard(
 @Composable
 private fun AddTaskDialog(
     onDismiss: () -> Unit,
-    onAdd: (String, String, Int, String) -> Unit
+    onAdd: (String, String, Int, String, String?, ActivityType) -> Unit
 ) {
     val subjects = listOf("Physics", "Chemistry", "Mathematics")
     var title by remember { mutableStateOf("") }
     var subject by remember { mutableStateOf(subjects.first()) }
+    var selectedChapterId by remember { mutableStateOf<String?>(null) }
+    var chapterExpanded by remember { mutableStateOf(false) }
+    var activityType by remember { mutableStateOf(ActivityType.OTHER) }
     var duration by remember { mutableStateOf("30") }
     var due by remember { mutableStateOf("Today") }
+    val chapters = JeeCatalog.forSubject(subject)
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -263,7 +267,55 @@ private fun AddTaskDialog(
                 Spacer(Modifier.height(6.dp))
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(subjects) { item ->
-                        FilterChip(item, item == subject) { subject = item }
+                        FilterChip(item, item == subject) {
+                            subject = item
+                            selectedChapterId = null
+                        }
+                    }
+                }
+                Spacer(Modifier.height(10.dp))
+                Box {
+                    OutlinedButton(
+                        onClick = { chapterExpanded = true },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(selectedChapterId?.let { id ->
+                            JeeCatalog.find(id)?.name ?: "Chapter"
+                        } ?: "No chapter linked")
+                        Spacer(Modifier.weight(1f))
+                        Icon(Icons.Filled.ExpandMore, null)
+                    }
+                    DropdownMenu(
+                        expanded = chapterExpanded,
+                        onDismissRequest = { chapterExpanded = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("No chapter linked") },
+                            onClick = {
+                                selectedChapterId = null
+                                chapterExpanded = false
+                            }
+                        )
+                        chapters.forEach { chapter ->
+                            DropdownMenuItem(
+                                text = { Text(chapter.number.toString() + ". " + chapter.name) },
+                                onClick = {
+                                    selectedChapterId = chapter.id
+                                    chapterExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.height(10.dp))
+                Text("Activity", color = TextMuted, fontSize = 11.sp)
+                Spacer(Modifier.height(6.dp))
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(listOf(ActivityType.LEARNING, ActivityType.PRACTICE, ActivityType.REVISION, ActivityType.TEST)) { type ->
+                        FilterChip(
+                            type.name.lowercase().replace('_', ' '),
+                            type == activityType
+                        ) { activityType = type }
                     }
                 }
                 Spacer(Modifier.height(10.dp))
@@ -289,7 +341,9 @@ private fun AddTaskDialog(
             TextButton(
                 enabled = title.isNotBlank() && minutes != null && minutes in 1..1440,
                 onClick = {
-                    minutes?.let { onAdd(title.trim(), subject, it, due) }
+                    minutes?.let {
+                        onAdd(title.trim(), subject, it, due, selectedChapterId, activityType)
+                    }
                 }
             ) {
                 Text("Add")

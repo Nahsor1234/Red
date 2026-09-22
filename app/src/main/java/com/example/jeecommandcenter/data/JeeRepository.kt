@@ -746,9 +746,24 @@ class JeeRepository(context: Context) {
             .apply()
     }
 
-    fun completeTimer(totalSeconds: Int) {
+    fun completeTimer(
+        totalSeconds: Int,
+        subject: String = "General",
+        chapterId: String? = null,
+        activityType: ActivityType = ActivityType.LEARNING
+    ) {
         if (totalSeconds >= 60) {
-            addSession(minutes = totalSeconds / 60)
+            val chapterName = chapterId?.let { JeeCatalog.find(it)?.name } ?: "Self study"
+            addSession(
+                minutes = totalSeconds / 60,
+                subject = subject,
+                chapter = chapterName,
+                subjectId = subject.lowercase().takeIf {
+                    it == "physics" || it == "chemistry" || it == "mathematics"
+                },
+                chapterId = chapterId,
+                activityType = activityType
+            )
         }
         prefs.edit()
             .remove("timer_total_seconds")
