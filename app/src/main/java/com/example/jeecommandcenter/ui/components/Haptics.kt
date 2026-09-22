@@ -6,10 +6,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.platform.LocalView
 
-fun Modifier.premiumClick(onClick: () -> Unit): Modifier = composed {
+/** Centralized, restrained tactile feedback for meaningful interactions. */
+fun Modifier.premiumClick(
+    onClick: () -> Unit,
+    haptic: Int = HapticFeedbackConstants.VIRTUAL_KEY
+): Modifier = composed {
     val view = LocalView.current
     clickable {
-        view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+        view.performHapticFeedback(haptic)
         onClick()
     }
 }
