@@ -5,7 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CheckBox
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.MenuBook
@@ -157,7 +157,7 @@ fun FilterChip(label: String, selected: Boolean, onClick: () -> Unit) {
 fun BottomNavBar(
     selected: AppTab,
     onTabSelected: (AppTab) -> Unit,
-    onFabClick: () -> Unit
+    onAiClick: () -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -179,10 +179,10 @@ fun BottomNavBar(
                 .size(48.dp)
                 .clip(CircleShape)
                 .background(AccentBlue)
-                .premiumClick(onFabClick),
+                .premiumClick(onAiClick),
             contentAlignment = Alignment.Center
         ) {
-            Icon(Icons.Filled.Add, contentDescription = "Add task", tint = Color.White)
+            Icon(Icons.Filled.AutoAwesome, contentDescription = "Open AI Hub", tint = Color.White)
         }
         NavIcon(Icons.Filled.CheckBox, "Tasks", selected == AppTab.TASKS) {
             onTabSelected(AppTab.TASKS)
