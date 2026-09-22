@@ -1,5 +1,8 @@
 package com.example.jeecommandcenter.ui.components
 
+import android.view.HapticFeedbackConstants
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -17,6 +20,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
@@ -37,15 +41,20 @@ fun LinearStatBar(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(height)
-            .clip(RoundedCornerShape(50))
+             .height(height)
+            .clip(JeeShapes.pill)
             .background(trackColor)
     ) {
         Box(
             modifier = Modifier
                 .fillMaxHeight()
-                .fillMaxWidth(progress.coerceIn(0f, 1f))
-                .clip(RoundedCornerShape(50))
+                 .fillMaxWidth(
+                    animateFloatAsState(
+                        targetValue = progress.coerceIn(0f, 1f),
+                        label = "linear-progress"
+                    ).value
+                )
+                .clip(JeeShapes.pill)
                 .background(fillColor)
         )
     }
@@ -87,24 +96,37 @@ data class TaskItem(
 
 @Composable
 fun TaskRow(task: TaskItem, onToggle: (String) -> Unit) {
+    val scale = animateFloatAsState(
+        targetValue = if (task.done) 1f else 0.98f,
+        label = "task-scale"
+    ).value
+    val checkColor = animateColorAsState(
+        targetValue = if (task.done) AccentGreen else Color.Transparent,
+        label = "task-state"
+    ).value
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 9.dp),
+            .padding(vertical = JeeSpacing.sm)
+            .graphicsLayer(scaleX = scale, scaleY = scale),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Row(
             modifier = Modifier
                 .weight(1f)
-                .premiumClick { onToggle(task.id) },
+                .premiumClick(
+                    onClick = { onToggle(task.id) },
+                    haptic = if (!task.done) HapticFeedbackConstants.LONG_PRESS else null
+                ),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
                     .size(34.dp)
                     .clip(CircleShape)
-                    .background(if (task.done) AccentGreen else Color.Transparent),
+                    .background(checkColor),
                 contentAlignment = Alignment.Center
             ) {
                 if (task.done) {
@@ -112,24 +134,24 @@ fun TaskRow(task: TaskItem, onToggle: (String) -> Unit) {
                         Icons.Filled.CheckBox,
                         contentDescription = "Completed",
                         tint = AccentGreenDark,
-                        modifier = Modifier.size(16.dp)
+                        modifier = Modifier.size(JeeSizes.iconSmall)
                     )
                 }
             }
-            Spacer(Modifier.width(10.dp))
+            Spacer(Modifier.width(JeeSpacing.md))
             Column {
                 Text(
                     task.title,
                     color = if (task.done) TextMuted else TextOnCard,
-                    fontSize = 13.sp,
+                    style = MaterialTheme.typography.bodyMedium,
                     textDecoration = if (task.done) TextDecoration.LineThrough else TextDecoration.None
                 )
                 if (task.subtitle.isNotEmpty()) {
-                    Text(task.subtitle, color = TextMuted, fontSize = 11.sp)
+                    Text(task.subtitle, color = TextMuted, style = MaterialTheme.typography.labelSmall)
                 }
             }
         }
-        Text(task.duration, color = TextMuted, fontSize = 11.sp)
+        Text(task.duration, color = TextMuted, style = MaterialTheme.typography.labelSmall)
     }
 }
 
@@ -137,11 +159,11 @@ fun TaskRow(task: TaskItem, onToggle: (String) -> Unit) {
 fun FilterChip(label: String, selected: Boolean, onClick: () -> Unit) {
     Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(20.dp))
+            .clip(JeeShapes.pill)
             .background(if (selected) ChipSelectedBg else ChipUnselectedBg)
             .sizeIn(minHeight = 40.dp)
             .premiumClick { onClick() }
-            .padding(horizontal = 16.dp, vertical = 10.dp),
+            .padding(horizontal = JeeSpacing.lg, vertical = JeeSpacing.sm),
         contentAlignment = Alignment.Center
     ) {
         Text(
@@ -164,7 +186,7 @@ fun BottomNavBar(
             .fillMaxWidth()
             .background(BgApp)
             .navigationBarsPadding()
-            .padding(top = 10.dp, bottom = 4.dp),
+            .padding(top = JeeSpacing.md, bottom = JeeSpacing.xs),
         horizontalArrangement = Arrangement.SpaceAround,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -176,7 +198,7 @@ fun BottomNavBar(
         }
         Box(
             modifier = Modifier
-                .size(48.dp)
+                .size(JeeSizes.navButton)
                 .clip(CircleShape)
                 .background(AccentBlue)
                 .premiumClick(onAiClick),
@@ -203,16 +225,16 @@ private fun NavIcon(
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
-            .sizeIn(minWidth = 56.dp, minHeight = 48.dp)
+            .sizeIn(minWidth = 56.dp, minHeight = JeeSizes.navButton)
             .premiumClick(onClick)
     ) {
         Icon(
             icon,
             contentDescription = label,
             tint = if (selected) AccentBlue else TextMuted,
-            modifier = Modifier.size(20.dp)
+            modifier = Modifier.size(JeeSizes.icon)
         )
-        Spacer(Modifier.height(3.dp))
-        Text(label, fontSize = 9.sp, color = if (selected) AccentBlue else TextMuted)
+        Spacer(Modifier.height(JeeSpacing.xs))
+        Text(label, style = MaterialTheme.typography.labelSmall, color = if (selected) AccentBlue else TextMuted)
     }
 }
