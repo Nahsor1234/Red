@@ -6,8 +6,8 @@ import androidx.compose.ui.composed
 import androidx.compose.ui.platform.LocalView
 
 fun Modifier.premiumClick(
-    onClick: () -> Unit,
-    haptic: Int? = null
+    haptic: Int? = null,
+    onClick: () -> Unit
 ): Modifier = composed {
     val view = LocalView.current
     clickable {
