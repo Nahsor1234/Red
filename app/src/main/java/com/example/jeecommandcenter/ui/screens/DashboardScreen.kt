@@ -68,7 +68,6 @@ fun DashboardScreen(
             Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .statusBarsPadding()
                 .padding(horizontal = 16.dp)
                 .verticalScroll(rememberScrollState())
         ) {

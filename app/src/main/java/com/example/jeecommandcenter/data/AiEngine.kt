@@ -8,14 +8,21 @@ import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 
-enum class AiProvider {
-    GEMINI,
-    NVIDIA
+enum class AiProvider(val label: String) {
+    GEMINI("Gemini"),
+    NVIDIA("NVIDIA NIM"),
+    OPENAI("OpenAI"),
+    OPENROUTER("OpenRouter"),
+    GROQ("Groq"),
+    TOGETHER("Together AI"),
+    DEEPSEEK("DeepSeek"),
+    CUSTOM_OPENAI_COMPATIBLE("Custom / OpenAI-compatible")
 }
 
 data class AiConfig(
     val provider: AiProvider = AiProvider.GEMINI,
-    val model: String = "gemini-3.8-flash"
+    val model: String = "gemini-3.8-flash",
+    val endpoint: String = ""
 )
 
 data class AiResult(
@@ -30,16 +37,32 @@ class AiSettingsRepository(context: Context) {
 
     fun getConfig(): AiConfig {
         val provider = runCatching {
-            AiProvider.valueOf(prefs.getString("provider", AiProvider.GEMINI.name) ?: AiProvider.GEMINI.name)
+            AiProvider.valueOf(
+                prefs.getString("provider", AiProvider.GEMINI.name) ?: AiProvider.GEMINI.name
+            )
         }.getOrDefault(AiProvider.GEMINI)
+
         return AiConfig(
             provider = provider,
-            model = prefs.getString("model", defaultModel(provider)) ?: defaultModel(provider)
+            model = prefs.getString("model", defaultModel(provider))
+                ?: defaultModel(provider),
+            endpoint = prefs.getString("endpoint", null)
+                ?.trim()
+                ?.takeIf { it.isNotBlank() }
+                ?: defaultEndpoint(provider)
         )
     }
 
-    fun saveConfig(provider: AiProvider, model: String) {
-        prefs.edit().putString("provider", provider.name).putString("model", model).apply()
+    fun saveConfig(
+        provider: AiProvider,
+        model: String,
+        endpoint: String = defaultEndpoint(provider)
+    ) {
+        prefs.edit()
+            .putString("provider", provider.name)
+            .putString("model", model.trim())
+            .putString("endpoint", endpoint.trim())
+            .apply()
     }
 
     fun saveApiKey(value: String) {
@@ -55,6 +78,23 @@ class AiSettingsRepository(context: Context) {
     fun defaultModel(provider: AiProvider): String = when (provider) {
         AiProvider.GEMINI -> "gemini-3.8-flash"
         AiProvider.NVIDIA -> "openai/gpt-oss-20b"
+        AiProvider.OPENAI -> "gpt-5"
+        AiProvider.OPENROUTER -> "openai/gpt-5"
+        AiProvider.GROQ -> "openai/gpt-oss-20b"
+        AiProvider.TOGETHER -> "meta-llama/Llama-3.3-70B-Instruct-Turbo"
+        AiProvider.DEEPSEEK -> "deepseek-flash"
+        AiProvider.CUSTOM_OPENAI_COMPATIBLE -> "your-model-id"
+    }
+
+    fun defaultEndpoint(provider: AiProvider): String = when (provider) {
+        AiProvider.GEMINI -> ""
+        AiProvider.NVIDIA -> "https://integrate.api.nvidia.com/v1/chat/completions"
+        AiProvider.OPENAI -> "https://api.openai.com/v1/chat/completions"
+        AiProvider.OPENROUTER -> "https://openrouter.ai/api/v1/chat/completions"
+        AiProvider.GROQ -> "https://api.groq.com/openai/v1/chat/completions"
+        AiProvider.TOGETHER -> "https://api.together.xyz/v1/chat/completions"
+        AiProvider.DEEPSEEK -> "https://api.deepseek.com/chat/completions"
+        AiProvider.CUSTOM_OPENAI_COMPATIBLE -> ""
     }
 
     internal fun apiKey(): String? = keyStore.read()
@@ -65,12 +105,28 @@ class AiEngine(private val settings: AiSettingsRepository) {
     suspend fun ask(prompt: String, systemInstruction: String? = null): AiResult =
         withContext(Dispatchers.IO) {
             val key = settings.apiKey()
-                ?: return@withContext AiResult(false, error = "Add an API key in Settings → AI Hub.")
+                ?: return@withContext AiResult(
+                    false,
+                    error = "Add an API key in Settings → AI Hub."
+                )
+
             val config = settings.getConfig()
+
             runCatching {
                 when (config.provider) {
-                    AiProvider.GEMINI -> callGemini(key, config.model, prompt, systemInstruction)
-                    AiProvider.NVIDIA -> callNvidia(key, config.model, prompt, systemInstruction)
+                    AiProvider.GEMINI ->
+                        callGemini(key, config.model, prompt, systemInstruction)
+
+                    else ->
+                        callOpenAiCompatible(
+                            key = key,
+                            endpoint = config.endpoint.ifBlank {
+                                settings.defaultEndpoint(config.provider)
+                            },
+                            model = config.model,
+                            prompt = prompt,
+                            systemInstruction = systemInstruction
+                        )
                 }
             }.getOrElse { error ->
                 AiResult(false, error = error.message ?: "AI request failed.")
@@ -83,11 +139,18 @@ class AiEngine(private val settings: AiSettingsRepository) {
         prompt: String,
         systemInstruction: String?
     ): AiResult {
-        val url = URL("https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent")
+        val url = URL(
+            "https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent"
+        )
         val body = JSONObject().apply {
             if (!systemInstruction.isNullOrBlank()) {
                 put("systemInstruction", JSONObject().apply {
-                    put("parts", JSONArray().put(JSONObject().put("text", systemInstruction)))
+                    put(
+                        "parts",
+                        JSONArray().put(
+                            JSONObject().put("text", systemInstruction)
+                        )
+                    )
                 })
             }
             put(
@@ -100,7 +163,12 @@ class AiEngine(private val settings: AiSettingsRepository) {
                 )
             )
         }
-        return postJson(url, mapOf("x-goog-api-key" to key), body) { response ->
+
+        return postJson(
+            url,
+            mapOf("x-goog-api-key" to key),
+            body
+        ) { response ->
             response.optJSONArray("candidates")
                 ?.optJSONObject(0)
                 ?.optJSONObject("content")
@@ -112,24 +180,40 @@ class AiEngine(private val settings: AiSettingsRepository) {
         }
     }
 
-    private fun callNvidia(
+    private fun callOpenAiCompatible(
         key: String,
+        endpoint: String,
         model: String,
         prompt: String,
         systemInstruction: String?
     ): AiResult {
+        require(endpoint.startsWith("https://")) {
+            "API endpoint must start with https://"
+        }
+        require(model.isNotBlank()) {
+            "Model ID cannot be blank."
+        }
+
         val messages = JSONArray()
         if (!systemInstruction.isNullOrBlank()) {
-            messages.put(JSONObject().put("role", "system").put("content", systemInstruction))
+            messages.put(
+                JSONObject()
+                    .put("role", "system")
+                    .put("content", systemInstruction)
+            )
         }
-        messages.put(JSONObject().put("role", "user").put("content", prompt))
+        messages.put(
+            JSONObject()
+                .put("role", "user")
+                .put("content", prompt)
+        )
+
         val body = JSONObject()
-            .put("model", model)
+            .put("model", model.trim())
             .put("messages", messages)
-            .put("temperature", 0.2)
-            .put("max_tokens", 1400)
+
         return postJson(
-            URL("https://integrate.api.nvidia.com/v1/chat/completions"),
+            URL(endpoint),
             mapOf("Authorization" to "Bearer $key"),
             body
         ) { response ->
@@ -138,7 +222,7 @@ class AiEngine(private val settings: AiSettingsRepository) {
                 ?.optJSONObject("message")
                 ?.optString("content")
                 ?.takeIf { it.isNotBlank() }
-                ?: throw IllegalStateException("NVIDIA returned no text.")
+                ?: throw IllegalStateException("Provider returned no text.")
         }
     }
 
@@ -157,9 +241,16 @@ class AiEngine(private val settings: AiSettingsRepository) {
             headers.forEach { (name, value) -> setRequestProperty(name, value) }
         }
 
-        connection.outputStream.use { it.write(body.toString().toByteArray()) }
+        connection.outputStream.use {
+            it.write(body.toString().toByteArray())
+        }
+
         val status = connection.responseCode
-        val stream = if (status in 200..299) connection.inputStream else connection.errorStream
+        val stream = if (status in 200..299) {
+            connection.inputStream
+        } else {
+            connection.errorStream
+        }
         val text = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
         connection.disconnect()
 
@@ -173,6 +264,7 @@ class AiEngine(private val settings: AiSettingsRepository) {
             }
             throw IllegalStateException(detail)
         }
+
         return AiResult(true, text = extractor(response))
     }
 }

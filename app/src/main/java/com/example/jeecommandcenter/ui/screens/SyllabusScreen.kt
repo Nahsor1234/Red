@@ -53,7 +53,6 @@ fun SyllabusScreen(
             Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .statusBarsPadding()
                 .padding(horizontal = 16.dp)
         ) {
             Spacer(Modifier.height(12.dp))
