@@ -24,6 +24,10 @@ fun AppRoot() {
         selectedTab = tab
     }
 
+    fun openAiHub() {
+        secondaryPage = SecondaryPage.AI_HUB
+    }
+
     when (secondaryPage) {
         SecondaryPage.PLANNER -> StudyPlannerScreen(
             repo = repo,
@@ -37,14 +41,13 @@ fun AppRoot() {
         )
         SecondaryPage.SETTINGS -> SettingsScreen(
             onBack = { secondaryPage = null },
-            onOpenAiHub = { secondaryPage = SecondaryPage.AI_HUB },
             onOpenAnalytics = { secondaryPage = SecondaryPage.ANALYTICS },
             onOpenAssessment = { secondaryPage = SecondaryPage.ASSESSMENT },
             onOpenMistakes = { secondaryPage = SecondaryPage.MISTAKES }
         )
         SecondaryPage.AI_HUB -> AiHubScreen(
             context = context,
-            onBack = { secondaryPage = SecondaryPage.SETTINGS },
+            onBack = { secondaryPage = null },
             onOpenTutor = { secondaryPage = SecondaryPage.AI_TUTOR }
         )
         SecondaryPage.AI_TUTOR -> AiTutorScreen(
@@ -75,7 +78,7 @@ fun AppRoot() {
                 repo = repo,
                 selectedTab = selectedTab,
                 onTabSelected = ::selectTab,
-                onFabClick = { selectTab(AppTab.TASKS) },
+                onAiClick = ::openAiHub,
                 onOpenPlanner = { secondaryPage = SecondaryPage.PLANNER },
                 onOpenRevision = { secondaryPage = SecondaryPage.REVISION },
                 onOpenSettings = { secondaryPage = SecondaryPage.SETTINGS }
@@ -84,18 +87,21 @@ fun AppRoot() {
                 repo = repo,
                 selectedTab = selectedTab,
                 onTabSelected = ::selectTab,
+                onAiClick = ::openAiHub,
                 onOpenPlanner = { secondaryPage = SecondaryPage.PLANNER },
                 onOpenRevision = { secondaryPage = SecondaryPage.REVISION }
             )
             AppTab.TASKS -> TasksScreen(
                 repo = repo,
                 selectedTab = selectedTab,
-                onTabSelected = ::selectTab
+                onTabSelected = ::selectTab,
+                onAiClick = ::openAiHub
             )
             AppTab.STATS -> StudyTimerScreen(
                 repo = repo,
                 selectedTab = selectedTab,
-                onTabSelected = ::selectTab
+                onTabSelected = ::selectTab,
+                onAiClick = ::openAiHub
             )
         }
     }
