@@ -42,31 +42,22 @@ fun StudyPlannerScreen(
     Scaffold(
         containerColor = BgApp,
         topBar = {
-            Row(
+            Box(
                 Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                    .statusBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
             ) {
-                TextButton(onClick = onBack) { Text("Back") }
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                TextButton(onClick = onBack, modifier = Modifier.align(Alignment.CenterStart)) {
+                    Text("Back")
+                }
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.align(Alignment.Center)
+                ) {
                     Text("Study planner", style = MaterialTheme.typography.titleLarge)
                     Text("Generated from your actual study state", color = TextMuted, fontSize = 10.sp)
                 }
-                Icon(
-                    Icons.Filled.Refresh,
-                    "Regenerate plan",
-                    tint = TextSecondary,
-                    modifier = Modifier.premiumClick {
-                        if (!generating) {
-                            generating = true
-                            repo.regenerateDailyPlan(learning)
-                            refresh++
-                            generating = false
-                        }
-                    }
-                )
             }
         }
     ) { padding ->
