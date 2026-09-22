@@ -26,3 +26,23 @@ val AccentPurple = Color(0xFFA855F7)
 val AccentPink = Color(0xFFEC4899)
 val ChipSelectedBg = AccentBlue
 val ChipUnselectedBg = Color(0xFF16233A)
+
+object JeeColors {
+    val background = BgApp
+    val surface = BgCard
+    val elevatedSurface = BgCardAlt
+    val primary = AccentBlue
+    val primarySoft = AccentBlueSoft
+    val secondary = AccentPurple
+    val accent = AccentBlueLight
+    val success = AccentGreen
+    val warning = AccentAmber
+    val error = TextPriorityBadge
+    val info = AccentBlueLight
+    val primaryText = TextPrimary
+    val secondaryText = TextSecondary
+    val mutedText = TextMuted
+    val onSurface = TextOnCard
+    val divider = BgDivider
+    val outline = BgCardBorder
+}
