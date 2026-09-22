@@ -56,7 +56,7 @@ fun AssessmentScreen(
     fun finish() {
         val duration = ((System.currentTimeMillis() - startedAt) / 1000L).toInt()
         val attempts = learning.getQuestionAttempts().filter { it.testId == testId }
-        val marks = attempts.sumOf { if (it.correct) 4 else -1 }
+        val marks = attempts.sumOf<Int> { if (it.correct) 4 else -1 }
         val totalMarks = attempts.size * 4
         val breakdown = attempts.groupBy { it.subject }.mapValues { (_, list) ->
             list.count { it.correct } to list.size
@@ -150,7 +150,6 @@ fun AssessmentScreen(
                 }
             }
             AssessmentState.RESULT -> {
-                val attempts = learning.getQuestionAttempts().filter { it.testId == testId }
                 ResultContent(
                     modifier = Modifier.padding(padding),
                     correct = correct,
