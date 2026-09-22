@@ -312,7 +312,8 @@ class JeeRepository(context: Context) {
         val existing = items.firstOrNull { it.chapterId == chapter.id }
         val updated = existing?.copy(
             dueDate = LocalDate.now().toString(),
-            lapses = existing.lapses + 1
+            lapses = existing.lapses + 1,
+            lastResult = RevisionRating.AGAIN
         ) ?: RevisionItem(
             id = "rev_" + chapter.id,
             chapterId = chapter.id,
@@ -373,11 +374,61 @@ class JeeRepository(context: Context) {
             ease = nextEase,
             repetitions = current.repetitions + 1,
             lapses = current.lapses + if (rating == RevisionRating.AGAIN) 1 else 0,
-            lastReviewedAt = now
+            lastReviewedAt = now,
+            lastResult = rating
         )
         saveRevisionItems(
             getRevisionItems().map { if (it.id == current.id) updated else it }
         )
+        appendRevisionRecord(
+            RevisionRecord(
+                id = "rr_" + chapterId + "_" + now,
+                chapterId = chapterId,
+                reviewedAt = now,
+                durationMin = 0,
+                confidence = confidence,
+                result = rating,
+                nextReviewAt = now + nextInterval * 86_400_000L
+            )
+        )
+    }
+
+    fun getRevisionHistory(chapterId: String? = null): List<RevisionRecord> {
+        val raw = prefs.getString("revision_history", null) ?: return emptyList()
+        return runCatching {
+            val array = JSONArray(raw)
+            List(array.length()) { index ->
+                val obj = array.getJSONObject(index)
+                RevisionRecord(
+                    id = obj.getString("id"),
+                    chapterId = obj.getString("chapterId"),
+                    reviewedAt = obj.getLong("reviewedAt"),
+                    durationMin = obj.optInt("durationMin", 0),
+                    confidence = obj.optInt("confidence", 0).coerceIn(0, 5),
+                    result = RevisionRating.valueOf(obj.getString("result")),
+                    nextReviewAt = obj.optLong("nextReviewAt", 0L)
+                )
+            }.filter { chapterId == null || it.chapterId == chapterId }
+                .sortedByDescending { it.reviewedAt }
+        }.getOrDefault(emptyList())
+    }
+
+    private fun appendRevisionRecord(record: RevisionRecord) {
+        val records = getRevisionHistory().toMutableList()
+        records += record
+        val array = JSONArray()
+        records.sortedByDescending { it.reviewedAt }.take(500).forEach { item ->
+            array.put(JSONObject().apply {
+                put("id", item.id)
+                put("chapterId", item.chapterId)
+                put("reviewedAt", item.reviewedAt)
+                put("durationMin", item.durationMin)
+                put("confidence", item.confidence)
+                put("result", item.result.name)
+                put("nextReviewAt", item.nextReviewAt)
+            })
+        }
+        prefs.edit().putString("revision_history", array.toString()).apply()
     }
 
     fun getMasteredChapterCount(): Int =
@@ -543,7 +594,10 @@ class JeeRepository(context: Context) {
                     ease = obj.optDouble("ease", 2.5).toFloat(),
                     repetitions = obj.optInt("repetitions", 0),
                     lapses = obj.optInt("lapses", 0),
-                    lastReviewedAt = obj.optLong("lastReviewedAt", 0L)
+                    lastReviewedAt = obj.optLong("lastReviewedAt", 0L),
+                    lastResult = obj.optString("lastResult").takeIf { it.isNotBlank() }?.let {
+                        runCatching { RevisionRating.valueOf(it) }.getOrNull()
+                    }
                 )
             }
         }.getOrDefault(emptyList())
@@ -562,6 +616,7 @@ class JeeRepository(context: Context) {
                     put("repetitions", item.repetitions)
                     put("lapses", item.lapses)
                     put("lastReviewedAt", item.lastReviewedAt)
+                    put("lastResult", item.lastResult?.name ?: "")
                 }
             )
         }
