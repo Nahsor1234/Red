@@ -42,23 +42,11 @@ fun StudyPlannerScreen(
     Scaffold(
         containerColor = BgApp,
         topBar = {
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .statusBarsPadding()
-                    .padding(horizontal = 16.dp, vertical = 12.dp)
-            ) {
-                TextButton(onClick = onBack, modifier = Modifier.align(Alignment.CenterStart)) {
-                    Text("Back")
-                }
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.align(Alignment.Center)
-                ) {
-                    Text("Study planner", style = MaterialTheme.typography.titleLarge)
-                    Text("Generated from your actual study state", color = TextMuted, fontSize = 10.sp)
-                }
-            }
+            JeeTopBar(
+                title = "Study planner",
+                subtitle = "Generated from your actual study state",
+                onBack = onBack
+            )
         }
     ) { padding ->
         LazyColumn(
