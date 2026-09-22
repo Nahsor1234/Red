@@ -20,8 +20,6 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
-import androidx.annotation.NonNull;
-
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
@@ -207,7 +205,7 @@ public class MainActivity extends Activity {
         task.setPadding(0, dp(7), 0, 0);
         box.addView(task);
 
-        String why = best == null ? "Start with an incomplete chapter." : best.priorityName + " priority · " + best.minutes + " min";
+        String why = best == null ? "Start with an incomplete chapter." : best.priorityName() + " priority · " + best.minutes + " min";
         box.addView(text(why, 12, MUTED, Typeface.NORMAL));
 
         MaterialButton start = button("Start study");
@@ -254,7 +252,7 @@ public class MainActivity extends Activity {
         LinearLayout mid = vertical();
         TextView title = text(task.title, 15, TEXT, Typeface.BOLD);
         mid.addView(title);
-        mid.addView(text(task.priorityName + " priority · " + task.minutes + " min", 11, MUTED, Typeface.NORMAL));
+        mid.addView(text(task.priorityName() + " priority · " + task.minutes + " min", 11, MUTED, Typeface.NORMAL));
         row.addView(mid, new LinearLayout.LayoutParams(0, -2, 1));
 
         MaterialButton start = button("Start");
@@ -783,7 +781,7 @@ public class MainActivity extends Activity {
             this.completed = completed;
         }
 
-        String get priorityName() {
+        String priorityName() {
             return priority == 3 ? "High" : priority == 2 ? "Medium" : "Low";
         }
     }
