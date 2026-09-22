@@ -25,7 +25,17 @@ import java.time.LocalTime
 import java.time.temporal.ChronoUnit
 
 @Composable
-fun DashboardScreen(repo: JeeRepository, selectedTab: AppTab, onTabSelected: (AppTab) -> Unit, onAiClick: () -> Unit = {}, onOpenPlanner: () -> Unit = {}, onOpenRevision: () -> Unit = {}, onOpenSettings: () -> Unit = {}) {
+fun DashboardScreen(
+    repo: JeeRepository,
+    selectedTab: AppTab,
+    onTabSelected: (AppTab) -> Unit,
+    onAiClick: () -> Unit = {},
+    onOpenPlanner: () -> Unit = {},
+    onOpenRevision: () -> Unit = {},
+    onOpenSettings: () -> Unit = {},
+    onOpenAssessment: () -> Unit = {},
+    onOpenMistakes: () -> Unit = {}
+) {
     var refresh by remember { mutableIntStateOf(0) }
     val context = androidx.compose.ui.platform.LocalContext.current.applicationContext
     val learning = remember { LearningRepository(context) }
@@ -44,62 +54,149 @@ fun DashboardScreen(repo: JeeRepository, selectedTab: AppTab, onTabSelected: (Ap
     val greeting = when (LocalTime.now().hour) { in 5..11 -> "Good morning"; in 12..16 -> "Good afternoon"; else -> "Good evening" }
 
     Scaffold(containerColor = BgApp, bottomBar = { BottomNavBar(selectedTab, onTabSelected, onAiClick) }) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 18.dp).verticalScroll(rememberScrollState())) {
+        Column(
+            Modifier.fillMaxSize().padding(padding).padding(horizontal = 18.dp).verticalScroll(rememberScrollState())
+        ) {
             Spacer(Modifier.height(10.dp))
-            Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().padding(bottom = 20.dp), Arrangement.SpaceBetween, Alignment.CenterVertically) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = onOpenSettings, modifier = Modifier.size(38.dp)) {
-                        Box(Modifier.size(38.dp).clip(CircleShape).background(AccentBlueSoft), Alignment.Center) { Icon(Icons.Filled.Person, null, tint = AccentBlueLight, modifier = Modifier.size(18.dp)) }
+                    IconButton(onClick = onOpenSettings, modifier = Modifier.size(42.dp)) {
+                        Box(Modifier.size(42.dp).clip(CircleShape).background(AccentBlueSoft), Alignment.Center) {
+                            Icon(Icons.Filled.Person, null, tint = AccentBlueLight, modifier = Modifier.size(19.dp))
+                        }
                     }
-                    Spacer(Modifier.width(9.dp))
-                    Column { Text(greeting, style = MaterialTheme.typography.titleMedium); Text("Let's make today count", color = TextMuted, fontSize = 11.sp) }
+                    Spacer(Modifier.width(10.dp))
+                    Column {
+                        Text(greeting, style = MaterialTheme.typography.titleMedium)
+                        Text("Let's make today count", color = TextSecondary, fontSize = 12.sp)
+                    }
                 }
                 Icon(Icons.Filled.Refresh, "Refresh", tint = TextSecondary, modifier = Modifier.premiumClick { refresh++ })
             }
-            Spacer(Modifier.height(18.dp))
+
+            // Hero: visually distinct from the page background.
+            Column(
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(BgCardAlt).padding(20.dp)
+            ) {
+                Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.Top) {
+                    Column {
+                        Text("⚡  JEE 2027", color = AccentBlueLight, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                        Spacer(Modifier.height(8.dp))
+                        Row(verticalAlignment = Alignment.Bottom) {
+                            Text(days.toString(), style = MaterialTheme.typography.displaySmall)
+                            Spacer(Modifier.width(6.dp))
+                            Text("days to 2027", color = TextSecondary, fontSize = 13.sp)
+                        }
+                    }
+                    Text("Live from your study\ndata", color = TextSecondary, fontSize = 12.sp, lineHeight = 17.sp)
+                }
+                Spacer(Modifier.height(16.dp))
+                LinearStatBar(prep, height = 6.dp)
+            }
+
+            Spacer(Modifier.height(24.dp))
+            SectionHeader("Preparation", "Overall")
+            Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.Bottom) {
+                Text("${(prep * 100).toInt()}%", style = MaterialTheme.typography.displaySmall)
+                Text("$done chapters complete · ${todayTasks.count { it.done }} tasks today", color = TextSecondary, fontSize = 12.sp)
+            }
+            Spacer(Modifier.height(9.dp)); LinearStatBar(prep, height = 7.dp)
+
+            Spacer(Modifier.height(24.dp))
+            SectionHeader("Today", "${LocalDate.now().dayOfWeek.name.lowercase().replaceFirstChar { it.uppercase() }}")
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Surface(color = BgCard, shape = RoundedCornerShape(18.dp), tonalElevation = 0.dp) {
+                    Row(Modifier.fillMaxWidth().padding(17.dp), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+                        Column {
+                            Text("Study goal", color = TextSecondary, fontSize = 13.sp)
+                            Spacer(Modifier.height(4.dp))
+                            Text("${today / 60}h ${today % 60}m", style = MaterialTheme.typography.titleLarge)
+                            Text("/ ${goal / 60}h", color = TextMuted, fontSize = 12.sp)
+                        }
+                        Box(Modifier.size(54.dp).clip(CircleShape).background(BgCardAlt), Alignment.Center) {
+                            Text("${if (goal == 0) 0 else (today * 100 / goal).coerceIn(0, 100)}%", color = AccentGreen, fontSize = 13.sp)
+                        }
+                    }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    HomeActionCard("Plan", "Open planner", "Auto-built from study state", Modifier.weight(1f), onOpenPlanner)
+                    HomeActionCard("Revision", "$due due", "Spaced review queue", Modifier.weight(1f), onOpenRevision)
+                }
+            }
+
+            Spacer(Modifier.height(10.dp))
             Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(BgCardAlt).padding(18.dp)) {
-                Text("JEE 2027", color = AccentBlue, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-                Row(verticalAlignment = Alignment.Bottom) { Text(days.toString(), style = MaterialTheme.typography.displaySmall); Spacer(Modifier.width(5.dp)); Text("days to 2027", color = TextMuted, fontSize = 12.sp) }
-                Spacer(Modifier.height(12.dp)); Text("Preparation", color = TextSecondary, fontSize = 11.sp); Text("${(prep * 100).toInt()}%", style = MaterialTheme.typography.titleLarge); Spacer(Modifier.height(6.dp)); LinearStatBar(prep)
-            }
-            Spacer(Modifier.height(12.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                MetricTile("Today", "${today / 60}h ${today % 60}m", "of ${goal / 60}h goal", Modifier.weight(1f)); MetricTile("Syllabus", "${(prep * 100).toInt()}%", "$done chapters", Modifier.weight(1f)); MetricTile("Revision", "$due", "due", Modifier.weight(1f))
-            }
-            Spacer(Modifier.height(12.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) { ActionTile("Today's plan", "Open planner", Modifier.weight(1f), onOpenPlanner); ActionTile("Revision", "$due due", Modifier.weight(1f), onOpenRevision) }
-            if (priorities.isNotEmpty()) {
-                Spacer(Modifier.height(12.dp))
-                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(BgCard).padding(15.dp)) {
-                    Text("TODAY'S PRIORITIES", color = TextSecondary, fontSize = 11.sp); Spacer(Modifier.height(8.dp))
+                Text("Today's priorities", style = MaterialTheme.typography.titleLarge)
+                Text("What matters most right now, based on your data.", color = TextMuted, fontSize = 12.sp)
+                Spacer(Modifier.height(8.dp))
+                if (priorities.isEmpty()) {
+                    Text("No priority generated yet.", color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(vertical = 10.dp))
+                } else {
                     priorities.forEachIndexed { index, priority ->
-                        Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Text("${index + 1}", color = AccentBlue, fontSize = 12.sp); Spacer(Modifier.width(9.dp))
-                            Column(Modifier.weight(1f)) { Text(priority.title, fontSize = 13.sp); Text(priority.reason, color = TextMuted, fontSize = 10.sp) }
-                            Text("${priority.durationMin}m", color = TextSecondary, fontSize = 10.sp)
+                        Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text("${index + 1}", color = AccentBlue, fontSize = 13.sp, modifier = Modifier.width(18.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(priority.title, fontSize = 14.sp)
+                                Text(priority.reason, color = TextMuted, fontSize = 11.sp)
+                            }
+                            Text("${priority.durationMin}m", color = TextSecondary, fontSize = 12.sp)
                         }
                     }
                 }
             }
-            Spacer(Modifier.height(12.dp))
+
             if (next != null) {
-                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(BgPriority).padding(15.dp).premiumClick { onTabSelected(AppTab.TASKS) }) {
-                    Text("DO THIS NOW", color = AccentBlue, fontSize = 11.sp, fontWeight = FontWeight.Medium); Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(10.dp))
+                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(BgCardAlt).padding(17.dp)) {
                     Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) { Text(next.title, style = MaterialTheme.typography.titleMedium); Text("${next.subject} · ${next.durationMin}m", color = TextSecondary, fontSize = 11.sp) }
-                        Box(Modifier.size(34.dp).clip(CircleShape).background(AccentBlue), Alignment.Center) { Icon(Icons.Filled.ArrowForward, null, tint = Color(0xFF17120A), modifier = Modifier.size(16.dp)) }
+                        Text("⚡  DO THIS NOW", color = AccentBlueLight, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        Text("Next task", color = AccentPink, fontSize = 12.sp)
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(next.title, style = MaterialTheme.typography.titleMedium)
+                            Text("${next.subject} · ${next.durationMin} min", color = TextSecondary, fontSize = 12.sp)
+                        }
+                        Box(Modifier.size(42.dp).clip(CircleShape).background(AccentBlue).premiumClick { onTabSelected(AppTab.TASKS) }, Alignment.Center) {
+                            Icon(Icons.Filled.ArrowForward, null, tint = Color(0xFF17120A), modifier = Modifier.size(19.dp))
+                        }
                     }
                 }
             }
-            Spacer(Modifier.height(10.dp)); SectionHeader("Today's tasks")
-            todayTasks.forEachIndexed { index, task ->
-                TaskRow(TaskItem(task.id.toString(), task.title, task.subject, "${task.durationMin}m", task.done)) { id -> repo.toggleTask(id.toLong()); refresh++ }
-                if (index < todayTasks.lastIndex) HorizontalDivider(color = BgDivider, thickness = .5.dp)
+
+            Spacer(Modifier.height(24.dp))
+            SectionHeader("Practice & mistakes")
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                HomeActionCard("Questions practice", "Practice by subject", "Build question volume", Modifier.weight(1f), onOpenAssessment)
+                HomeActionCard("Mistake bank", "Review weak patterns", "Recurring errors", Modifier.weight(1f), onOpenMistakes)
             }
-            Spacer(Modifier.height(20.dp))
+
+            Spacer(Modifier.height(24.dp))
+            SectionHeader("Today's tasks", "See all") { onTabSelected(AppTab.TASKS) }
+            if (todayTasks.isEmpty()) {
+                Text("No tasks scheduled for today.", color = TextMuted, fontSize = 13.sp, modifier = Modifier.padding(vertical = 8.dp))
+            } else {
+                todayTasks.take(4).forEachIndexed { index, task ->
+                    TaskRow(
+                        TaskItem(task.id.toString(), task.title, task.subject, "${task.durationMin}m", task.done),
+                        onToggle = { id -> repo.toggleTask(id.toLong()); refresh++ },
+                        onClick = { onTabSelected(AppTab.TASKS) }
+                    )
+                    if (index < minOf(todayTasks.size, 4) - 1) HorizontalDivider(color = BgDivider, thickness = .5.dp)
+                }
+            }
+            Spacer(Modifier.height(24.dp))
         }
     }
 }
 
-@Composable private fun MetricTile(label: String, value: String, sub: String, modifier: Modifier) { Column(modifier.clip(RoundedCornerShape(16.dp)).background(BgCard).padding(13.dp)) { Text(label, color = TextSecondary, fontSize = 10.sp); Text(value, style = MaterialTheme.typography.titleMedium); Text(sub, color = TextMuted, fontSize = 9.sp) } }
-@Composable private fun ActionTile(label: String, value: String, modifier: Modifier, onClick: () -> Unit) { Column(modifier.clip(RoundedCornerShape(16.dp)).background(BgCard).premiumClick(onClick).padding(14.dp)) { Text(label, color = TextSecondary, fontSize = 10.sp); Text(value, style = MaterialTheme.typography.titleMedium); Text("From your study data", color = TextMuted, fontSize = 9.sp) } }
+@Composable
+private fun HomeActionCard(title: String, value: String, subtitle: String, modifier: Modifier, onClick: () -> Unit) {
+    Column(modifier.clip(RoundedCornerShape(18.dp)).background(BgCard).premiumClick(onClick).padding(16.dp)) {
+        Text(title, color = TextSecondary, fontSize = 13.sp)
+        Spacer(Modifier.height(4.dp))
+        Text(value, style = MaterialTheme.typography.titleMedium)
+        Text(subtitle, color = TextMuted, fontSize = 10.sp, maxLines = 1)
+    }
+}
