@@ -1,33 +1,55 @@
-# It Really Worked — Android APK Test
+# JeE — JEE 2027 Command Center
 
-This repository is a minimal Android app used to verify that we can build an installable **.apk entirely through GitHub Actions**, without needing Android Studio or a PC.
+A personal, offline-first Android command center for JEE 2027 preparation.
 
-## What the app does
+## Current stack
 
-The app intentionally does only one thing:
+- Kotlin
+- Jetpack Compose + Material 3
+- Android Gradle Plugin 8.6.1
+- Gradle 8.7
+- Kotlin 2.0.20
+- compileSdk / targetSdk 35
+- minSdk 23
+- Java 17
+- SharedPreferences + JSON for the current local data layer
 
-**Displays:** It Really Worked
+## Current functionality
 
-## Build process
+- Dashboard driven by stored study/task data
+- Chapter progress tracking
+- Task creation, completion, deletion, and persistence
+- Study timer with presets
+- Completed study-session recording
+- Daily study-goal tracking
+- Local persistence across app restarts
+- Haptic interaction feedback
+- Bottom navigation
 
-1. Android source code is stored in this repository.
-2. GitHub Actions runs the Android/Gradle build in the cloud.
-3. A debug APK is generated at app/build/outputs/apk/debug/app-debug.apk.
-4. The workflow uploads the APK as a GitHub Actions artifact.
-5. The APK can then be downloaded to an Android phone and installed for testing.
+## Build
 
-## Project
+The app is built through GitHub Actions and produces the debug APK at:
+app/build/outputs/apk/debug/app-debug.apk
 
-- **Application ID:** com.example.itreallyworked
-- **Version:** 1.0
-- **Minimum Android:** API 23
-- **Target Android:** API 35
-- **Build:** Debug APK
-- **Build system:** Gradle + Android Gradle Plugin
-- **Automation:** GitHub Actions
+The current workflow is intentionally simple:
 
-## Purpose
+Phone → GitHub → GitHub Actions → Gradle/Android SDK → APK → phone
 
-This is a proof-of-concept for a **phone-only Android development workflow**: write/edit code on a phone, let GitHub's cloud runner compile it, and obtain an installable APK.
+## Product direction
 
-The next step is to verify the workflow and download/install the generated APK.
+JeE is intended to become a real JEE preparation command center rather than a generic productivity app.
+
+Planned domain systems include:
+
+- richer syllabus states
+- revision scheduling
+- mistake bank
+- test tracking
+- actionable analytics
+- justified reminders/notifications
+
+The app remains offline-first unless a strong product reason justifies cloud functionality.
+
+## Important data rule
+
+Dashboard values must come from actual stored data. The application does not intentionally seed fake/demo tasks or study metrics.
