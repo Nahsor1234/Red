@@ -1,4 +1,4 @@
-package com.example.jeecommandcenter.ui.components
+package com.example.jeecommandcenter.ui.theme
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.MaterialTheme
@@ -7,6 +7,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import com.example.jeecommandcenter.ui.theme.JeeSpacing
 
 @Composable
