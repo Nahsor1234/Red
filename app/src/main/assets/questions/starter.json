@@ -1,0 +1,254 @@
+[
+  {
+    "id": "phy_units_001",
+    "subject": "Physics",
+    "chapterId": "Physics_1",
+    "chapter": "Units and measurements",
+    "topic": "SI units",
+    "prompt": "Which SI unit is used for force?",
+    "options": [
+      "Joule",
+      "Newton",
+      "Pascal",
+      "Watt"
+    ],
+    "correctIndex": 1,
+    "explanation": "Force is measured in newtons (N), kg·m/s².",
+    "difficulty": 1,
+    "source": "JeE starter bank",
+    "year": null,
+    "marks": 4,
+    "negativeMarks": 1
+  },
+  {
+    "id": "phy_motion_001",
+    "subject": "Physics",
+    "chapterId": "Physics_2",
+    "chapter": "Motion in a straight line",
+    "topic": "Equations of motion",
+    "prompt": "A body starts from rest and accelerates uniformly at 2 m/s². What is its speed after 5 s?",
+    "options": [
+      "5 m/s",
+      "7 m/s",
+      "10 m/s",
+      "12 m/s"
+    ],
+    "correctIndex": 2,
+    "explanation": "v = u + at = 0 + 2×5 = 10 m/s.",
+    "difficulty": 2,
+    "source": "JeE starter bank",
+    "year": null,
+    "marks": 4,
+    "negativeMarks": 1
+  },
+  {
+    "id": "phy_current_001",
+    "subject": "Physics",
+    "chapterId": "Physics_18",
+    "chapter": "Current electricity",
+    "topic": "Resistance",
+    "prompt": "Two resistors of 2 Ω and 3 Ω are connected in series. What is their equivalent resistance?",
+    "options": [
+      "1 Ω",
+      "5 Ω",
+      "6 Ω",
+      "2.5 Ω"
+    ],
+    "correctIndex": 1,
+    "explanation": "Series resistances add: 2 + 3 = 5 Ω.",
+    "difficulty": 2,
+    "source": "JeE starter bank",
+    "year": null,
+    "marks": 4,
+    "negativeMarks": 1
+  },
+  {
+    "id": "chem_atom_001",
+    "subject": "Chemistry",
+    "chapterId": "Chemistry_2",
+    "chapter": "Structure of atom",
+    "topic": "Atomic number",
+    "prompt": "The atomic number of an element equals the number of:",
+    "options": [
+      "Neutrons",
+      "Protons",
+      "Nucleons",
+      "Protons + neutrons"
+    ],
+    "correctIndex": 1,
+    "explanation": "Atomic number Z is the number of protons in the nucleus.",
+    "difficulty": 1,
+    "source": "JeE starter bank",
+    "year": null,
+    "marks": 4,
+    "negativeMarks": 1
+  },
+  {
+    "id": "chem_basic_001",
+    "subject": "Chemistry",
+    "chapterId": "Chemistry_1",
+    "chapter": "Some basic concepts of chemistry",
+    "topic": "Moles",
+    "prompt": "How many particles are present in one mole of a substance?",
+    "options": [
+      "6.022×10^23",
+      "3.011×10^23",
+      "9.81×10^2",
+      "1.602×10^-19"
+    ],
+    "correctIndex": 0,
+    "explanation": "One mole contains Avogadro number, approximately 6.022×10^23 entities.",
+    "difficulty": 1,
+    "source": "JeE starter bank",
+    "year": null,
+    "marks": 4,
+    "negativeMarks": 1
+  },
+  {
+    "id": "chem_redox_001",
+    "subject": "Chemistry",
+    "chapterId": "Chemistry_7",
+    "chapter": "Redox reactions",
+    "topic": "Oxidation",
+    "prompt": "Oxidation is best described as:",
+    "options": [
+      "Gain of electrons",
+      "Loss of electrons",
+      "Gain of neutrons",
+      "Loss of protons"
+    ],
+    "correctIndex": 1,
+    "explanation": "Oxidation corresponds to loss of electrons.",
+    "difficulty": 2,
+    "source": "JeE starter bank",
+    "year": null,
+    "marks": 4,
+    "negativeMarks": 1
+  },
+  {
+    "id": "math_sets_001",
+    "subject": "Mathematics",
+    "chapterId": "Mathematics_1",
+    "chapter": "Sets",
+    "topic": "Set cardinality",
+    "prompt": "If A = {1, 2, 3, 4}, what is n(A)?",
+    "options": [
+      "2",
+      "3",
+      "4",
+      "5"
+    ],
+    "correctIndex": 2,
+    "explanation": "The set contains four distinct elements.",
+    "difficulty": 1,
+    "source": "JeE starter bank",
+    "year": null,
+    "marks": 4,
+    "negativeMarks": 1
+  },
+  {
+    "id": "math_quad_001",
+    "subject": "Mathematics",
+    "chapterId": "Mathematics_5",
+    "chapter": "Quadratic equations",
+    "topic": "Roots",
+    "prompt": "For x² - 5x + 6 = 0, the roots are:",
+    "options": [
+      "1 and 6",
+      "2 and 3",
+      "-2 and -3",
+      "0 and 6"
+    ],
+    "correctIndex": 1,
+    "explanation": "x² - 5x + 6 = (x - 2)(x - 3).",
+    "difficulty": 2,
+    "source": "JeE starter bank",
+    "year": null,
+    "marks": 4,
+    "negativeMarks": 1
+  },
+  {
+    "id": "math_derivative_001",
+    "subject": "Mathematics",
+    "chapterId": "Mathematics_13",
+    "chapter": "Continuity and differentiability",
+    "topic": "Differentiation",
+    "prompt": "What is d(x²)/dx?",
+    "options": [
+      "x",
+      "2x",
+      "x²/2",
+      "2"
+    ],
+    "correctIndex": 1,
+    "explanation": "By the power rule, d(x²)/dx = 2x.",
+    "difficulty": 1,
+    "source": "JeE starter bank",
+    "year": null,
+    "marks": 4,
+    "negativeMarks": 1
+  },
+  {
+    "id": "math_det_001",
+    "subject": "Mathematics",
+    "chapterId": "Mathematics_19",
+    "chapter": "Determinants",
+    "topic": "2×2 determinant",
+    "prompt": "What is the determinant of [[1, 2], [3, 4]]?",
+    "options": [
+      "-2",
+      "2",
+      "10",
+      "-10"
+    ],
+    "correctIndex": 0,
+    "explanation": "ad - bc = 1×4 - 2×3 = -2.",
+    "difficulty": 2,
+    "source": "JeE starter bank",
+    "year": null,
+    "marks": 4,
+    "negativeMarks": 1
+  },
+  {
+    "id": "phy_energy_001",
+    "subject": "Physics",
+    "chapterId": "Physics_5",
+    "chapter": "Work, energy and power",
+    "topic": "Kinetic energy",
+    "prompt": "The kinetic energy of a body of mass m moving with speed v is:",
+    "options": [
+      "mv",
+      "mv²",
+      "1/2 mv²",
+      "m/v²"
+    ],
+    "correctIndex": 2,
+    "explanation": "K = ½mv².",
+    "difficulty": 1,
+    "source": "JeE starter bank",
+    "year": null,
+    "marks": 4,
+    "negativeMarks": 1
+  },
+  {
+    "id": "chem_bond_001",
+    "subject": "Chemistry",
+    "chapterId": "Chemistry_4",
+    "chapter": "Chemical bonding",
+    "topic": "Bonding",
+    "prompt": "A covalent bond is formed primarily by:",
+    "options": [
+      "Transfer of protons",
+      "Sharing of electrons",
+      "Transfer of neutrons",
+      "Sharing of nuclei"
+    ],
+    "correctIndex": 1,
+    "explanation": "Covalent bonding results from sharing electron pairs.",
+    "difficulty": 2,
+    "source": "JeE starter bank",
+    "year": null,
+    "marks": 4,
+    "negativeMarks": 1
+  }
+]
