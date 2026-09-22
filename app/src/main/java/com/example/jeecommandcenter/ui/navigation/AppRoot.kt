@@ -1,24 +1,7 @@
 package com.example.jeecommandcenter.ui.navigation
-
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
+import com.example.jeecommandcenter.data.JeeRepository
 import com.example.jeecommandcenter.ui.components.AppTab
-import com.example.jeecommandcenter.ui.screens.DashboardScreen
-import com.example.jeecommandcenter.ui.screens.StudyTimerScreen
-import com.example.jeecommandcenter.ui.screens.SyllabusScreen
-import com.example.jeecommandcenter.ui.screens.TasksScreen
-
-@Composable
-fun AppRoot() {
-    var selectedTab by remember { mutableStateOf(AppTab.HOME) }
-
-    when (selectedTab) {
-        AppTab.HOME -> DashboardScreen(selectedTab, { selectedTab = it }, {})
-        AppTab.SYLLABUS -> SyllabusScreen(selectedTab, { selectedTab = it }, {})
-        AppTab.TASKS -> TasksScreen(selectedTab, { selectedTab = it }, {})
-        AppTab.STATS -> StudyTimerScreen(selectedTab, { selectedTab = it }, {})
-    }
-}
+import com.example.jeecommandcenter.ui.screens.*
+@Composable fun AppRoot(){val repo=remember{JeeRepository(LocalContext.current.applicationContext)};var selectedTab by remember{mutableStateOf(AppTab.HOME)};when(selectedTab){AppTab.HOME->DashboardScreen(repo,selectedTab,{selectedTab=it}){selectedTab=AppTab.TASKS};AppTab.SYLLABUS->SyllabusScreen(repo,selectedTab,{selectedTab=it});AppTab.TASKS->TasksScreen(repo,selectedTab,{selectedTab=it});AppTab.STATS->StudyTimerScreen(repo,selectedTab,{selectedTab=it})}}
