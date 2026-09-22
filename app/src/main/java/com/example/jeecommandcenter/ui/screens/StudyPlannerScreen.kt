@@ -30,8 +30,9 @@ fun StudyPlannerScreen(
 ) {
     var refresh by remember { mutableIntStateOf(0) }
     var generating by remember { mutableStateOf(false) }
-
-    val plan = remember(refresh) { repo.getOrCreateDailyPlan() }
+    val context = androidx.compose.ui.platform.LocalContext.current.applicationContext
+    val learning = remember { LearningRepository(context) }
+    val plan = remember(refresh) { repo.getOrCreateDailyPlan(learning) }
     val completed = plan.items.count { it.completed }
     val doneMinutes = plan.items.filter { it.completed }.sumOf { it.durationMin }
     val remainingMinutes = (plan.goalMinutes - doneMinutes).coerceAtLeast(0)
@@ -60,7 +61,7 @@ fun StudyPlannerScreen(
                     modifier = Modifier.premiumClick {
                         if (!generating) {
                             generating = true
-                            repo.regenerateDailyPlan()
+                            repo.regenerateDailyPlan(learning)
                             refresh++
                             generating = false
                         }
@@ -91,7 +92,7 @@ fun StudyPlannerScreen(
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Button(
                         onClick = {
-                            repo.regenerateDailyPlan()
+                            repo.regenerateDailyPlan(learning)
                             refresh++
                         },
                         modifier = Modifier.weight(1f),
