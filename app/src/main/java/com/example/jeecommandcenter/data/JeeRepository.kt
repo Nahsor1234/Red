@@ -177,24 +177,6 @@ class JeeRepository(context: Context) {
         prefs.edit().putInt("daily_goal", value.coerceIn(15, 1440)).apply()
 
     fun getChapterProgress(subject: String, number: Int): Float =
-        prefs.getFloat("chapter_${subject}_$number", 0f)
-
-    fun setChapterProgress(subject: String, number: Int, progress: Float) =
-        prefs.edit()
-            .putFloat("chapter_${subject}_$number", progress.coerceIn(0f, 1f))
-            .apply()
-
-    fun chapters(subject: String): List<ChapterProgress> =
-        (syllabus[subject] ?: emptyList()).mapIndexed { index, name ->
-            ChapterProgress(
-                subject = subject,
-                number = index + 1,
-                name = name,
-                progress = getChapterProgress(subject, index + 1)
-            )
-        }
-
-    fun getChapterProgress(subject: String, number: Int): Float =
         prefs.getFloat("chapter_" + subject + "_" + number, 0f)
 
     fun setChapterProgress(subject: String, number: Int, progress: Float) {
@@ -652,39 +634,5 @@ class JeeRepository(context: Context) {
         private const val MIN_TIMER_SECONDS = 60
         private const val MAX_TIMER_SECONDS = 24 * 60 * 60
 
-        val syllabus = mapOf(
-            "Physics" to listOf(
-                "Units and measurements", "Motion in a straight line", "Motion in a plane",
-                "Laws of motion", "Work, energy and power", "System of particles",
-                "Rotational motion", "Gravitation", "Mechanical properties of solids",
-                "Mechanical properties of fluids", "Thermal properties of matter",
-                "Thermodynamics", "Kinetic theory", "Oscillations", "Waves",
-                "Electric charges and fields", "Electrostatic potential and capacitance",
-                "Current electricity", "Moving charges and magnetism", "Magnetism and matter",
-                "Electromagnetic induction", "Alternating current", "Electromagnetic waves",
-                "Ray optics", "Wave optics", "Dual nature of matter", "Atoms", "Nuclei",
-                "Semiconductor electronics"
-            ),
-            "Chemistry" to listOf(
-                "Some basic concepts of chemistry", "Structure of atom",
-                "Classification of elements", "Chemical bonding", "Thermodynamics",
-                "Equilibrium", "Redox reactions", "Organic chemistry basics", "Hydrocarbons",
-                "Solutions", "Electrochemistry", "Chemical kinetics", "Surface chemistry",
-                "p-Block elements", "d- and f-Block elements", "Coordination compounds",
-                "Haloalkanes and haloarenes", "Alcohols, phenols and ethers",
-                "Aldehydes, ketones and carboxylic acids", "Amines",
-                "Biomolecules and polymers", "Practical chemistry"
-            ),
-            "Mathematics" to listOf(
-                "Sets", "Relations and functions", "Trigonometric functions",
-                "Complex numbers", "Quadratic equations", "Sequences and series",
-                "Permutations and combinations", "Binomial theorem", "Straight lines",
-                "Circles", "Conic sections", "Limits", "Continuity and differentiability",
-                "Application of derivatives", "Integrals", "Application of integrals",
-                "Differential equations", "Matrices", "Determinants", "Vector algebra",
-                "Three dimensional geometry", "Statistics", "Probability",
-                "Mathematical reasoning"
-            )
-        )
     }
 }
