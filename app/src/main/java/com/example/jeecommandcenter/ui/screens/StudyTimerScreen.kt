@@ -293,7 +293,6 @@ fun StudyTimerScreen(
             }
         }
     }
-}
 
     if (showCustomDialog) {
         AlertDialog(
