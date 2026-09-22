@@ -17,11 +17,3 @@ fun Modifier.premiumClick(
         onClick()
     }
 }
-
-fun Modifier.premiumClick(haptic: Int?, onClick: () -> Unit): Modifier = composed {
-    val view = LocalView.current
-    clickable {
-        haptic?.let(view::performHapticFeedback)
-        onClick()
-    }
-}
