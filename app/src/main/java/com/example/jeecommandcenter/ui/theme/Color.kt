@@ -2,30 +2,31 @@ package com.example.jeecommandcenter.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val BgApp = Color(0xFF0B1220)
-val BgCard = Color(0xFF111C30)
-val BgCardAlt = Color(0xFF132339)
-val BgCardBorder = Color(0xFF1E3A5F)
-val BgDivider = Color(0xFF1E293B)
-val BgPriority = Color(0xFF2A1A0A)
-val BorderPriority = Color(0xFF78350F)
-val BgPriorityBadge = Color(0xFF3F1D1D)
-val TextPriorityBadge = Color(0xFFFCA5A5)
-val TextAmber = Color(0xFFFBBF24)
-val TextPrimary = Color(0xFFF8FAFC)
-val TextSecondary = Color(0xFF94A3B8)
-val TextMuted = Color(0xFF64748B)
-val TextOnCard = Color(0xFFE2E8F0)
-val AccentBlue = Color(0xFF3B82F6)
-val AccentBlueLight = Color(0xFF93C5FD)
-val AccentBlueSoft = Color(0xFF1E3A5F)
-val AccentGreen = Color(0xFF22C55E)
-val AccentGreenDark = Color(0xFF052E16)
-val AccentAmber = Color(0xFFF59E0B)
-val AccentPurple = Color(0xFFA855F7)
-val AccentPink = Color(0xFFEC4899)
+// Warm Graphite palette
+val BgApp = Color(0xFF0C0C0D)          // Background
+val BgCard = Color(0xFF18181B)         // Surface
+val BgCardAlt = Color(0xFF1E1E21)      // Surface Alt
+val BgCardBorder = Color(0xFF3F3F42)   // Border / Divider
+val BgDivider = Color(0xFF3F3F42)     // Border / Divider
+val BgPriority = Color(0xFF1E1E21)
+val BorderPriority = Color(0xFF3F3F42)
+val BgPriorityBadge = Color(0xFF1E1E21)
+val TextPriorityBadge = Color(0xFFEF4444) // Danger
+val TextAmber = Color(0xFFFCD34D)         // Primary Light
+val TextPrimary = Color(0xFFFAFAFA)
+val TextSecondary = Color(0xFFA1A1A8)
+val TextMuted = Color(0xFF6B6B70)
+val TextOnCard = Color(0xFFFAFAFA)
+val AccentBlue = Color(0xFFF59E0B)      // Primary / Accent
+val AccentBlueLight = Color(0xFFFCD34D) // Primary Light
+val AccentBlueSoft = Color(0xFF1E1E21)
+val AccentGreen = Color(0xFF4ADE80)     // Success
+val AccentGreenDark = Color(0xFF18181B)
+val AccentAmber = Color(0xFFFACC15)     // Warning
+val AccentPurple = Color(0xFFFCD34D)
+val AccentPink = Color(0xFFEF4444)
 val ChipSelectedBg = AccentBlue
-val ChipUnselectedBg = Color(0xFF16233A)
+val ChipUnselectedBg = BgCard
 
 object JeeColors {
     val background = BgApp
@@ -33,7 +34,7 @@ object JeeColors {
     val elevatedSurface = BgCardAlt
     val primary = AccentBlue
     val primarySoft = AccentBlueSoft
-    val secondary = AccentPurple
+    val secondary = AccentGreen
     val accent = AccentBlueLight
     val success = AccentGreen
     val warning = AccentAmber
