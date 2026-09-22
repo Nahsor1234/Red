@@ -29,7 +29,7 @@ fun DashboardScreen(
     repo: JeeRepository,
     selectedTab: AppTab,
     onTabSelected: (AppTab) -> Unit,
-    onFabClick: () -> Unit = {},
+    onAiClick: () -> Unit = {},
     onOpenPlanner: () -> Unit = {},
     onOpenRevision: () -> Unit = {},
     onOpenSettings: () -> Unit = {}
@@ -62,12 +62,13 @@ fun DashboardScreen(
 
     Scaffold(
         containerColor = BgApp,
-        bottomBar = { BottomNavBar(selectedTab, onTabSelected, onFabClick) }
+        bottomBar = { BottomNavBar(selectedTab, onTabSelected, onAiClick) }
     ) { padding ->
         Column(
             Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .statusBarsPadding()
                 .padding(horizontal = 16.dp)
                 .verticalScroll(rememberScrollState())
         ) {
