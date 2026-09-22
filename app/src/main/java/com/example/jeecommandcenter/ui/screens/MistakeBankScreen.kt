@@ -79,6 +79,7 @@ private fun MistakeCard(
     onRefresh: () -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
+    var typeMenu by remember { mutableStateOf(false) }
     Column(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(BgCard).padding(14.dp)
     ) {
@@ -91,7 +92,27 @@ private fun MistakeCard(
             Text("×" + mistake.count, color = if (mistake.count >= 2) AccentAmber else TextMuted)
         }
         Spacer(Modifier.height(8.dp))
-        Text("Type: " + mistake.mistakeType.name.replace('_', ' '), color = TextMuted, fontSize = 10.sp)
+        Box {
+            OutlinedButton(
+                onClick = { typeMenu = true },
+                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                modifier = Modifier.height(36.dp)
+            ) {
+                Text("Type: " + mistake.mistakeType.name.replace('_', ' '), fontSize = 10.sp)
+            }
+            DropdownMenu(expanded = typeMenu, onDismissRequest = { typeMenu = false }) {
+                MistakeType.entries.forEach { type ->
+                    DropdownMenuItem(
+                        text = { Text(type.name.replace('_', ' '), fontSize = 11.sp) },
+                        onClick = {
+                            learning.updateMistakeType(mistake.id, type)
+                            typeMenu = false
+                            onRefresh()
+                        }
+                    )
+                }
+            }
+        }
         if (expanded) {
             Spacer(Modifier.height(8.dp))
             Text("Your last answer: " + mistake.lastSelectedAnswer, color = TextSecondary, fontSize = 11.sp)
