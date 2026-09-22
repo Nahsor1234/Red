@@ -67,7 +67,7 @@ fun TasksScreen(
                 .padding(padding)
                 .padding(horizontal = 16.dp)
         ) {
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(JeeSpacing.md))
             Row(
                 Modifier.fillMaxWidth(),
                 Arrangement.SpaceBetween,
@@ -75,7 +75,7 @@ fun TasksScreen(
             ) {
                 Text(
                     "Tasks",
-                    style = MaterialTheme.typography.headlineMedium.copy(fontSize = 22.sp)
+                    style = MaterialTheme.typography.headlineSmall
                 )
                 Icon(
                     Icons.Filled.Refresh,
