@@ -760,6 +760,7 @@ class JeeRepository(context: Context) {
 
     companion object {
         const val CURRENT_SCHEMA_VERSION = 2
+        private const val DATA_VERSION_KEY = "data_schema_version"
 
         val syllabus: Map<String, List<String>>
             get() = JeeCatalog.chapters
