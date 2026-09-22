@@ -28,3 +28,9 @@ object JeeSizes {
     val navButton = 48.dp
     val primaryButtonHeight = 52.dp
 }
+
+object JeeSurfaceTokens {
+    val borderWidth = 1.dp
+    val cardBorderAlpha = 0.72f
+    val featuredBorderAlpha = 0.90f
+}
