@@ -55,7 +55,7 @@ fun SyllabusScreen(
                 .padding(padding)
                 .padding(horizontal = 16.dp)
         ) {
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(JeeSpacing.md))
             Row(
                 Modifier.fillMaxWidth(),
                 Arrangement.SpaceBetween,
@@ -63,7 +63,7 @@ fun SyllabusScreen(
             ) {
                 Text(
                     "Syllabus",
-                    style = MaterialTheme.typography.headlineMedium.copy(fontSize = 22.sp)
+                    style = MaterialTheme.typography.headlineSmall
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     TextButton(onClick = onOpenPlanner) {
