@@ -246,6 +246,13 @@ class JeeRepository(context: Context) {
             .apply()
     }
 
+    fun flagChapterWeak(chapterId: String) {
+        val chapter = JeeCatalog.find(chapterId) ?: return
+        val state = getChapterState(chapter.id)
+        setChapterState(chapter.id, state.progress, minOf(1, state.confidence))
+        ensureRevisionItem(chapter.id)
+    }
+
     fun getRevisionQueue(): List<RevisionQueueItem> {
         val today = LocalDate.now()
         return getRevisionItems()
@@ -310,13 +317,13 @@ class JeeRepository(context: Context) {
     fun getActiveRevisionCount(): Int =
         getRevisionItems().count { getChapterState(it.chapterId).progress > 0f }
 
-    fun getOrCreateDailyPlan(): DailyPlan {
+    fun getOrCreateDailyPlan(learning: LearningRepository? = null): DailyPlan {
         val today = LocalDate.now().toString()
         getDailyPlan()?.takeIf { it.date == today }?.let { return it }
-        return regenerateDailyPlan()
+        return regenerateDailyPlan(learning)
     }
 
-    fun regenerateDailyPlan(): DailyPlan {
+    fun regenerateDailyPlan(learning: LearningRepository? = null): DailyPlan {
         val today = LocalDate.now().toString()
         val goal = getDailyGoalMinutes()
         val selected = mutableListOf<PlannerItem>()
@@ -367,11 +374,14 @@ class JeeRepository(context: Context) {
                 val state = getChapterState(chapter.id)
                 val daysSinceStudy = if (state.lastStudiedAt == 0L) 999
                 else ((System.currentTimeMillis() - state.lastStudiedAt) / 86_400_000L).toInt()
+                val repeatedMistakes = learning?.getMistakes()
+                    ?.count { it.chapterId == chapter.id && !it.resolved } ?: 0
                 val score =
                     (1f - state.progress) * 100f +
                         (5 - state.confidence) * 9f +
                         chapter.difficulty * 5f +
-                        minOf(daysSinceStudy, 30) * 0.5f
+                        minOf(daysSinceStudy, 30) * 0.5f +
+                        repeatedMistakes * 18f
                 chapter to score
             }
             .sortedByDescending { it.second }
