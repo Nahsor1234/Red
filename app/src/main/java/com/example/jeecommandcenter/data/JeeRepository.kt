@@ -273,7 +273,7 @@ class JeeRepository(context: Context) {
                 val state = getChapterState(chapter.id)
                 val due = runCatching { LocalDate.parse(revision.dueDate) }.getOrNull()
                     ?: today
-                if (state.progress <= 0f || due.isAfter(today)) return@mapNotNull null
+                if (due.isAfter(today)) return@mapNotNull null
                 RevisionQueueItem(chapter, revision, state.progress, state.confidence)
             }
             .sortedWith(
