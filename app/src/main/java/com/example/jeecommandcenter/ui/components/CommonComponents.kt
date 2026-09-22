@@ -203,7 +203,7 @@ fun BottomNavBar(
 }
 
 @Composable
-private fun NavIcon(
+private fun RowScope.NavIcon(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
     selected: Boolean,
