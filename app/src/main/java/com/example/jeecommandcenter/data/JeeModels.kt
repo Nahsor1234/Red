@@ -180,3 +180,22 @@ object JeeCatalog {
     fun find(chapterId: String): JeeChapter? =
         chapters.firstOrNull { it.id == chapterId }
 }
+
+
+enum class ActivityType {
+    LEARNING,
+    PRACTICE,
+    REVISION,
+    TEST,
+    OTHER
+}
+
+data class RevisionRecord(
+    val id: String,
+    val chapterId: String,
+    val reviewedAt: Long,
+    val durationMin: Int,
+    val confidence: Int,
+    val result: RevisionRating,
+    val nextReviewAt: Long
+)
