@@ -51,3 +51,4 @@ class AiOrchestrator(context: android.content.Context) {
         }.replace("__DOLLAR__", "$")
         return AiEngine(settings).ask(prompt)
     }
+}
