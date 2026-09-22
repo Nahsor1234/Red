@@ -61,14 +61,14 @@ fun TasksScreen(repo: JeeRepository, selectedTab: AppTab, onTabSelected: (AppTab
             }
             LazyColumn(Modifier.weight(1f)) {
                 if (filter == "All") {
-                    taskGroup("Today", today, repo) { selectedTask = it }
-                    taskGroup("Upcoming", upcoming, repo) { selectedTask = it }
-                    if (completed.isNotEmpty()) taskGroup("Completed", completed, repo) { selectedTask = it }
+                    taskGroup("Today", today, repo, { selectedTask = it }, { refresh++ })
+                    taskGroup("Upcoming", upcoming, repo, { selectedTask = it }, { refresh++ })
+                    if (completed.isNotEmpty()) taskGroup("Completed", completed, repo, { selectedTask = it }, { refresh++ })
                     if (all.isEmpty()) emptyTaskState()
                 } else {
                     if (visible.isEmpty()) emptyTaskState()
                     else visible.forEach { task ->
-                        item(key = task.id) { TaskListItem(task, repo) { selectedTask = task } }
+                        item(key = task.id) { TaskListItem(task, repo, { selectedTask = it }, { refresh++ }) }
                     }
                 }
                 item { Spacer(Modifier.height(8.dp)) }
@@ -114,7 +114,13 @@ fun TasksScreen(repo: JeeRepository, selectedTab: AppTab, onTabSelected: (AppTab
     }
 }
 
-private fun LazyListScope.taskGroup(title: String, tasks: List<AppTask>, repo: JeeRepository, onOpen: (AppTask) -> Unit) {
+private fun LazyListScope.taskGroup(
+    title: String,
+    tasks: List<AppTask>,
+    repo: JeeRepository,
+    onOpen: (AppTask) -> Unit,
+    onRefresh: () -> Unit
+) {
     if (tasks.isEmpty()) return
     item(key = "header_$title") {
         Row(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 5.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -122,18 +128,18 @@ private fun LazyListScope.taskGroup(title: String, tasks: List<AppTask>, repo: J
             Spacer(Modifier.width(6.dp)); Text("· ${tasks.size}", color = TextMuted, fontSize = 11.sp)
         }
     }
-    items(tasks, key = { it.id }) { task -> TaskListItem(task, repo, onOpen) }
+    items(tasks, key = { it.id }) { task -> TaskListItem(task, repo, onOpen, onRefresh) }
 }
 
 @Composable
-private fun TaskListItem(task: AppTask, repo: JeeRepository, onOpen: (AppTask) -> Unit) {
+private fun TaskListItem(task: AppTask, repo: JeeRepository, onOpen: (AppTask) -> Unit, onRefresh: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().premiumClick { onOpen(task) }.padding(vertical = 11.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
             Modifier.size(23.dp).clip(RoundedCornerShape(7.dp)).background(if (task.done) AccentGreen else Color.Transparent)
-                .premiumClick(haptic = HapticFeedbackConstants.KEYBOARD_TAP) { repo.toggleTask(task.id) },
+                .premiumClick(haptic = HapticFeedbackConstants.KEYBOARD_TAP) { repo.toggleTask(task.id); onRefresh() },
             Alignment.Center
         ) {
             if (task.done) Icon(Icons.Filled.Check, null, tint = AccentGreenDark, modifier = Modifier.size(14.dp))
