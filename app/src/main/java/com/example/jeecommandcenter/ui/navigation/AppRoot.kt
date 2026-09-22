@@ -57,8 +57,7 @@ fun AppRoot() {
             AppTab.TASKS -> TasksScreen(
                 repo = repo,
                 selectedTab = selectedTab,
-                onTabSelected = ::selectTab,
-                onOpenPlanner = { secondaryPage = SecondaryPage.PLANNER }
+                onTabSelected = ::selectTab
             )
 
             AppTab.STATS -> StudyTimerScreen(
