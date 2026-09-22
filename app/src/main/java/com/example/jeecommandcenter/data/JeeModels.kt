@@ -44,7 +44,8 @@ data class RevisionItem(
     val ease: Float = 2.5f,
     val repetitions: Int = 0,
     val lapses: Int = 0,
-    val lastReviewedAt: Long = 0L
+    val lastReviewedAt: Long = 0L,
+    val lastResult: RevisionRating? = null
 )
 
 enum class PlannerItemType {
