@@ -269,6 +269,11 @@ class JeeRepository(context: Context) {
     }
 
     companion object {
+        val syllabus: Map<String, List<String>>
+            get() = JeeCatalog.chapters
+                .groupBy { it.subject }
+                .mapValues { entry -> entry.value.sortedBy { it.number }.map { it.name } }
+
         private const val DEFAULT_TIMER_SECONDS = 25 * 60
         private const val MIN_TIMER_SECONDS = 60
         private const val MAX_TIMER_SECONDS = 24 * 60 * 60
