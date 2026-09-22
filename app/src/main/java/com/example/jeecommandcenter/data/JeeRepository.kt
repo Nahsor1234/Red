@@ -14,7 +14,10 @@ data class AppTask(
     val subject: String,
     val durationMin: Int,
     val dueDay: String,
-    val done: Boolean = false
+    val done: Boolean = false,
+    val subjectId: String? = null,
+    val chapterId: String? = null,
+    val activityType: ActivityType = ActivityType.OTHER
 )
 
 data class StudySession(
@@ -23,7 +26,10 @@ data class StudySession(
     val minutes: Int,
     val subject: String,
     val chapter: String,
-    val startedAt: Long = id
+    val startedAt: Long = id,
+    val subjectId: String? = null,
+    val chapterId: String? = null,
+    val activityType: ActivityType = ActivityType.LEARNING
 )
 
 data class TimerState(
@@ -37,6 +43,20 @@ class JeeRepository(context: Context) {
 
     private val prefs = context.getSharedPreferences("jee_command_center", Context.MODE_PRIVATE)
 
+    init {
+        migrateSchema()
+    }
+
+    private fun migrateSchema() {
+        val version = prefs.getInt(DATA_VERSION_KEY, 0)
+        if (version < 1) prefs.edit().putInt(DATA_VERSION_KEY, 1).apply()
+        if (version < 2) {
+            // Existing JSON remains readable because all new fields are optional.
+            // This marks the start of explicit schema-versioned storage.
+            prefs.edit().putInt(DATA_VERSION_KEY, CURRENT_SCHEMA_VERSION).apply()
+        }
+    }
+
     fun getTasks(): List<AppTask> {
         val raw = prefs.getString("tasks", null) ?: return emptyList()
         return runCatching {
@@ -49,7 +69,14 @@ class JeeRepository(context: Context) {
                     subject = obj.getString("subject"),
                     durationMin = obj.getInt("duration"),
                     dueDay = obj.getString("dueDay"),
-                    done = obj.optBoolean("done")
+                    done = obj.optBoolean("done"),
+                    subjectId = obj.optString("subjectId").ifBlank { null },
+                    chapterId = obj.optString("chapterId").ifBlank { null },
+                    activityType = runCatching {
+                        ActivityType.valueOf(
+                            obj.optString("activityType", ActivityType.OTHER.name)
+                        )
+                    }.getOrDefault(ActivityType.OTHER)
                 )
             }.sortedBy { it.id }
         }.getOrDefault(emptyList())
@@ -59,7 +86,9 @@ class JeeRepository(context: Context) {
         title: String,
         subject: String,
         durationMin: Int,
-        dueDay: String = "Today"
+        dueDay: String = "Today",
+        chapterId: String? = null,
+        activityType: ActivityType = ActivityType.OTHER
     ): Boolean {
         val cleanTitle = title.trim()
         val cleanSubject = subject.trim().ifBlank { "General" }
@@ -75,7 +104,15 @@ class JeeRepository(context: Context) {
                 title = cleanTitle,
                 subject = cleanSubject,
                 durationMin = durationMin,
-                dueDay = if (dueDay == "Today") "Today" else "Upcoming"
+                dueDay = if (dueDay == "Today") "Today" else "Upcoming",
+                subjectId = when (cleanSubject) {
+                    "Physics" -> "physics"
+                    "Chemistry" -> "chemistry"
+                    "Mathematics" -> "mathematics"
+                    else -> null
+                },
+                chapterId = chapterId,
+                activityType = activityType
             )
         )
         saveTasks(tasks)
@@ -103,6 +140,9 @@ class JeeRepository(context: Context) {
                     put("duration", task.durationMin)
                     put("dueDay", task.dueDay)
                     put("done", task.done)
+                    put("subjectId", task.subjectId ?: "")
+                    put("chapterId", task.chapterId ?: "")
+                    put("activityType", task.activityType.name)
                 }
             )
         }
@@ -121,7 +161,14 @@ class JeeRepository(context: Context) {
                     minutes = obj.getInt("minutes"),
                     subject = obj.getString("subject"),
                     chapter = obj.getString("chapter"),
-                    startedAt = obj.optLong("startedAt", obj.getLong("id"))
+                    startedAt = obj.optLong("startedAt", obj.getLong("id")),
+                    subjectId = obj.optString("subjectId").ifBlank { null },
+                    chapterId = obj.optString("chapterId").ifBlank { null },
+                    activityType = runCatching {
+                        ActivityType.valueOf(
+                            obj.optString("activityType", ActivityType.LEARNING.name)
+                        )
+                    }.getOrDefault(ActivityType.LEARNING)
                 )
             }.sortedByDescending { it.startedAt }
         }.getOrDefault(emptyList())
@@ -131,7 +178,10 @@ class JeeRepository(context: Context) {
         minutes: Int,
         subject: String = "General",
         chapter: String = "Self study",
-        startedAt: Long = System.currentTimeMillis()
+        startedAt: Long = System.currentTimeMillis(),
+        subjectId: String? = null,
+        chapterId: String? = null,
+        activityType: ActivityType = ActivityType.LEARNING
     ) {
         if (minutes <= 0) return
 
@@ -146,7 +196,12 @@ class JeeRepository(context: Context) {
                 minutes = minutes,
                 subject = subject,
                 chapter = chapter,
-                startedAt = startedAt
+                startedAt = startedAt,
+                subjectId = subjectId ?: subject.lowercase().takeIf {
+                    it == "physics" || it == "chemistry" || it == "mathematics"
+                },
+                chapterId = chapterId,
+                activityType = activityType
             )
         )
 
@@ -160,6 +215,9 @@ class JeeRepository(context: Context) {
                     put("subject", session.subject)
                     put("chapter", session.chapter)
                     put("startedAt", session.startedAt)
+                    put("subjectId", session.subjectId ?: "")
+                    put("chapterId", session.chapterId ?: "")
+                    put("activityType", session.activityType.name)
                 }
             )
         }
@@ -646,6 +704,8 @@ class JeeRepository(context: Context) {
     }
 
     companion object {
+        const val CURRENT_SCHEMA_VERSION = 2
+
         val syllabus: Map<String, List<String>>
             get() = JeeCatalog.chapters
                 .groupBy { it.subject }
