@@ -42,14 +42,17 @@ fun StudyTimerScreen(
     repo: JeeRepository,
     selectedTab: AppTab,
     onTabSelected: (AppTab) -> Unit,
-    onFabClick: () -> Unit = {}
+    onAiClick: () -> Unit = {}
 ) {
     val initialState = remember { repo.restoreTimerState() }
     var selectedPreset by remember {
         mutableStateOf(
             TimerPreset.values().firstOrNull { it.minutes * 60 == initialState.totalSeconds }
-                ?: TimerPreset.POMODORO
         )
+    }
+    var showCustomDialog by remember { mutableStateOf(false) }
+    var customMinutes by remember {
+        mutableStateOf((initialState.totalSeconds / 60).coerceAtLeast(1).toString())
     }
     var totalSeconds by remember { mutableIntStateOf(initialState.totalSeconds) }
     var remaining by remember { mutableIntStateOf(initialState.remainingSeconds) }
@@ -96,12 +99,13 @@ fun StudyTimerScreen(
 
     Scaffold(
         containerColor = BgApp,
-        bottomBar = { BottomNavBar(selectedTab, onTabSelected, onFabClick) }
+        bottomBar = { BottomNavBar(selectedTab, onTabSelected, onAiClick) }
     ) { padding ->
         Column(
             Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .statusBarsPadding()
                 .padding(horizontal = 16.dp)
         ) {
             Spacer(Modifier.height(12.dp))
@@ -234,6 +238,14 @@ fun StudyTimerScreen(
                             resetToPreset(preset)
                         }
                     }
+                    CustomPresetCard(
+                        selected = selectedPreset == null,
+                        minutes = totalSeconds / 60,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        customMinutes = (totalSeconds / 60).coerceAtLeast(1).toString()
+                        showCustomDialog = true
+                    }
                 }
 
                 Spacer(Modifier.height(18.dp))
@@ -280,6 +292,44 @@ fun StudyTimerScreen(
                 )
             }
         }
+    }
+}
+
+    if (showCustomDialog) {
+        AlertDialog(
+            onDismissRequest = { showCustomDialog = false },
+            title = { Text("Custom timer") },
+            text = {
+                OutlinedTextField(
+                    value = customMinutes,
+                    onValueChange = { customMinutes = it.filter(Char::isDigit).take(4) },
+                    label = { Text("Minutes") },
+                    supportingText = { Text("1–1440 minutes") },
+                    singleLine = true
+                )
+            },
+            confirmButton = {
+                val minutes = customMinutes.toIntOrNull()
+                TextButton(
+                    enabled = minutes != null && minutes in 1..1440,
+                    onClick = {
+                        minutes?.let {
+                            selectedPreset = null
+                            totalSeconds = it * 60
+                            remaining = totalSeconds
+                            running = false
+                            endAtMillis = 0L
+                            repo.resetTimer(totalSeconds)
+                            showCustomDialog = false
+                            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                        }
+                    }
+                ) { Text("Use") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCustomDialog = false }) { Text("Cancel") }
+            }
+        )
     }
 }
 
@@ -334,5 +384,35 @@ private fun PresetCard(
             fontWeight = FontWeight.Medium
         )
         Text(preset.sublabel, color = TextMuted, fontSize = 11.sp)
+    }
+}
+
+@Composable
+private fun CustomPresetCard(
+    selected: Boolean,
+    minutes: Int,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Column(
+        modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(BgCard)
+            .border(
+                1.dp,
+                if (selected) AccentBlue else Color.Transparent,
+                RoundedCornerShape(12.dp)
+            )
+            .premiumClick(onClick)
+            .padding(vertical = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            "Custom",
+            color = if (selected) AccentBlue else TextOnCard,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Medium
+        )
+        Text("$minutes min", color = TextMuted, fontSize = 11.sp)
     }
 }
