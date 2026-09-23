@@ -217,14 +217,15 @@ fun AiTutorScreen(
 
 @Composable
 private fun CoachPrompt(title: String, subtitle: String, icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit) {
-    Surface(
-        Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
-        color = BgCard,
-        border = androidx.compose.foundation.BorderStroke(1.dp, BgCardBorder.copy(alpha = .8f)),
-        onClick = onClick
+    Row(
+        Modifier.fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(BgCard)
+            .border(1.dp, BgCardBorder.copy(alpha = .8f), RoundedCornerShape(18.dp))
+            .premiumClick(onClick)
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(icon, null, tint = PrimaryLight, modifier = Modifier.size(20.dp))
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
