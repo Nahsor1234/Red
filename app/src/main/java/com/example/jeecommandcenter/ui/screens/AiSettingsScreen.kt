@@ -58,10 +58,23 @@ fun AiSettingsScreen(context: android.content.Context, onBack: () -> Unit) {
                                 Spacer(Modifier.weight(1f))
                                 Icon(Icons.Filled.ExpandMore, null)
                             }
-                            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                            DropdownMenu(
+                                expanded = expanded,
+                                onDismissRequest = { expanded = false },
+                                modifier = Modifier
+                                    .background(BgCardAlt, RoundedCornerShape(16.dp))
+                                    .border(1.dp, BgCardBorder.copy(alpha = .95f), RoundedCornerShape(16.dp))
+                                    .padding(vertical = 5.dp)
+                            ) {
                                 AiProvider.entries.forEach { provider ->
                                     DropdownMenuItem(
-                                        text = { Text(provider.label) },
+                                        text = {
+                                            Text(
+                                                provider.label,
+                                                color = if (provider == config.provider) PrimaryLight else TextPrimary,
+                                                fontWeight = if (provider == config.provider) FontWeight.Medium else FontWeight.Normal
+                                            )
+                                        },
                                         onClick = {
                                             val newModel = settings.defaultModel(provider)
                                             val newEndpoint = settings.defaultEndpoint(provider)
