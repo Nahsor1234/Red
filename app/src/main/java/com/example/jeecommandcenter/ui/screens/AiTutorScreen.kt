@@ -256,7 +256,7 @@ private fun MarkdownText(markdown: String) {
 }
 
 private fun String.inlineMarkdown() = buildAnnotatedString {
-    val regex = Regex("\\\\*\\\\*(.+?)\\\\*\\\\*")
+    val regex = Regex("\\*\\*(.+?)\\*\\*")
     var cursor = 0
     regex.findAll(this@inlineMarkdown).forEach { match ->
         append(this@inlineMarkdown.substring(cursor, match.range.first))
