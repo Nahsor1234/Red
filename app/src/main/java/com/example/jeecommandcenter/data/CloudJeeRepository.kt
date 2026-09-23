@@ -76,10 +76,6 @@ class CloudJeeRepository(
 ) {
     private val db = client.postgrest
 
-    /**
-     * Restores the persisted Supabase session. Cloud sync requires a real
-     * authenticated account; the app no longer depends on anonymous sign-in.
-     */
     suspend fun ensureSession() = run {
         client.auth.loadFromStorage(autoRefresh = true)
         client.auth.currentSessionOrNull()?.user
@@ -106,10 +102,6 @@ class CloudJeeRepository(
             filter { CloudTopic::chapterId eq JeeCatalog.normalizeChapterId(chapterId) }
         }.decodeList<CloudTopic>().sortedBy { it.sortOrder }
 
-    /**
-     * Cloud is the preferred question source. The bundled bank remains an
-     * intentional offline fallback so practice still works before or without cloud access.
-     */
     suspend fun questions(chapterId: String): List<CloudQuestion> {
         val canonicalId = JeeCatalog.normalizeChapterId(chapterId)
         val remote = runCatching {
@@ -204,8 +196,7 @@ class CloudJeeRepository(
     suspend fun resendConfirmation(email: String) {
         client.auth.resendEmail(
             type = OtpType.Email.SIGNUP,
-            email = email.trim(),
-            redirectUrl = SupabaseClientProvider.AUTH_REDIRECT_URL
+            email = email.trim()
         )
     }
 
@@ -220,10 +211,6 @@ class CloudJeeRepository(
         client.auth.signOut()
     }
 
-    /**
-     * One-time migration of local syllabus progress into the signed-in account.
-     * Question attempts are handled incrementally by CloudSyncCoordinator.
-     */
     suspend fun migrateLocalProgress(context: Context) {
         val user = ensureSession()
         val prefs = context.getSharedPreferences("sigma_cloud_migration", Context.MODE_PRIVATE)
