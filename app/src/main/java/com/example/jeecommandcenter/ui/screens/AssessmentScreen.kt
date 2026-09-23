@@ -28,7 +28,7 @@ import kotlin.math.roundToInt
 private enum class AssessmentState { SETUP, RUNNING, RESULT }
 
 @Composable
-fun AssessmentScreen(learning: LearningRepository, jee: JeeRepository, onBack: () -> Unit, onOpenMistakes: () -> Unit) {
+fun AssessmentScreen(learning: LearningRepository, jee: JeeRepository, onBack: () -> Unit, onOpenMistakes: () -> Unit, onOpenHistory: () -> Unit = {}) {
     val context = LocalContext.current
     val settings = remember { AiSettingsRepository(context) }
     val scope = rememberCoroutineScope()
@@ -71,7 +71,7 @@ fun AssessmentScreen(learning: LearningRepository, jee: JeeRepository, onBack: (
         state = AssessmentState.RESULT
     }
 
-    Scaffold(containerColor = BgApp, topBar = { JeeTopBar(title = when (state) { AssessmentState.SETUP -> "Assessment"; AssessmentState.RUNNING -> if (mode == TestMode.MOCK) "Starter mock" else "Practice test"; AssessmentState.RESULT -> "Result" }, onBack = onBack) }) { padding ->
+    Scaffold(containerColor = BgApp, topBar = { JeeTopBar(title = when (state) { AssessmentState.SETUP -> "Assessment"; AssessmentState.RUNNING -> if (mode == TestMode.MOCK) "Starter mock" else "Practice test"; AssessmentState.RESULT -> "Result" }, onBack = onBack, trailing = { if (state == AssessmentState.SETUP) IconButton(onClick = onOpenHistory) { Icon(Icons.Filled.History, "Test history") } }) }) { padding ->
         when (state) {
             AssessmentState.SETUP -> SetupContent(mode, subject, { mode = it }, { subject = it }, ::start, onOpenMistakes, Modifier.padding(padding), settings.hasApiKey(), { showAiDialog = true })
             AssessmentState.RUNNING -> {
