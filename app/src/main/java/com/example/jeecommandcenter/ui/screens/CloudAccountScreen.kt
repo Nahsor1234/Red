@@ -20,21 +20,26 @@ fun CloudAccountScreen(context: android.content.Context, onBack: () -> Unit) {
     val cloud = remember { CloudJeeRepository() }
     var connected by remember { mutableStateOf(false) }
     var loading by remember { mutableStateOf(true) }
+    var syncing by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(loading) {
-        if (!loading) return@LaunchedEffect
-        runCatching { cloud.ensureSession() }
-            .onSuccess {
-                connected = true
-                message = "Supabase authentication is active for this device. Cloud syllabus and progress sync are available."
-            }
-            .onFailure {
-                connected = false
-                message = "Cloud session unavailable. Enable Anonymous Sign-Ins in Supabase Auth. Local fallback remains available."
-            }
+    suspend fun connectAndSync() {
+        loading = true
+        message = null
+        runCatching {
+            cloud.ensureSession()
+            cloud.migrateLocalProgress(context)
+        }.onSuccess {
+            connected = true
+            message = "Cloud session is active. Local syllabus progress has been migrated when needed."
+        }.onFailure {
+            connected = false
+            message = "Cloud session unavailable. Enable Anonymous Sign-Ins in Supabase Auth. Local fallback remains available."
+        }
         loading = false
     }
+
+    LaunchedEffect(Unit) { connectAndSync() }
 
     Scaffold(
         containerColor = BgApp,
@@ -59,7 +64,7 @@ fun CloudAccountScreen(context: android.content.Context, onBack: () -> Unit) {
                         )
                         Text(
                             if (connected) "Supabase PostgreSQL is connected to Sigma JE."
-                            else "The app will continue using the local repository until cloud authentication is available.",
+                            else "The app continues with local data until cloud authentication is available.",
                             color = TextSecondary,
                             fontSize = 11.sp
                         )
@@ -67,24 +72,32 @@ fun CloudAccountScreen(context: android.content.Context, onBack: () -> Unit) {
                 }
             }
 
-            if (loading) {
+            if (loading || syncing) {
                 LinearProgressIndicator(Modifier.fillMaxWidth(), color = Primary)
             }
 
-            message?.let {
-                Text(it, color = TextSecondary, fontSize = 12.sp)
-            }
+            message?.let { Text(it, color = TextSecondary, fontSize = 12.sp) }
 
             OutlinedButton(
-                onClick = { loading = true },
-                enabled = !loading,
+                onClick = {
+                    syncing = true
+                    // Keep the operation coroutine-safe without introducing another state owner.
+                    loading = true
+                },
+                enabled = !loading && !syncing,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Check connection")
+                Text("Sync local progress")
+            }
+
+            LaunchedEffect(syncing) {
+                if (!syncing) return@LaunchedEffect
+                connectAndSync()
+                syncing = false
             }
 
             Text(
-                "Anonymous authentication is used as the first cloud foundation so the app can sync without adding login friction.",
+                "Anonymous authentication is the first cloud foundation. The app remains usable offline and only uploads the student's own progress.",
                 color = TextMuted,
                 fontSize = 10.sp
             )
