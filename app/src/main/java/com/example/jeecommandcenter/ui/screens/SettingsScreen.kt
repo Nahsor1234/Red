@@ -21,7 +21,7 @@ import com.example.jeecommandcenter.ui.components.*
 import com.example.jeecommandcenter.ui.theme.*
 
 @Composable
-fun SettingsScreen(onBack: () -> Unit, onOpenAnalytics: () -> Unit, onOpenAiSettings: () -> Unit) {
+fun SettingsScreen(onBack: () -> Unit, onOpenAnalytics: () -> Unit, onOpenAiSettings: () -> Unit, onOpenCloudAccount: () -> Unit = {}) {
     val context = androidx.compose.ui.platform.LocalContext.current
     var backupStatus by remember { mutableStateOf<String?>(null) }
     val backup = remember { BackupRepository(context) }
@@ -45,6 +45,7 @@ fun SettingsScreen(onBack: () -> Unit, onOpenAnalytics: () -> Unit, onOpenAiSett
 
     Scaffold(containerColor = BgApp, topBar = { JeeTopBar(title = "Settings", onBack = onBack) }) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            SettingsCard("Cloud sync", "Supabase connection and cloud syllabus status", Icons.Filled.Cloud, onOpenCloudAccount)
             SettingsCard("Analytics", "Real performance and study metrics", Icons.Filled.Insights, onOpenAnalytics)
             SettingsCard("AI configuration", "Provider, model and API key", Icons.Filled.AutoAwesome, onOpenAiSettings)
             Spacer(Modifier.height(8.dp))
