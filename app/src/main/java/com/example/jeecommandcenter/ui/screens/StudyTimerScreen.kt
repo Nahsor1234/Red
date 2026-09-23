@@ -199,7 +199,7 @@ fun StudyTimerScreen(repo: JeeRepository, selectedTab: AppTab, onTabSelected: (A
                             items(chapters, key = { it.id }) { value ->
                                 TextButton(onClick = { chapter = value.id }) {
                                     Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
-                                        Text("\${value.number}. \${value.name}", color = if (chapter == value.id) PrimaryLight else TextOnCard)
+                                        Text("${value.number}. ${value.name}", color = if (chapter == value.id) PrimaryLight else TextOnCard)
                                         if (chapter == value.id) Text("Selected", color = PrimaryLight, fontSize = 10.sp)
                                     }
                                 }
