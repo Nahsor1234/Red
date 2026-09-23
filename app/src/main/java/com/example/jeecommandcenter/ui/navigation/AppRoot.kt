@@ -16,7 +16,7 @@ import com.example.jeecommandcenter.data.LearningRepository
 import com.example.jeecommandcenter.ui.components.AppTab
 import com.example.jeecommandcenter.ui.screens.*
 
-private enum class SecondaryPage { PLANNER, REVISION, SETTINGS, AI_SETTINGS, AI_HUB, AI_TUTOR, ANALYTICS, ASSESSMENT, MISTAKES, CHAPTER_DETAIL }
+private enum class SecondaryPage { PLANNER, REVISION, SETTINGS, AI_SETTINGS, AI_HUB, AI_TUTOR, AI_HISTORY, ANALYTICS, ASSESSMENT, ASSESSMENT_HISTORY, MISTAKES, CHAPTER_DETAIL }
 
 @Composable
 fun AppRoot() {
@@ -55,9 +55,11 @@ fun AppRoot() {
             SecondaryPage.SETTINGS -> SettingsScreen(::popPage, { openPage(SecondaryPage.ANALYTICS) }, { openPage(SecondaryPage.AI_SETTINGS) })
             SecondaryPage.AI_SETTINGS -> AiSettingsScreen(context, ::popPage)
             SecondaryPage.AI_HUB -> AiHubScreen(context, ::popPage, { openPage(SecondaryPage.AI_TUTOR) }, { openPage(SecondaryPage.AI_SETTINGS) })
-            SecondaryPage.AI_TUTOR -> AiTutorScreen(context, repo, learning, ::popPage) { openPage(SecondaryPage.AI_SETTINGS) }
+            SecondaryPage.AI_TUTOR -> AiTutorScreen(context, repo, learning, ::popPage, { openPage(SecondaryPage.AI_SETTINGS) }) { openPage(SecondaryPage.AI_HISTORY) }
+            SecondaryPage.AI_HISTORY -> AiHistoryScreen(context, ::popPage)
             SecondaryPage.ANALYTICS -> AnalyticsScreen(repo, learning, ::popPage) { openPage(SecondaryPage.AI_TUTOR) }
-            SecondaryPage.ASSESSMENT -> AssessmentScreen(learning, repo, ::popPage) { openPage(SecondaryPage.MISTAKES) }
+            SecondaryPage.ASSESSMENT -> AssessmentScreen(learning, repo, ::popPage, { openPage(SecondaryPage.MISTAKES) }) { openPage(SecondaryPage.ASSESSMENT_HISTORY) }
+            SecondaryPage.ASSESSMENT_HISTORY -> AssessmentHistoryScreen(learning, ::popPage)
             SecondaryPage.MISTAKES -> MistakeBankScreen(learning, ::popPage) { openPage(SecondaryPage.AI_TUTOR) }
             SecondaryPage.CHAPTER_DETAIL -> selectedChapter?.let { ChapterDetailScreen(context, repo, it, ::popPage) }
             null -> when (targetTab ?: AppTab.HOME) {
