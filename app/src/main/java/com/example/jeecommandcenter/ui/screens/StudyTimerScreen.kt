@@ -108,10 +108,7 @@ fun StudyTimerScreen(repo: JeeRepository, selectedTab: AppTab, onTabSelected: (A
                 }
             }
             item {
-                Column(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(BgCardAlt)
-                        .border(JeeSurfaceTokens.borderWidth,BgCardBorder.copy(alpha=JeeSurfaceTokens.cardBorderAlpha),JeeShapes.medium).padding(15.dp)
-                ) {
+                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(BgCardAlt).border(JeeSurfaceTokens.borderWidth,BgCardBorder.copy(alpha = JeeSurfaceTokens.cardBorderAlpha),JeeShapes.medium).padding(15.dp)) {
                     Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
                         Text("SESSION CONTEXT", color = TextSecondary, fontSize = 11.sp)
                         TextButton(enabled = !running, onClick = { showContext = true }) { Text("Change", fontSize = 11.sp) }
@@ -128,48 +125,31 @@ fun StudyTimerScreen(repo: JeeRepository, selectedTab: AppTab, onTabSelected: (A
                 }
             }
             item {
-                Button(
-                    onClick = {
-                        if (running) {
-                            remaining = ceil((end - System.currentTimeMillis()).coerceAtLeast(0) / 1000.0).toInt().coerceIn(0, total)
-                            running = false
-                            end = 0
-                            repo.pauseTimer(total, remaining)
-                        } else {
-                            if (remaining <= 0) remaining = total
-                            repo.startTimer(total, remaining)
-                            end = System.currentTimeMillis() + remaining * 1000
-                            running = true
-                        }
-                        view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                    },
-                    modifier = Modifier.fillMaxWidth().height(52.dp),
-                    shape = RoundedCornerShape(17.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = AccentBlue)
-                ) {
+                Button(onClick = {
+                    if (running) {
+                        remaining = ceil((end - System.currentTimeMillis()).coerceAtLeast(0) / 1000.0).toInt().coerceIn(0, total)
+                        running = false
+                        end = 0
+                        repo.pauseTimer(total, remaining)
+                    } else {
+                        if (remaining <= 0) remaining = total
+                        repo.startTimer(total, remaining)
+                        end = System.currentTimeMillis() + remaining * 1000
+                        running = true
+                    }
+                    view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(17.dp), colors = ButtonDefaults.buttonColors(containerColor = AccentBlue)) {
                     Icon(if (running) Icons.Filled.Pause else Icons.Filled.PlayArrow, null, tint = Color(0xFF17120A))
                     Spacer(Modifier.width(8.dp))
                     Text(if (running) "Pause" else "Start session", color = Color(0xFF17120A))
                 }
             }
-            item { SectionHeader("Recent sessions") }
+            item { SectionHeader("Completed sessions") }
             if (recentSessions.isEmpty()) {
-                item {
-                    JeeCard {
-                        Text("No completed sessions yet.", color = TextMuted, fontSize = 12.sp)
-                        Spacer(Modifier.height(4.dp))
-                        Text("Completed sessions will appear here after your first study block.", color = TextSecondary, fontSize = 11.sp)
-                    }
-                }
+                item { JeeCard { Text("No completed sessions yet.", color = TextMuted, fontSize = 12.sp); Spacer(Modifier.height(4.dp)); Text("Completed sessions will appear here after your first study block.", color = TextSecondary, fontSize = 11.sp) } }
             } else {
                 items(recentSessions, key = { it.id }) { session ->
-                    Row(
-                        Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(BgCard)
-                            .border(1.dp,BgCardBorder.copy(alpha=.72f),RoundedCornerShape(14.dp))
-                            .padding(horizontal=14.dp, vertical=11.dp),
-                        Arrangement.SpaceBetween,
-                        Alignment.CenterVertically
-                    ) {
+                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(BgCard).border(1.dp,BgCardBorder.copy(alpha=.72f),RoundedCornerShape(14.dp)).padding(horizontal=14.dp, vertical=11.dp), Arrangement.SpaceBetween, Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text(session.subject, color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.Medium)
                             Text(session.chapter + " · " + session.activityType.name.lowercase().replace('_', ' '), color = TextMuted, fontSize = 10.sp)
@@ -185,72 +165,33 @@ fun StudyTimerScreen(repo: JeeRepository, selectedTab: AppTab, onTabSelected: (A
     }
 
     if (showContext) {
-        AlertDialog(
-            onDismissRequest = { showContext = false },
-            title = { Text("Study context") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("Subject", color = TextSecondary, fontSize = 12.sp)
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        subjects.forEach { value -> JeeFilterChip(value, value == subject) { subject = value; chapter = null } }
-                    }
-                    if (subject != "General") {
-                        Text("Chapter", color = TextSecondary, fontSize = 12.sp)
-                        LazyColumn(Modifier.fillMaxWidth().height(220.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            items(chapters, key = { it.id }) { value ->
-                                TextButton(onClick = { chapter = value.id }) {
-                                    Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
-                                        Text("${value.number}. ${value.name}", color = if (chapter == value.id) PrimaryLight else TextOnCard)
-                                        if (chapter == value.id) Text("Selected", color = PrimaryLight, fontSize = 10.sp)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    Text("Activity", color = TextSecondary, fontSize = 12.sp)
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        listOf(ActivityType.LEARNING, ActivityType.PRACTICE, ActivityType.REVISION, ActivityType.TEST).forEach { value ->
-                            JeeFilterChip(value.name.lowercase().replace('_', ' '), value == activity) { activity = value }
-                        }
+        AlertDialog(onDismissRequest = { showContext = false }, title = { Text("Study context") }, text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("Subject", color = TextSecondary, fontSize = 12.sp)
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { subjects.forEach { value -> JeeFilterChip(value, value == subject) { subject = value; chapter = null } } }
+                if (subject != "General") {
+                    Text("Chapter", color = TextSecondary, fontSize = 12.sp)
+                    LazyColumn(Modifier.fillMaxWidth().height(220.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        items(chapters, key = { it.id }) { value -> TextButton(onClick = { chapter = value.id }) { Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) { Text("${value.number}. ${value.name}", color = if (chapter == value.id) PrimaryLight else TextOnCard); if (chapter == value.id) Text("Selected", color = PrimaryLight, fontSize = 10.sp) } } }
                     }
                 }
-            },
-            confirmButton = { TextButton(onClick = { showContext = false }) { Text("Done") } }
-        )
+                Text("Activity", color = TextSecondary, fontSize = 12.sp)
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { listOf(ActivityType.LEARNING, ActivityType.PRACTICE, ActivityType.REVISION, ActivityType.TEST).forEach { value -> JeeFilterChip(value.name.lowercase().replace('_', ' '), value == activity) { activity = value } } }
+            }
+        }, confirmButton = { TextButton(onClick = { showContext = false }) { Text("Done") } })
     }
 
     if (showCustom) {
-        AlertDialog(
-            onDismissRequest = { showCustom = false },
-            title = { Text("Custom timer") },
-            text = { OutlinedTextField(custom, { custom = it.filter(Char::isDigit).take(4) }, label = { Text("Minutes") }, singleLine = true) },
-            confirmButton = {
-                val m = custom.toIntOrNull()
-                TextButton(enabled = m != null && m in 1..1440, onClick = {
-                    m?.let {
-                        selected = null
-                        total = it * 60
-                        remaining = total
-                        running = false
-                        end = 0
-                        repo.resetTimer(total)
-                        showCustom = false
-                    }
-                }) { Text("Use") }
-            },
-            dismissButton = { TextButton(onClick = { showCustom = false }) { Text("Cancel") } }
-        )
+        AlertDialog(onDismissRequest = { showCustom = false }, title = { Text("Custom timer") }, text = { OutlinedTextField(custom, { custom = it.filter(Char::isDigit).take(4) }, label = { Text("Minutes") }, singleLine = true) }, confirmButton = {
+            val m = custom.toIntOrNull()
+            TextButton(enabled = m != null && m in 1..1440, onClick = { m?.let { selected = null; total = it * 60; remaining = total; running = false; end = 0; repo.resetTimer(total); showCustom = false } }) { Text("Use") }
+        }, dismissButton = { TextButton(onClick = { showCustom = false }) { Text("Cancel") } })
     }
 }
 
 @Composable
 private fun Preset(label: String, sub: String, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
-    Column(
-        modifier.clip(RoundedCornerShape(15.dp)).background(BgCard)
-            .border(1.dp, if (selected) AccentBlue else Color.Transparent, RoundedCornerShape(15.dp))
-            .premiumClick(onClick).padding(vertical = 11.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
+    Column(modifier.clip(RoundedCornerShape(15.dp)).background(BgCard).border(1.dp, if (selected) AccentBlue else Color.Transparent, RoundedCornerShape(15.dp)).premiumClick(onClick).padding(vertical = 11.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Text(label, color = if (selected) AccentBlue else TextOnCard, fontSize = 12.sp, fontWeight = FontWeight.Medium)
         Text(sub, color = TextMuted, fontSize = 10.sp)
     }
