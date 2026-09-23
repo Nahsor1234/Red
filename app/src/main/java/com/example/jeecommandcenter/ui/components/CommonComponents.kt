@@ -104,12 +104,12 @@ fun JeeFilterChip(label: String, selected: Boolean, onClick: () -> Unit) {
 @Composable
 fun BottomNavBar(selected: AppTab, onTabSelected: (AppTab) -> Unit, onAiClick: () -> Unit) {
     val view = LocalView.current
+    val selectedPosition = when (selected) { AppTab.HOME -> 0; AppTab.SYLLABUS -> 1; AppTab.TASKS -> 3; AppTab.STATS -> 4 }
     val items = listOf(AppTab.HOME to (Icons.Filled.Home to "Home"), AppTab.SYLLABUS to (Icons.Filled.MenuBook to "Syllabus"), AppTab.TASKS to (Icons.Filled.CheckCircle to "Tasks"), AppTab.STATS to (Icons.Filled.Timer to "Timer"))
-    val selectedIndex = items.indexOfFirst { it.first == selected }.coerceAtLeast(0)
     Box(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp), contentAlignment = Alignment.Center) {
         BoxWithConstraints(Modifier.fillMaxWidth().height(62.dp).clip(RoundedCornerShape(24.dp)).background(BgCard).border(1.dp, BgCardBorder.copy(alpha = .9f), RoundedCornerShape(24.dp)).padding(5.dp)) {
             val slotWidth = maxWidth / 5
-            val indicatorX by animateDpAsState(slotWidth * selectedIndex, animationSpec = tween(280), label = "nav-indicator-x")
+            val indicatorX by animateDpAsState(slotWidth * selectedPosition, animationSpec = tween(280), label = "nav-indicator-x")
             Box(Modifier.offset(x = indicatorX).width(slotWidth).fillMaxHeight().clip(RoundedCornerShape(19.dp)).background(BgCardAlt).border(1.dp, BgCardBorder.copy(alpha = .8f), RoundedCornerShape(19.dp)))
             Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
                 NavDestination(items[0].second.first, items[0].second.second, selected == AppTab.HOME, Modifier.weight(1f)) { onTabSelected(AppTab.HOME) }
