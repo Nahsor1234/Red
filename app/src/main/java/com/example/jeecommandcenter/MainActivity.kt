@@ -5,20 +5,13 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.core.tween
-import androidx.lifecycle.lifecycleScope
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
-import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.lifecycleScope
 import com.example.jeecommandcenter.data.SupabaseClientProvider
-import com.example.jeecommandcenter.ui.screens.OpeningScreen
 import com.example.jeecommandcenter.ui.components.JeeBackground
 import com.example.jeecommandcenter.ui.navigation.AppRoot
 import com.example.jeecommandcenter.ui.theme.BgAppBase
@@ -26,7 +19,6 @@ import com.example.jeecommandcenter.ui.theme.JeePrepTheme
 import io.github.jan.supabase.annotations.SupabaseInternal
 import io.github.jan.supabase.gotrue.auth
 import io.github.jan.supabase.gotrue.parseFragmentAndImportSession
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -40,19 +32,6 @@ class MainActivity : ComponentActivity() {
                     Box(Modifier.fillMaxSize().background(BgAppBase)) {
                         JeeBackground()
                         AppRoot()
-
-                        var showOpening by rememberSaveable { mutableStateOf(true) }
-                        LaunchedEffect(Unit) {
-                            delay(900)
-                            showOpening = false
-                        }
-                        AnimatedVisibility(
-                            visible = showOpening,
-                            enter = fadeIn(tween(160)),
-                            exit = fadeOut(tween(220))
-                        ) {
-                            OpeningScreen()
-                        }
                     }
                 }
             }
@@ -69,7 +48,6 @@ class MainActivity : ComponentActivity() {
     private fun handleSupabaseAuthIntent(intent: Intent?) {
         val fragment = intent?.data?.fragment?.takeIf { it.isNotBlank() } ?: return
         val client = SupabaseClientProvider.client
-
         lifecycleScope.launch {
             runCatching { client.auth.parseFragmentAndImportSession(fragment) }
         }
