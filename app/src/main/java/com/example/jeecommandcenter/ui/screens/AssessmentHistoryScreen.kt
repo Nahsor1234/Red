@@ -83,8 +83,6 @@ fun AssessmentHistoryScreen(learning: LearningRepository, onBack: () -> Unit) {
                 }
             }
         }
-    }
-
     selected?.let { attempt ->
         AlertDialog(
             onDismissRequest = { selected = null },
