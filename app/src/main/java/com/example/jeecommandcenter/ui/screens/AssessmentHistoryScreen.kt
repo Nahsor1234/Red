@@ -1,6 +1,9 @@
 package com.example.jeecommandcenter.ui.screens
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -46,14 +49,14 @@ fun AssessmentHistoryScreen(learning: LearningRepository, onBack: () -> Unit) {
                 contentPadding = PaddingValues(bottom = 24.dp)
             ) {
                 items(attempts, key = { it.id }) { attempt ->
-                    Surface(
-                        Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        color = BgCard,
-                        border = androidx.compose.foundation.BorderStroke(1.dp, BgCardBorder.copy(alpha = .8f)),
-                        onClick = { selected = attempt }
+                    Column(
+                        Modifier.fillMaxWidth()
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(BgCard)
+                            .border(1.dp, BgCardBorder.copy(alpha = .8f), RoundedCornerShape(16.dp))
+                            .premiumClick { selected = attempt }
+                            .padding(14.dp)
                     ) {
-                        Column(Modifier.padding(14.dp)) {
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                 Column(Modifier.weight(1f)) {
                                     Text(
