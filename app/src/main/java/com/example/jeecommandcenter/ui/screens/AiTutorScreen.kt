@@ -56,8 +56,8 @@ fun AiTutorScreen(
     val topMistakes = remember { learning.getMistakes().filterNot { it.resolved }.take(5) }
     val hasData = analytics.studyMinutes7d > 0 || analytics.testsCompleted > 0 || analytics.unresolvedMistakes > 0 || priorities.isNotEmpty()
     val coachingHeadline = when { priorities.isNotEmpty() -> priorities.first().title; revisions.isNotEmpty() -> "Clear " + revisions.first().chapter.name + " revision"; weak.isNotEmpty() -> "Strengthen " + weak.first().chapter.name; hasData -> "Keep building your study signal"; else -> "Start collecting real study data" }
-    var activeId by remember(conversationId) { mutableStateOf(conversationId) }
-    var messages by remember(conversationId) { mutableStateOf(conversationId?.let { history.getConversation(it)?.messages }.orEmpty()) }
+    var activeId by remember { mutableStateOf(conversationId) }
+    var messages by remember { mutableStateOf(conversationId?.let { history.getConversation(it)?.messages }.orEmpty()) }
     var input by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     var streamingText by remember { mutableStateOf("") }
@@ -65,7 +65,15 @@ fun AiTutorScreen(
     var activeRequestJob by remember { mutableStateOf<Job?>(null) }
     val chatListState = androidx.compose.foundation.lazy.rememberLazyListState()
 
-    LaunchedEffect(conversationId) { activeId = conversationId; messages = conversationId?.let { history.getConversation(it)?.messages }.orEmpty() }
+    LaunchedEffect(conversationId) {
+        if (conversationId != activeId && activeRequestJob == null) {
+            activeId = conversationId
+            messages = conversationId?.let { history.getConversation(it)?.messages }.orEmpty()
+            streamingText = ""
+            streamingMessageId = null
+            busy = false
+        }
+    }
 
     fun ensureConversation(title: String): Long {
         activeId?.let { return it }
