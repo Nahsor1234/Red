@@ -5,12 +5,13 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.InputStreamReader
-import java.time.LocalDate
-import java.util.UUID
 
 class LearningRepository(private val context: Context) {
 
     private val prefs = context.getSharedPreferences("jee_learning_engine", Context.MODE_PRIVATE)
+
+    private fun normalizedQuestions(questions: List<Question>): List<Question> =
+        questions.map { it.copy(chapterId = JeeCatalog.normalizeChapterId(it.chapterId)) }
 
     fun getQuestions(): List<Question> {
         val raw = runCatching {
@@ -19,11 +20,11 @@ class LearningRepository(private val context: Context) {
             }
         }.getOrNull()
 
-        if (raw.isNullOrBlank()) return StarterQuestionBank.fallback
+        if (raw.isNullOrBlank()) return normalizedQuestions(StarterQuestionBank.fallback)
 
         return runCatching {
             val array = JSONArray(raw)
-            List(array.length()) { index ->
+            normalizedQuestions(List(array.length()) { index ->
                 val item = array.getJSONObject(index)
                 Question(
                     id = item.getString("id"),
@@ -38,13 +39,13 @@ class LearningRepository(private val context: Context) {
                     correctIndex = item.getInt("correctIndex"),
                     explanation = item.getString("explanation"),
                     difficulty = item.optInt("difficulty", 3),
-                    source = item.optString("source", "JeE question bank"),
+                    source = item.optString("source", "JEE question bank"),
                     year = if (item.isNull("year")) null else item.optInt("year"),
                     marks = item.optInt("marks", 4),
                     negativeMarks = item.optDouble("negativeMarks", 1.0).toFloat()
                 )
-            }
-        }.getOrElse { StarterQuestionBank.fallback }
+            })
+        }.getOrElse { normalizedQuestions(StarterQuestionBank.fallback) }
     }
 
     fun selectQuestions(
@@ -77,11 +78,11 @@ class LearningRepository(private val context: Context) {
             correct = selectedIndex == question.correctIndex,
             responseTimeSec = responseTimeSec.coerceAtLeast(0),
             subject = question.subject,
-            chapterId = question.chapterId
+            chapterId = JeeCatalog.normalizeChapterId(question.chapterId)
         )
         val all = getQuestionAttempts().toMutableList().apply { add(record) }
         saveQuestionAttempts(all.takeLast(1000))
-        if (!record.correct) registerMistake(question, selectedIndex)
+        if (!record.correct && selectedIndex >= 0) registerMistake(question, selectedIndex)
         return record
     }
 
@@ -131,7 +132,7 @@ class LearningRepository(private val context: Context) {
                     correct = obj.getBoolean("correct"),
                     responseTimeSec = obj.optInt("responseTimeSec", 0),
                     subject = obj.getString("subject"),
-                    chapterId = obj.getString("chapterId"),
+                    chapterId = JeeCatalog.normalizeChapterId(obj.getString("chapterId")),
                     mistakeType = obj.optString("mistakeType").takeIf { it.isNotBlank() }
                         ?.let { runCatching { MistakeType.valueOf(it) }.getOrNull() },
                     createdAt = obj.optLong("createdAt", obj.getLong("id"))
@@ -181,7 +182,7 @@ class LearningRepository(private val context: Context) {
                     id = obj.getString("id"),
                     questionId = obj.getString("questionId"),
                     subject = obj.getString("subject"),
-                    chapterId = obj.getString("chapterId"),
+                    chapterId = JeeCatalog.normalizeChapterId(obj.getString("chapterId")),
                     questionPrompt = obj.getString("questionPrompt"),
                     correctAnswer = obj.getString("correctAnswer"),
                     lastSelectedAnswer = obj.getString("lastSelectedAnswer"),
@@ -259,13 +260,14 @@ class LearningRepository(private val context: Context) {
     private fun registerMistake(question: Question, selectedIndex: Int) {
         val selected = question.options.getOrNull(selectedIndex) ?: "No answer"
         val correct = question.options.getOrNull(question.correctIndex) ?: "Unknown"
+        val chapterId = JeeCatalog.normalizeChapterId(question.chapterId)
         val existing = getMistakes().firstOrNull { it.questionId == question.id }
         val updated = if (existing == null) {
             MistakeRecord(
                 id = "mistake_" + question.id,
                 questionId = question.id,
                 subject = question.subject,
-                chapterId = question.chapterId,
+                chapterId = chapterId,
                 questionPrompt = question.prompt,
                 correctAnswer = correct,
                 lastSelectedAnswer = selected,
@@ -277,6 +279,7 @@ class LearningRepository(private val context: Context) {
         } else {
             existing.copy(
                 lastSelectedAnswer = selected,
+                chapterId = chapterId,
                 count = existing.count + 1,
                 resolved = false,
                 lastSeenAt = System.currentTimeMillis()
@@ -293,7 +296,7 @@ class LearningRepository(private val context: Context) {
                     put("id", item.id)
                     put("questionId", item.questionId)
                     put("subject", item.subject)
-                    put("chapterId", item.chapterId)
+                    put("chapterId", JeeCatalog.normalizeChapterId(item.chapterId))
                     put("questionPrompt", item.questionPrompt)
                     put("correctAnswer", item.correctAnswer)
                     put("lastSelectedAnswer", item.lastSelectedAnswer)
@@ -321,7 +324,7 @@ class LearningRepository(private val context: Context) {
                     put("correct", item.correct)
                     put("responseTimeSec", item.responseTimeSec)
                     put("subject", item.subject)
-                    put("chapterId", item.chapterId)
+                    put("chapterId", JeeCatalog.normalizeChapterId(item.chapterId))
                     put("mistakeType", item.mistakeType?.name ?: "")
                     put("createdAt", item.createdAt)
                 }
