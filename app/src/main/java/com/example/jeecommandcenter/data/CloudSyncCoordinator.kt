@@ -14,6 +14,9 @@ class CloudSyncCoordinator(
 
     suspend fun sync(): SyncResult {
         val user = cloud.ensureSession()
+        // Move local syllabus progress into this specific account before incremental sync.
+        cloud.migrateLocalProgress(context)
+
         val local = JeeRepository(context)
         val learning = LearningRepository(context)
         val topics = TopicRepository(context)
@@ -37,7 +40,12 @@ class CloudSyncCoordinator(
             }
         }
 
-        val syncedIds = syncPrefs.getStringSet("question_attempt_ids", emptySet()).orEmpty().toMutableSet()
+        // Sync bookkeeping is scoped to the signed-in account. This prevents one
+        // account's local sync history from suppressing uploads for another account.
+        val attemptKey = "question_attempt_ids_${user.id}"
+        val lastSyncKey = "last_sync_at_${user.id}"
+        val syncedIds = syncPrefs.getStringSet(attemptKey, emptySet()).orEmpty().toMutableSet()
+
         learning.getQuestionAttempts().forEach { attempt ->
             if (attempt.id.toString() in syncedIds) return@forEach
 
@@ -55,8 +63,10 @@ class CloudSyncCoordinator(
             attemptCount++
         }
 
-        syncPrefs.edit().putStringSet("question_attempt_ids", syncedIds).apply()
-        syncPrefs.edit().putLong("last_sync_at", System.currentTimeMillis()).apply()
+        syncPrefs.edit()
+            .putStringSet(attemptKey, syncedIds)
+            .putLong(lastSyncKey, System.currentTimeMillis())
+            .apply()
 
         return SyncResult(
             chaptersUploaded = chapterCount,
@@ -65,7 +75,12 @@ class CloudSyncCoordinator(
         )
     }
 
-    fun lastSyncAt(): Long = syncPrefs.getLong("last_sync_at", 0L)
+    suspend fun hasAccount(): Boolean = cloud.hasAuthenticatedSession()
+
+    fun lastSyncAt(userId: String? = null): Long {
+        if (userId == null) return 0L
+        return syncPrefs.getLong("last_sync_at_$userId", 0L)
+    }
 }
 
 data class SyncResult(
