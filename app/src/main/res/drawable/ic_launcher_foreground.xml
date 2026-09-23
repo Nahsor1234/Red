@@ -1,29 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp"
-    android:height="108dp"
-    android:viewportWidth="108"
-    android:viewportHeight="108">
-
-    <path
-        android:fillColor="#CFF28C"
-        android:pathData="M20,19 L84,19 L84,35 L49,35 L64,49 L49,63 L84,63 L84,82 L20,82 L20,64 L40,64 L56,49 L40,35 L20,35 Z" />
-
-    <path
-        android:fillColor="#75D768"
-        android:pathData="M40,35 L56,49 L40,64 L20,64 L20,35 Z" />
-
-    <path
-        android:strokeColor="#9CCB65"
-        android:strokeWidth="1.6"
-        android:fillColor="@android:color/transparent"
-        android:pathData="M12,55 C22,30 46,17 70,22 C88,26 94,38 92,50 C90,63 74,76 54,79 C34,82 19,74 15,63" />
-
-    <path
-        android:fillColor="#DFFF91"
-        android:pathData="M13,57 C10,57 8,55 8,52 C8,49 10,47 13,47 C16,47 18,49 18,52 C18,55 16,57 13,57 Z" />
-
-    <path
-        android:fillColor="#F5FFAE"
-        android:pathData="M76,34 L79,41 L86,44 L79,47 L76,54 L73,47 L66,44 L73,41 Z" />
-</vector>
+<bitmap xmlns:android="http://schemas.android.com/apk/res/android"
+    android:src="@drawable/sigma_je_icon"
+    android:gravity="fill" />
