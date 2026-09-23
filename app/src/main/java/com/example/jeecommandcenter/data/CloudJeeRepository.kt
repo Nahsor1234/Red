@@ -90,18 +90,51 @@ class CloudJeeRepository(
 
     suspend fun chapters(subjectId: String): List<CloudChapter> =
         db["chapters"].select {
-            filter { CloudChapter::subjectId eq subjectId }
+            filter { CloudChapter::subjectId eq subjectId.lowercase() }
         }.decodeList<CloudChapter>().sortedBy { it.number }
 
     suspend fun topics(chapterId: String): List<CloudTopic> =
         db["topics"].select {
-            filter { CloudTopic::chapterId eq chapterId }
+            filter { CloudTopic::chapterId eq JeeCatalog.normalizeChapterId(chapterId) }
         }.decodeList<CloudTopic>().sortedBy { it.sortOrder }
 
-    suspend fun questions(chapterId: String): List<CloudQuestion> =
-        db["questions"].select {
-            filter { CloudQuestion::chapterId eq chapterId }
-        }.decodeList()
+    /**
+     * Cloud is the preferred question source. The bundled bank remains an
+     * intentional offline fallback so practice still works before the cloud
+     * catalog/question seed has been uploaded.
+     */
+    suspend fun questions(chapterId: String): List<CloudQuestion> {
+        val canonicalId = JeeCatalog.normalizeChapterId(chapterId)
+        val remote = runCatching {
+            db["questions"].select {
+                filter { CloudQuestion::chapterId eq canonicalId }
+            }.decodeList<CloudQuestion>()
+        }.getOrDefault(emptyList())
+
+        if (remote.isNotEmpty()) return remote
+
+        return StarterQuestionBank.fallback
+            .filter { JeeCatalog.normalizeChapterId(it.chapterId) == canonicalId }
+            .map { question ->
+                CloudQuestion(
+                    id = question.id,
+                    subjectId = question.subject.lowercase(),
+                    chapterId = canonicalId,
+                    topicId = null,
+                    chapterName = question.chapter,
+                    topic = question.topic,
+                    prompt = question.prompt,
+                    options = question.options,
+                    correctIndex = question.correctIndex,
+                    explanation = question.explanation,
+                    difficulty = question.difficulty,
+                    source = question.source,
+                    year = question.year,
+                    marks = question.marks,
+                    negativeMarks = question.negativeMarks
+                )
+            }
+    }
 
     suspend fun chapterProgressForUser(userId: String): List<CloudChapterProgress> =
         db["chapter_progress"].select {
@@ -129,7 +162,7 @@ class CloudJeeRepository(
         db["chapter_progress"].upsert(
             CloudChapterProgress(
                 userId = userId,
-                chapterId = chapterId,
+                chapterId = JeeCatalog.normalizeChapterId(chapterId),
                 progress = progress.coerceIn(0f, 1f),
                 confidence = confidence.coerceIn(0, 5)
             ),
@@ -146,7 +179,7 @@ class CloudJeeRepository(
         db["question_attempts"].insert(buildJsonObject {
             put("user_id", userId)
             put("question_id", question.id)
-            put("chapter_id", question.chapterId)
+            put("chapter_id", JeeCatalog.normalizeChapterId(question.chapterId))
             put("topic_id", question.topicId)
             put("selected_index", selectedIndex)
             put("correct", selectedIndex == question.correctIndex)
@@ -200,17 +233,10 @@ class CloudJeeRepository(
         }
 
         if (topicRows.isNotEmpty()) {
-            db["topic_progress"].upsert(
-                topicRows,
-                onConflict = "user_id,topic_id"
-            )
+            db["topic_progress"].upsert(topicRows, onConflict = "user_id,topic_id")
         }
-
         if (chapterRows.isNotEmpty()) {
-            db["chapter_progress"].upsert(
-                chapterRows,
-                onConflict = "user_id,chapter_id"
-            )
+            db["chapter_progress"].upsert(chapterRows, onConflict = "user_id,chapter_id")
         }
 
         prefs.edit().putBoolean("topic_progress_v1", true).apply()
