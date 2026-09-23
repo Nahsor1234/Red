@@ -89,7 +89,7 @@ fun BottomNavBar(selected: AppTab, onTabSelected: (AppTab) -> Unit, onAiClick: (
     var navWidth by remember { mutableStateOf(0.dp) }
     val itemCount = 5
     val contentWidth = (navWidth - 12.dp).coerceAtLeast(0.dp)
-    val slotWidth = if (contentWidth > 0.dp) contentWidth / itemCount else 0.dp)
+    val slotWidth = if (contentWidth > 0.dp) contentWidth / itemCount else 0.dp
     val activeIndex = when (selected) {
         AppTab.HOME -> 0
         AppTab.SYLLABUS -> 1
