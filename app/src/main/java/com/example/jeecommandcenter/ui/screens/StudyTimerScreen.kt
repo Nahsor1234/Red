@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -53,9 +54,9 @@ fun StudyTimerScreen(repo: JeeRepository, selectedTab: AppTab, onTabSelected: (A
     var running by remember { mutableStateOf(initial.running) }
     var end by remember { mutableLongStateOf(initial.endAtMillis) }
     var refresh by remember { mutableIntStateOf(0) }
-    var subject by remember { mutableStateOf("General") }
-    var chapter by remember { mutableStateOf<String?>(null) }
-    var activity by remember { mutableStateOf(ActivityType.LEARNING) }
+    var subject by rememberSaveable { mutableStateOf("General") }
+    var chapter by rememberSaveable { mutableStateOf<String?>(null) }
+    var activity by rememberSaveable { mutableStateOf(ActivityType.LEARNING) }
     var contextExpanded by remember { mutableStateOf(false) }
     var chapterPickerExpanded by remember { mutableStateOf(false) }
     val view = LocalView.current
