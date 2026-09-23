@@ -1,4 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<bitmap xmlns:android="http://schemas.android.com/apk/res/android"
-    android:src="@drawable/sigma_je_icon"
-    android:gravity="fill" />
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#B7F36A"
+        android:pathData="M25,18 L84,18 Q90,18 90,24 L90,38 Q90,44 84,44 L57,44 L70,57 L57,70 L84,70 Q90,70 90,76 L90,90 L25,90 L25,75 L46,75 L59,62 L46,49 L25,49 Z" />
+</vector>
