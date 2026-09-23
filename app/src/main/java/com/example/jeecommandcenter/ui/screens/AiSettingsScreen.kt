@@ -12,6 +12,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.jeecommandcenter.data.*
+import com.example.jeecommandcenter.ui.components.JeeTopBar
 import com.example.jeecommandcenter.ui.theme.*
 import kotlinx.coroutines.launch
 
@@ -39,7 +40,7 @@ fun AiSettingsScreen(context: android.content.Context, onBack: () -> Unit) {
 
     Scaffold(
         containerColor = BgApp,
-        topBar = { com.example.jeecommandcenter.ui.theme.JeeTopBar(title = "AI configuration", onBack = onBack) }
+        topBar = { JeeTopBar(title = "AI configuration", onBack = onBack) }
     ) { padding ->
         LazyColumn(
             Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp),
