@@ -45,3 +45,4 @@ jobs:
           path: app/build/outputs/apk/debug/app-debug.apk
 
       # Verification build for the current implementation batch.
+      # Current app identity/state verification build.
