@@ -22,7 +22,7 @@ class AiOrchestrator(context: android.content.Context) {
             appendLine("Weak chapters: ${intelligence.weakChapters(5).joinToString { it.chapter.name }}")
             appendLine("Return 3 observations, 3 concrete actions, and one risk to watch.")
         }
-        return AiEngine(settings).ask(prompt)
+        return AiEngine(settings).ask(prompt, JeeAiPrompt.taskInstruction("performance analysis"))
     }
 
     suspend fun buildDailyStudyPlan(): AiResult {
@@ -34,7 +34,7 @@ class AiOrchestrator(context: android.content.Context) {
             }
             appendLine("Do not invent chapters or student data.")
         }
-        return AiEngine(settings).ask(prompt)
+        return AiEngine(settings).ask(prompt, JeeAiPrompt.taskInstruction("daily study planning"))
     }
 
     suspend fun explainMistakes(): AiResult {
@@ -49,6 +49,6 @@ class AiOrchestrator(context: android.content.Context) {
             }
             appendLine("Return recurring patterns, root causes, and the next practice action.")
         }
-        return AiEngine(settings).ask(prompt)
+        return AiEngine(settings).ask(prompt, JeeAiPrompt.taskInstruction("mistake diagnosis"))
     }
 }
