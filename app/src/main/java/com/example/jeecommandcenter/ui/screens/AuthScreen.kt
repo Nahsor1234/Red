@@ -21,6 +21,8 @@ import com.example.jeecommandcenter.data.CloudJeeRepository
 import com.example.jeecommandcenter.ui.components.JeeCard
 import com.example.jeecommandcenter.ui.components.JeeTopBar
 import com.example.jeecommandcenter.ui.theme.*
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 private enum class AuthMode { SIGN_IN, SIGN_UP }
@@ -40,8 +42,25 @@ fun AuthScreen(
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
+    var waitingForConfirmation by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
+
+    // When the user confirms the email in a browser, Supabase redirects back
+    // into Sigma JE. This also covers the case where the Auth screen is still
+    // visible while the confirmation happens on another app/browser.
+    LaunchedEffect(waitingForConfirmation) {
+        if (!waitingForConfirmation) return@LaunchedEffect
+        val deadline = System.currentTimeMillis() + 120_000L
+        while (isActive && System.currentTimeMillis() < deadline) {
+            if (runCatching { cloud.currentUser() }.getOrNull() != null) {
+                waitingForConfirmation = false
+                onAuthenticated()
+                break
+            }
+            delay(1_000L)
+        }
+    }
 
     fun submit() {
         val normalizedEmail = email.trim()
@@ -58,6 +77,7 @@ fun AuthScreen(
             busy = true
             message = null
             error = null
+            waitingForConfirmation = false
             runCatching {
                 if (mode == AuthMode.SIGN_IN) {
                     cloud.signIn(normalizedEmail, password)
@@ -74,11 +94,33 @@ fun AuthScreen(
                     mode = AuthMode.SIGN_IN
                     password = ""
                     confirmPassword = ""
-                    message = "Account created. Check your email to confirm the account, then sign in."
+                    waitingForConfirmation = true
+                    message = "Confirmation email sent. Open it on this device and Sigma JE will finish the sign-in automatically. If you already confirmed this account, use Sign in instead."
                 }
             }.onFailure {
                 error = it.message?.takeIf(String::isNotBlank) ?: "Authentication failed. Please try again."
             }
+            busy = false
+        }
+    }
+
+    fun resendConfirmation() {
+        val normalizedEmail = email.trim()
+        if (normalizedEmail.isBlank() || !android.util.Patterns.EMAIL_ADDRESS.matcher(normalizedEmail).matches()) {
+            error = "Enter the email address you used to create the account."
+            return
+        }
+        scope.launch {
+            busy = true
+            error = null
+            runCatching { cloud.resendConfirmation(normalizedEmail) }
+                .onSuccess {
+                    waitingForConfirmation = true
+                    message = "Confirmation email sent again. Check your inbox and spam folder."
+                }
+                .onFailure {
+                    error = "Could not resend confirmation. If the account is already confirmed, switch to Sign in."
+                }
             busy = false
         }
     }
@@ -163,9 +205,22 @@ fun AuthScreen(
                 }
             }
 
+            if (waitingForConfirmation) {
+                OutlinedButton(
+                    onClick = ::resendConfirmation,
+                    enabled = !busy,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Filled.Email, null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Resend confirmation email")
+                }
+            }
+
             TextButton(
                 onClick = {
                     mode = if (mode == AuthMode.SIGN_IN) AuthMode.SIGN_UP else AuthMode.SIGN_IN
+                    waitingForConfirmation = false
                     message = null
                     error = null
                 },
