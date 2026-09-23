@@ -4,7 +4,7 @@ import android.content.Context
 
 /**
  * Offline-first synchronization coordinator.
- * Cloud catalog is read-only; student progress/attempts are uploaded incrementally.
+ * Cloud catalog is read-only; authenticated student progress/attempts are merged both ways.
  */
 class CloudSyncCoordinator(
     private val context: Context,
@@ -14,7 +14,13 @@ class CloudSyncCoordinator(
 
     suspend fun sync(): SyncResult {
         val user = cloud.ensureSession()
-        // Move local syllabus progress into this specific account before incremental sync.
+
+        // Pull first so a fresh install can recover the account's existing cloud state.
+        // The restore is monotonic: progress/confidence use the stronger value, completed
+        // topics stay completed, and attempts are unioned by their cloud UUID.
+        val restore = CloudSyncRestore(context, cloud).restore(user.id)
+
+        // Move any local state into this account after cloud state has been merged.
         cloud.migrateLocalProgress(context)
 
         val local = JeeRepository(context)
@@ -40,11 +46,12 @@ class CloudSyncCoordinator(
             }
         }
 
-        // Sync bookkeeping is scoped to the signed-in account. This prevents one
-        // account's local sync history from suppressing uploads for another account.
+        // Sync bookkeeping is scoped to the signed-in account and includes attempts
+        // restored from cloud, preventing a restored attempt from being uploaded again.
         val attemptKey = "question_attempt_ids_${user.id}"
         val lastSyncKey = "last_sync_at_${user.id}"
         val syncedIds = syncPrefs.getStringSet(attemptKey, emptySet()).orEmpty().toMutableSet()
+        syncedIds += restore.restoredAttemptLocalIds
 
         learning.getQuestionAttempts().forEach { attempt ->
             if (attempt.id.toString() in syncedIds) return@forEach
@@ -71,7 +78,10 @@ class CloudSyncCoordinator(
         return SyncResult(
             chaptersUploaded = chapterCount,
             topicsUploaded = topicCount,
-            attemptsUploaded = attemptCount
+            attemptsUploaded = attemptCount,
+            chaptersRestored = restore.chaptersRestored,
+            topicsRestored = restore.topicsRestored,
+            attemptsRestored = restore.attemptsRestored
         )
     }
 
@@ -86,5 +96,8 @@ class CloudSyncCoordinator(
 data class SyncResult(
     val chaptersUploaded: Int,
     val topicsUploaded: Int,
-    val attemptsUploaded: Int
+    val attemptsUploaded: Int,
+    val chaptersRestored: Int = 0,
+    val topicsRestored: Int = 0,
+    val attemptsRestored: Int = 0
 )
