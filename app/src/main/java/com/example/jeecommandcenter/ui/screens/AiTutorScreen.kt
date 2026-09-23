@@ -32,14 +32,7 @@ import com.example.jeecommandcenter.ui.theme.*
 import kotlinx.coroutines.launch
 
 @Composable
-fun AiTutorScreen(
-    context: android.content.Context,
-    jee: JeeRepository,
-    learning: LearningRepository,
-    onBack: () -> Unit,
-    onOpenSettings: () -> Unit = {},
-    onOpenHistory: () -> Unit = {}
-) {
+fun AiTutorScreen(context: android.content.Context, jee: JeeRepository, learning: LearningRepository, onBack: () -> Unit, onOpenSettings: () -> Unit = {}, onOpenHistory: () -> Unit = {}) {
     val settings = remember { AiSettingsRepository(context) }
     val orchestrator = remember { AiOrchestrator(context) }
     val history = remember { AiChatHistoryRepository(context) }
@@ -73,10 +66,7 @@ fun AiTutorScreen(
         response = ""
         scope.launch {
             val result = runCatching {
-                AiEngine(settings).ask(
-                    prompt + "\n\nStudent context:\n" + contextSummary(analytics, topMistakes),
-                    "You are the JEE study coach. Use only supplied student data. Never invent performance data. Give concise, actionable guidance."
-                )
+                AiEngine(settings).ask(prompt + "\n\nStudent context:\n" + contextSummary(analytics, topMistakes), "You are the JEE study coach. Use only supplied student data. Never invent performance data. Give concise, actionable guidance.")
             }.getOrElse { AiResult(false, error = it.message ?: "AI request failed.") }
             response = if (result.success && result.text.isNotBlank()) result.text else (result.error ?: "The coach returned no response. Try again.")
             if (result.success && result.text.isNotBlank()) history.save(title, prompt, result.text)
@@ -101,78 +91,32 @@ fun AiTutorScreen(
     Scaffold(
         containerColor = BgApp,
         topBar = {
-            JeeTopBar(
-                title = "AI Study Coach",
-                onBack = onBack,
-                trailing = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        TextButton(onClick = onOpenHistory) { Icon(Icons.Filled.History, null, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(4.dp)); Text("History", fontSize = 12.sp) }
-                        Box(Modifier.size(7.dp).clip(CircleShape).background(if (settings.hasApiKey()) Primary else TextMuted))
-                        Spacer(Modifier.width(5.dp))
-                    }
+            JeeTopBar(title = "AI Study Coach", onBack = onBack, trailing = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    TextButton(onClick = onOpenHistory) { Icon(Icons.Filled.History, null, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(4.dp)); Text("History", fontSize = 12.sp) }
+                    Box(Modifier.size(7.dp).clip(CircleShape).background(if (settings.hasApiKey()) Primary else TextMuted))
+                    Spacer(Modifier.width(5.dp))
                 }
-            )
+            })
         },
         bottomBar = {
-            Column(
-                Modifier.fillMaxWidth()
-                    .navigationBarsPadding()
-                    .padding(start = 16.dp, end = 16.dp, bottom = 10.dp, top = 5.dp),
-                verticalArrangement = Arrangement.spacedBy(7.dp)
-            ) {
+            Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(start = 16.dp, end = 16.dp, bottom = 10.dp, top = 5.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
                 if (!busy && response.isBlank()) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                        CoachQuickAction("Analyze my preparation", Icons.Filled.Analytics, Modifier.weight(1f)) {
-                            action("Preparation analysis", "Analyze my preparation", { orchestrator.analyzePerformance() })
-                        }
-                        CoachQuickAction("What should I study?", Icons.Filled.Today, Modifier.weight(1f)) {
-                            askCoach("What should I study now? Use my current study data, revision backlog, mistakes, and weak chapters to recommend the next concrete JEE study action.", "Daily study recommendation")
-                        }
+                        CoachQuickAction("Analyze my preparation", Icons.Filled.Analytics, Modifier.weight(1f)) { action("Preparation analysis", "Analyze my preparation", { orchestrator.analyzePerformance() }) }
+                        CoachQuickAction("What should I study?", Icons.Filled.Today, Modifier.weight(1f)) { askCoach("What should I study now? Use my current study data, revision backlog, mistakes, and weak chapters to recommend the next concrete JEE study action.", "Daily study recommendation") }
                     }
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                        CoachQuickAction("Analyze my mistakes from now", Icons.Filled.ErrorOutline, Modifier.weight(1f)) {
-                            action("Mistake analysis", "Analyze my mistakes from now", { orchestrator.explainMistakes() })
-                        }
-                        CoachQuickAction("Chat with coach", Icons.Filled.AutoAwesome, Modifier.weight(1f)) { }
-                    }
+                    CoachQuickAction("Analyze my mistakes from now", Icons.Filled.ErrorOutline, Modifier.fillMaxWidth()) { action("Mistake analysis", "Analyze my mistakes from now", { orchestrator.explainMistakes() }) }
                 }
-                Row(
-                    Modifier.fillMaxWidth()
-                        .clip(RoundedCornerShape(28.dp))
-                        .background(BgCardAlt)
-                        .border(1.dp, BgCardBorder.copy(alpha = .85f), RoundedCornerShape(28.dp))
-                        .padding(horizontal = 5.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(BgCardAlt).border(1.dp, BgCardBorder.copy(alpha = .85f), RoundedCornerShape(28.dp)).padding(horizontal = 5.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Filled.Add, null, tint = TextSecondary, modifier = Modifier.padding(8.dp).size(21.dp))
-                    TextField(
-                        value = input,
-                        onValueChange = { input = it },
-                        modifier = Modifier.weight(1f),
-                        placeholder = { Text("Ask your study coach", color = TextMuted) },
-                        singleLine = false,
-                        maxLines = 3,
-                        colors = TextFieldDefaults.colors(
-                            focusedContainerColor = androidx.compose.ui.graphics.Color.Transparent,
-                            unfocusedContainerColor = androidx.compose.ui.graphics.Color.Transparent,
-                            disabledContainerColor = androidx.compose.ui.graphics.Color.Transparent,
-                            focusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
-                            unfocusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent
-                        )
-                    )
-                    IconButton(onClick = { askCoach(input, "Study coach") }, enabled = input.isNotBlank() && !busy) {
-                        Icon(Icons.Filled.Send, "Ask coach", tint = if (input.isNotBlank() && !busy) PrimaryLight else TextMuted)
-                    }
+                    TextField(value = input, onValueChange = { input = it }, modifier = Modifier.weight(1f), placeholder = { Text("Ask your study coach", color = TextMuted) }, singleLine = false, maxLines = 3, colors = TextFieldDefaults.colors(focusedContainerColor = androidx.compose.ui.graphics.Color.Transparent, unfocusedContainerColor = androidx.compose.ui.graphics.Color.Transparent, disabledContainerColor = androidx.compose.ui.graphics.Color.Transparent, focusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent, unfocusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent))
+                    IconButton(onClick = { askCoach(input, "Study coach") }, enabled = input.isNotBlank() && !busy) { Icon(Icons.Filled.Send, "Ask coach", tint = if (input.isNotBlank() && !busy) PrimaryLight else TextMuted) }
                 }
             }
         }
     ) { padding ->
-        LazyColumn(
-            Modifier.fillMaxSize().padding(padding).padding(horizontal = 18.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(9.dp),
-            contentPadding = PaddingValues(top = 18.dp, bottom = 18.dp)
-        ) {
+        LazyColumn(Modifier.fillMaxSize().padding(padding).padding(horizontal = 18.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(9.dp), contentPadding = PaddingValues(top = 18.dp, bottom = 18.dp)) {
             if (response.isBlank()) {
                 item {
                     Spacer(Modifier.height(90.dp))
@@ -185,21 +129,8 @@ fun AiTutorScreen(
                     Text("Current signal · $coachingHeadline", color = TextMuted, fontSize = 10.sp)
                 }
             } else {
-                item {
-                    Surface(Modifier.fillMaxWidth(), color = BgCardAlt, shape = RoundedCornerShape(18.dp), border = androidx.compose.foundation.BorderStroke(1.dp, BgCardBorder.copy(alpha = .75f))) {
-                        Text(lastPrompt, color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(15.dp))
-                    }
-                }
-                item {
-                    JeeCard {
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Text("COACH", color = PrimaryLight, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = .9.sp)
-                            if (busy) CircularProgressIndicator(Modifier.size(15.dp), strokeWidth = 2.dp, color = Primary)
-                        }
-                        Spacer(Modifier.height(8.dp))
-                        MarkdownText(response)
-                    }
-                }
+                item { Surface(Modifier.fillMaxWidth(), color = BgCardAlt, shape = RoundedCornerShape(18.dp), border = androidx.compose.foundation.BorderStroke(1.dp, BgCardBorder.copy(alpha = .75f))) { Text(lastPrompt, color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(15.dp)) } }
+                item { JeeCard { Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) { Text("COACH", color = PrimaryLight, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = .9.sp); if (busy) CircularProgressIndicator(Modifier.size(15.dp), strokeWidth = 2.dp, color = Primary) }; Spacer(Modifier.height(8.dp)); MarkdownText(response) } }
             }
         }
     }
@@ -207,19 +138,8 @@ fun AiTutorScreen(
 
 @Composable
 private fun CoachQuickAction(title: String, icon: androidx.compose.ui.graphics.vector.ImageVector, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    Row(
-        modifier.fillMaxWidth()
-            .height(48.dp)
-            .clip(RoundedCornerShape(18.dp))
-            .background(BgCard)
-            .border(1.dp, BgCardBorder.copy(alpha = .8f), RoundedCornerShape(18.dp))
-            .premiumClick(onClick)
-            .padding(horizontal = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(icon, null, tint = PrimaryLight, modifier = Modifier.size(18.dp))
-        Spacer(Modifier.width(7.dp))
-        Text(title, color = TextOnCard, fontSize = 10.sp, fontWeight = FontWeight.Medium, maxLines = 2)
+    Row(modifier.fillMaxWidth().height(48.dp).clip(RoundedCornerShape(18.dp)).background(BgCard).border(1.dp, BgCardBorder.copy(alpha = .8f), RoundedCornerShape(18.dp)).premiumClick(onClick).padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        Icon(icon, null, tint = PrimaryLight, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(7.dp)); Text(title, color = TextOnCard, fontSize = 10.sp, fontWeight = FontWeight.Medium, maxLines = 2)
     }
 }
 
