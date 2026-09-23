@@ -18,7 +18,7 @@ import com.example.jeecommandcenter.data.TestAttemptRecord
 import com.example.jeecommandcenter.ui.components.AppTab
 import com.example.jeecommandcenter.ui.screens.*
 
-private enum class SecondaryPage { PLANNER, REVISION, SETTINGS, CLOUD_ACCOUNT, AI_SETTINGS, AI_HUB, AI_TUTOR, AI_HISTORY, ANALYTICS, ASSESSMENT, ASSESSMENT_HISTORY, ASSESSMENT_RESULT, MISTAKES, CHAPTER_DETAIL, CHAPTER_QUESTIONS }
+private enum class SecondaryPage { PLANNER, REVISION, SETTINGS, CLOUD_ACCOUNT, AUTH, AI_SETTINGS, AI_HUB, AI_TUTOR, AI_HISTORY, ANALYTICS, ASSESSMENT, ASSESSMENT_HISTORY, ASSESSMENT_RESULT, MISTAKES, CHAPTER_DETAIL, CHAPTER_QUESTIONS }
 
 @Composable
 fun AppRoot() {
@@ -30,11 +30,13 @@ fun AppRoot() {
     var secondaryStack by remember { mutableStateOf<List<SecondaryPage>>(emptyList()) }
     var selectedChapter by remember { mutableStateOf<JeeChapter?>(null) }
     var selectedAttempt by remember { mutableStateOf<TestAttemptRecord?>(null) }
+    var authMode by remember { mutableStateOf(CloudAuthMode.SIGN_IN) }
     var activeAiConversationId by remember { mutableStateOf(aiHistory.getActiveConversationId()?.takeIf { aiHistory.getConversation(it) != null }) }
     val secondaryPage = secondaryStack.lastOrNull()
     fun selectTab(tab: AppTab) { secondaryStack = emptyList(); selectedTab = tab }
     fun openPage(page: SecondaryPage) { secondaryStack = secondaryStack + page }
     fun popPage() { if (secondaryStack.isNotEmpty()) secondaryStack = secondaryStack.dropLast(1) }
+    fun openAuth(mode: CloudAuthMode) { authMode = mode; openPage(SecondaryPage.AUTH) }
     fun openAiConversation(id: Long) { activeAiConversationId = id; aiHistory.setActiveConversationId(id); secondaryStack = secondaryStack.dropLast(2) + SecondaryPage.AI_TUTOR }
     BackHandler(enabled = secondaryStack.isNotEmpty()) { popPage() }
     val screenKey = secondaryPage?.let { "secondary:" + it.name } ?: ("tab:" + selectedTab.name)
@@ -49,7 +51,8 @@ fun AppRoot() {
             SecondaryPage.PLANNER -> StudyPlannerScreen(repo, ::popPage) { openPage(SecondaryPage.REVISION) }
             SecondaryPage.REVISION -> RevisionScreen(repo, ::popPage) { openPage(SecondaryPage.PLANNER) }
             SecondaryPage.SETTINGS -> SettingsScreen(::popPage, { openPage(SecondaryPage.ANALYTICS) }, { openPage(SecondaryPage.AI_SETTINGS) }) { openPage(SecondaryPage.CLOUD_ACCOUNT) }
-            SecondaryPage.CLOUD_ACCOUNT -> CloudAccountScreen(context, ::popPage)
+            SecondaryPage.CLOUD_ACCOUNT -> CloudAccountScreen(context, ::popPage, ::openAuth)
+            SecondaryPage.AUTH -> AuthScreen(authMode, ::popPage) { popPage() }
             SecondaryPage.AI_SETTINGS -> AiSettingsScreen(context, ::popPage)
             SecondaryPage.AI_HUB -> AiHubScreen(context, ::popPage, { openPage(SecondaryPage.AI_TUTOR) }, { openPage(SecondaryPage.AI_SETTINGS) })
             SecondaryPage.AI_TUTOR -> AiTutorScreen(context, repo, learning, ::popPage, { openPage(SecondaryPage.AI_SETTINGS) }, { openPage(SecondaryPage.AI_HISTORY) }, activeAiConversationId) { id -> activeAiConversationId = id; aiHistory.setActiveConversationId(id) }
