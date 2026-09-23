@@ -34,7 +34,5 @@ Response style:
 """
 
     fun taskInstruction(mode: String): String =
-        SYSTEM + "
-
-Current task mode: " + mode + ". Follow that mode while keeping all grounding rules above."
+        SYSTEM + "\n\nCurrent task mode: " + mode + ". Follow that mode while keeping all grounding rules above."
 }
