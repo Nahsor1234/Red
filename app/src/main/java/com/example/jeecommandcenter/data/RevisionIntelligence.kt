@@ -4,6 +4,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
+import kotlin.math.roundToInt
 
 /** Deterministic revision policy. Question performance and unresolved mistakes are first-class signals. */
 class RevisionIntelligence(
