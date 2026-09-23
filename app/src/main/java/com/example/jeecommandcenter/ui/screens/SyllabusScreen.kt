@@ -84,7 +84,7 @@ fun SyllabusScreen(
             return topicIds.count { cloudTopicProgress[it]?.completed == true }.toFloat() / topicIds.size
         }
         return localChapters
-            .firstOrNull { ${it.subject.lowercase()}_${it.number} == id }
+            .firstOrNull { it.subject.lowercase() + "_" + it.number == id }
             ?.progress
             ?: 0f
     }
