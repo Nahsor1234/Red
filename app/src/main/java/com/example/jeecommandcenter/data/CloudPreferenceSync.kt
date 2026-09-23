@@ -6,6 +6,7 @@ import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
@@ -231,7 +232,7 @@ class CloudPreferenceSync(
         is Boolean -> buildJsonObject { put("type", "boolean"); put("value", value) }
         is Set<*> -> buildJsonObject {
             put("type", "stringSet")
-            put("value", buildJsonArray { value.filterIsInstance<String>().forEach { add(it) } })
+            put("value", buildJsonArray { value.filterIsInstance<String>().forEach { add(JsonPrimitive(it)) } })
         }
         else -> null
     }
