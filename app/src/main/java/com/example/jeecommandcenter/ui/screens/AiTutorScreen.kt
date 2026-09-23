@@ -3,6 +3,7 @@ package com.example.jeecommandcenter.ui.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
@@ -30,6 +31,26 @@ fun AiTutorScreen(context: android.content.Context, jee: JeeRepository, learning
     var response by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     val analytics = remember { learning.analytics(jee) }
+    val intelligence = remember { JeeIntelligence(jee, learning) }
+    val mistakes = remember { learning.getMistakes().filterNot { it.resolved } }
+    val weak = remember { intelligence.weakChapters(3) }
+    val priorities = remember { intelligence.dailyPriorities(3) }
+    val revisions = remember { intelligence.revisionRecommendations(3) }
+    val hasData = analytics.studyMinutes7d > 0 || analytics.testsCompleted > 0 || analytics.unresolvedMistakes > 0 || priorities.isNotEmpty()
+    val coachingHeadline = when {
+        priorities.isNotEmpty() -> priorities.first().title
+        revisions.isNotEmpty() -> "Clear " + revisions.first().chapter.name + " revision"
+        weak.isNotEmpty() -> "Strengthen " + weak.first().chapter.name
+        hasData -> "Keep building your study signal"
+        else -> "Start collecting real study data"
+    }
+    val coachingReason = when {
+        priorities.isNotEmpty() -> priorities.first().reason
+        revisions.isNotEmpty() -> revisions.first().reason
+        weak.isNotEmpty() -> weak.first().signals.take(2).joinToString(" + ")
+        hasData -> "Your recent data is present, but it does not yet produce a strong priority."
+        else -> "Study sessions, questions, revisions and tests will make the coach more useful."
+    }
     val topMistakes = remember { learning.getMistakes().filterNot { it.resolved }.take(5) }
 
     fun stream(prompt: String) {
