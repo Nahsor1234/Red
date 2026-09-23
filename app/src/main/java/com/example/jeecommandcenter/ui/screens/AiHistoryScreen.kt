@@ -3,10 +3,10 @@ package com.example.jeecommandcenter.ui.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material3.*
@@ -16,7 +16,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.jeecommandcenter.data.AiChatHistoryRepository
 import com.example.jeecommandcenter.data.AiHistoryEntry
-import com.example.jeecommandcenter.ui.components.JeeCard
+import com.example.jeecommandcenter.ui.components.*
 import com.example.jeecommandcenter.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -81,7 +81,6 @@ fun AiHistoryScreen(context: android.content.Context, onBack: () -> Unit) {
                 }
             }
         }
-    }
 
     selected?.let { entry ->
         AlertDialog(
