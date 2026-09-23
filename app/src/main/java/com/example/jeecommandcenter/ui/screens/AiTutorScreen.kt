@@ -26,7 +26,9 @@ import androidx.compose.ui.unit.sp
 import com.example.jeecommandcenter.data.*
 import com.example.jeecommandcenter.ui.components.*
 import com.example.jeecommandcenter.ui.theme.*
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -59,6 +61,7 @@ fun AiTutorScreen(
     var input by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     var streamingText by remember { mutableStateOf("") }
+    var activeRequestJob by remember { mutableStateOf<Job?>(null) }
 
     LaunchedEffect(conversationId) { activeId = conversationId; messages = conversationId?.let { history.getConversation(it)?.messages }.orEmpty() }
 
@@ -72,6 +75,8 @@ fun AiTutorScreen(
     }
 
     fun exitConversation() {
+        activeRequestJob?.cancel()
+        activeRequestJob = null
         activeId = null
         messages = emptyList()
         streamingText = ""
@@ -98,7 +103,7 @@ fun AiTutorScreen(
         streamingText = ""
         busy = true
 
-        scope.launch {
+        activeRequestJob = scope.launch {
             val result = try {
                 block?.invoke() ?: run {
                     val turns = history.getConversation(id)?.messages.orEmpty()
@@ -124,9 +129,11 @@ fun AiTutorScreen(
                     )
                 }
             } catch (error: Throwable) {
+                if (error is CancellationException) throw error
                 AiResult(false, error = error.message ?: "AI request failed.")
             }
 
+            activeRequestJob = null
             val coachText = if (result.success && result.text.isNotBlank()) {
                 result.text
             } else {
