@@ -84,33 +84,223 @@ data class TaskItem(val id: String, val title: String, val subtitle: String, val
 
 @Composable
 fun BottomNavBar(selected: AppTab, onTabSelected: (AppTab) -> Unit, onAiClick: () -> Unit) {
-    val view = LocalView.current; val density = LocalDensity.current; var navWidth by remember { mutableStateOf(0.dp) }; val itemCount = 5; val slotWidth = if (navWidth > 0.dp) (navWidth - 12.dp) / itemCount else 0.dp
-    val activeIndex = when (selected) { AppTab.HOME -> 0; AppTab.SYLLABUS -> 1; AppTab.TASKS -> 3; AppTab.STATS -> 4 }
-    val pillX by animateDpAsState(6.dp + slotWidth * activeIndex, animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow), label = "nav-pill-position")
-    val items = listOf(AppTab.HOME to (Icons.Filled.Home to "Home"), AppTab.SYLLABUS to (Icons.Filled.MenuBook to "Syllabus"), AppTab.TASKS to (Icons.Filled.CheckCircle to "Tasks"), AppTab.STATS to (Icons.Filled.Timer to "Timer"))
-    Box(Modifier.fillMaxWidth().navigationBarsPadding().padding(start = 16.dp, end = 16.dp, bottom = 17.dp), contentAlignment = Alignment.Center) {
-        Box(Modifier.fillMaxWidth().height(66.dp).clip(RoundedCornerShape(33.dp)).shadow(8.dp, RoundedCornerShape(33.dp), clip = false).background(BgCard.copy(alpha = .96f)).border(1.dp, BgCardBorder.copy(alpha = .88f), RoundedCornerShape(33.dp)).onGloballyPositioned { coordinates -> navWidth = with(density) { coordinates.size.width.toDp() } }) {
-            if (slotWidth > 0.dp) Box(Modifier.offset(x = pillX - 1.dp).width(slotWidth + 2.dp).height(56.dp).align(Alignment.CenterStart).clip(RoundedCornerShape(28.dp)).background(BgAppBase).border(1.dp, BgCardBorder.copy(alpha = .95f), RoundedCornerShape(28.dp)))
-            Row(Modifier.fillMaxSize().padding(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                NavSlot(items[0].first, items[0].second.first, items[0].second.second, selected == items[0].first, Modifier.weight(1f)) { view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK); onTabSelected(items[0].first) }
-                NavSlot(items[1].first, items[1].second.first, items[1].second.second, selected == items[1].first, Modifier.weight(1f)) { view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK); onTabSelected(items[1].first) }
-                AiDestination(Modifier.weight(1f), view, onAiClick)
-                NavSlot(items[2].first, items[2].second.first, items[2].second.second, selected == items[2].first, Modifier.weight(1f)) { view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK); onTabSelected(items[2].first) }
-                NavSlot(items[3].first, items[3].second.first, items[3].second.second, selected == items[3].first, Modifier.weight(1f)) { view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK); onTabSelected(items[3].first) }
+    val view = LocalView.current
+    val density = LocalDensity.current
+    var navWidth by remember { mutableStateOf(0.dp) }
+    val itemCount = 5
+    val contentWidth = (navWidth - 12.dp).coerceAtLeast(0.dp)
+    val slotWidth = if (contentWidth > 0.dp) contentWidth / itemCount else 0.dp)
+    val activeIndex = when (selected) {
+        AppTab.HOME -> 0
+        AppTab.SYLLABUS -> 1
+        AppTab.TASKS -> 3
+        AppTab.STATS -> 4
+    }
+    val indicatorX by animateDpAsState(
+        targetValue = 6.dp + slotWidth * activeIndex + (slotWidth - 46.dp).coerceAtLeast(0.dp) / 2f,
+        animationSpec = tween(210),
+        label = "nav-selected-indicator"
+    )
+
+    val items = listOf(
+        AppTab.HOME to (Icons.Filled.Home to "Home"),
+        AppTab.SYLLABUS to (Icons.Filled.MenuBook to "Syllabus"),
+        AppTab.TASKS to (Icons.Filled.CheckCircle to "Tasks"),
+        AppTab.STATS to (Icons.Filled.Timer to "Timer")
+    )
+
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .navigationBarsPadding()
+            .padding(start = 16.dp, end = 16.dp, bottom = 17.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(62.dp)
+                .clip(RoundedCornerShape(24.dp))
+                .shadow(8.dp, RoundedCornerShape(24.dp), clip = false)
+                .background(BgCard.copy(alpha = .97f))
+                .border(1.dp, BgCardBorder.copy(alpha = .9f), RoundedCornerShape(24.dp))
+                .onGloballyPositioned { coordinates ->
+                    navWidth = with(density) { coordinates.size.width.toDp() }
+                }
+        ) {
+            if (slotWidth > 0.dp) {
+                Box(
+                    Modifier
+                        .offset(x = indicatorX, y = 9.dp)
+                        .size(46.dp, 44.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(BgAppBase.copy(alpha = .9f))
+                        .border(1.dp, BgCardBorder.copy(alpha = .95f), RoundedCornerShape(16.dp))
+                )
+            }
+
+            Row(
+                Modifier
+                    .fillMaxSize()
+                    .padding(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                NavIconSlot(
+                    icon = items[0].second.first,
+                    contentDescription = items[0].second.second,
+                    selected = selected == items[0].first,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                    onTabSelected(items[0].first)
+                }
+                NavIconSlot(
+                    icon = items[1].second.first,
+                    contentDescription = items[1].second.second,
+                    selected = selected == items[1].first,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                    onTabSelected(items[1].first)
+                }
+                NavIconSlot(
+                    icon = Icons.Filled.AutoAwesome,
+                    contentDescription = "AI Study Coach",
+                    selected = false,
+                    accent = true,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                    onAiClick()
+                }
+                NavIconSlot(
+                    icon = items[2].second.first,
+                    contentDescription = items[2].second.second,
+                    selected = selected == items[2].first,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                    onTabSelected(items[2].first)
+                }
+                NavIconSlot(
+                    icon = items[3].second.first,
+                    contentDescription = items[3].second.second,
+                    selected = selected == items[3].first,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                    onTabSelected(items[3].first)
+                }
             }
         }
     }
 }
 
-@Composable private fun RowScope.NavSlot(tab: AppTab, icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
-    val color by animateColorAsState(if (selected) AccentBlueLight else TextSecondary, animationSpec = tween(180), label = "nav-color-${tab.name}"); val iconScale by animateFloatAsState(if (selected) 1.08f else 1f, animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium), label = "nav-scale-${tab.name}"); val iconLift by animateFloatAsState(if (selected) -1.5f else 0f, animationSpec = tween(180), label = "nav-lift-${tab.name}"); val interaction = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }; val pressed by interaction.collectIsPressedAsState(); val pressScale by animateFloatAsState(if (pressed) .93f else 1f, animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium), label = "nav-press-${tab.name}")
-    Row(modifier.fillMaxHeight().graphicsLayer(scaleX = pressScale, scaleY = pressScale).clip(RoundedCornerShape(28.dp)).clickable(interactionSource = interaction, indication = LocalIndication.current, onClick = onClick), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-        Icon(icon, label, tint = color, modifier = Modifier.size(25.dp).graphicsLayer(scaleX = iconScale, scaleY = iconScale, translationY = iconLift))
-        AnimatedVisibility(visible = selected, enter = fadeIn(tween(140)) + expandHorizontally(tween(160)), exit = fadeOut(tween(100)) + shrinkHorizontally(tween(120))) { Row(verticalAlignment = Alignment.CenterVertically) { Spacer(Modifier.width(6.dp)); Text(label, color = color, fontSize = 11.sp, fontWeight = FontWeight.Medium, maxLines = 1) } }
+@Composable
+private fun RowScope.NavIconSlot(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    contentDescription: String,
+    selected: Boolean,
+    modifier: Modifier,
+    accent: Boolean = false,
+    onClick: () -> Unit
+) {
+    val interaction = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = when {
+            pressed -> .91f
+            selected -> 1.06f
+            else -> 1f
+        },
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "nav-press-scale-$contentDescription"
+    )
+    val color by animateColorAsState(
+        targetValue = when {
+            selected -> AccentBlueLight
+            accent -> PrimaryLight
+            else -> TextSecondary
+        },
+        animationSpec = tween(140),
+        label = "nav-color-$contentDescription"
+    )
+
+    Box(
+        modifier
+            .fillMaxHeight()
+            .clip(RoundedCornerShape(18.dp))
+            .graphicsLayer(
+                scaleX = scale,
+                scaleY = scale
+            )
+            .clickable(
+                interactionSource = interaction,
+                indication = LocalIndication.current,
+                onClick = onClick
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Nav3DIcon(
+            icon = icon,
+            contentDescription = contentDescription,
+            tint = color,
+            selected = selected || accent
+        )
     }
 }
 
-@Composable private fun AiDestination(modifier: Modifier, view: android.view.View, onClick: () -> Unit) {
-    val interaction = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }; val pressed by interaction.collectIsPressedAsState(); val pulse by animateFloatAsState(if (pressed) .92f else 1f, animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium), label = "ai-press"); val rotation by animateFloatAsState(if (pressed) -8f else 0f, animationSpec = tween(160), label = "ai-rotation")
-    Box(modifier.fillMaxHeight().graphicsLayer(scaleX = pulse, scaleY = pulse, rotationZ = rotation).clip(RoundedCornerShape(28.dp)).clickable(interactionSource = interaction, indication = LocalIndication.current) { view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK); onClick() }, contentAlignment = Alignment.Center) { Icon(Icons.Filled.AutoAwesome, "AI Study Coach", tint = PrimaryLight, modifier = Modifier.size(26.dp)) }
+@Composable
+private fun Nav3DIcon(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    contentDescription: String,
+    tint: Color,
+    selected: Boolean
+) {
+    val lift by animateFloatAsState(
+        targetValue = if (selected) -1.5f else 0f,
+        animationSpec = tween(160),
+        label = "nav-lift-$contentDescription"
+    )
+    Box(
+        Modifier
+            .size(30.dp)
+            .graphicsLayer(
+                translationY = lift,
+                rotationX = if (selected) 2.5f else 0f,
+                rotationY = if (selected) -2.5f else 0f,
+                cameraDistance = 18f
+            )
+    ) {
+        Icon(
+            icon,
+            null,
+            tint = tint.copy(alpha = .25f),
+            modifier = Modifier
+                .offset(x = 2.dp, y = 2.5.dp)
+                .size(25.dp)
+        )
+        Icon(
+            icon,
+            contentDescription,
+            tint = tint,
+            modifier = Modifier
+                .offset(x = (-.5f).dp, y = (-.5f).dp)
+                .size(25.dp)
+        )
+        if (selected) {
+            Box(
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .offset(y = 5.dp)
+                    .size(4.dp)
+                    .clip(androidx.compose.foundation.shape.CircleShape)
+                    .background(tint.copy(alpha = .9f))
+            )
+        }
+    }
 }
+
