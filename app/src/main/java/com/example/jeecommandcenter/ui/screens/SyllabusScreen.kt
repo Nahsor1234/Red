@@ -42,7 +42,7 @@ fun SyllabusScreen(repo: JeeRepository, selectedTab: AppTab, onTabSelected: (App
             Spacer(Modifier.height(10.dp))
             Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) { Text("Syllabus", style = MaterialTheme.typography.headlineSmall); TextButton(onClick = onOpenRevision) { Text("Review", fontSize = 12.sp) } }
             Spacer(Modifier.height(12.dp))
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) { items(subjects) { value -> FilterChip(value, value == subject) { subject = value } } }
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) { items(subjects) { value -> JeeFilterChip(value, value == subject) { subject = value } } }
             Spacer(Modifier.height(14.dp))
             Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(BgCardAlt).padding(17.dp)) {
                 Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
@@ -51,7 +51,7 @@ fun SyllabusScreen(repo: JeeRepository, selectedTab: AppTab, onTabSelected: (App
                 }
                 Spacer(Modifier.height(10.dp)); LinearStatBar(avg)
             }
-            Spacer(Modifier.height(14.dp)); LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) { items(filters) { value -> FilterChip(value, value == filter) { filter = value } } }
+            Spacer(Modifier.height(14.dp)); LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) { items(filters) { value -> JeeFilterChip(value, value == filter) { filter = value } } }
             Spacer(Modifier.height(6.dp))
             LazyColumn(Modifier.weight(1f)) {
                 if (filter == "All" && attention != null) item { Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(BgCard).padding(15.dp)) { Text("NEXT ATTENTION", color = TextSecondary, fontSize = 11.sp); Text(attention.name, style = MaterialTheme.typography.titleMedium); Text("Low confidence or no recent study", color = TextMuted, fontSize = 11.sp); Spacer(Modifier.height(8.dp)); LinearStatBar(attention.progress, height = 5.dp) } }
