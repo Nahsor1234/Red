@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
@@ -70,7 +71,6 @@ fun OpeningScreen() {
                 Canvas(Modifier.fillMaxSize().padding(26.dp)) {
                     val w = size.width
                     val h = size.height
-
                     val top = Path().apply {
                         moveTo(w * .16f, h * .14f)
                         lineTo(w * .80f, h * .14f)
@@ -88,62 +88,30 @@ fun OpeningScreen() {
                         lineTo(w * .16f, h * .34f)
                         close()
                     }
-                    drawPath(
-                        top,
-                        brush = Brush.linearGradient(
-                            listOf(Color(0xFFE8FF9C), Color(0xFF77D96A), Color(0xFF4A9B43))
-                        )
-                    )
+                    drawPath(top, brush = Brush.linearGradient(listOf(Color(0xFFE8FF9C), Color(0xFF77D96A), Color(0xFF4A9B43))))
                     drawOval(
                         color = PrimaryLight.copy(alpha = .58f),
                         topLeft = Offset(w * .02f, h * .20f),
                         size = androidx.compose.ui.geometry.Size(w * .96f, h * .60f),
                         style = Stroke(2.5.dp.toPx())
                     )
-                    drawCircle(
-                        PrimaryLight,
-                        radius = 6.dp.toPx(),
-                        center = Offset(w * .10f, h * .57f)
-                    )
+                    drawCircle(PrimaryLight, radius = 6.dp.toPx(), center = Offset(w * .10f, h * .57f))
                     val cx = w * .78f
                     val cy = h * .50f
                     val star = Path().apply {
-                        moveTo(cx, cy - 13)
-                        lineTo(cx + 5, cy - 5)
-                        lineTo(cx + 13, cy)
-                        lineTo(cx + 5, cy + 5)
-                        lineTo(cx, cy + 13)
-                        lineTo(cx - 5, cy + 5)
-                        lineTo(cx - 13, cy)
-                        lineTo(cx - 5, cy - 5)
-                        close()
+                        moveTo(cx, cy - 13); lineTo(cx + 5, cy - 5); lineTo(cx + 13, cy)
+                        lineTo(cx + 5, cy + 5); lineTo(cx, cy + 13); lineTo(cx - 5, cy + 5)
+                        lineTo(cx - 13, cy); lineTo(cx - 5, cy - 5); close()
                     }
                     drawPath(star, color = Color(0xFFF1FF9F))
                 }
             }
-
             Spacer(Modifier.height(24.dp))
-            Text(
-                "SIGMA JEE",
-                color = TextPrimary,
-                fontSize = 28.sp,
-                fontWeight = FontWeight.SemiBold,
-                letterSpacing = 3.sp
-            )
+            Text("SIGMA JEE", color = TextPrimary, fontSize = 28.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 3.sp)
             Spacer(Modifier.height(8.dp))
-            Text(
-                "HIGHER. EVERYDAY.",
-                color = PrimaryLight,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Medium,
-                letterSpacing = 3.2.sp
-            )
+            Text("HIGHER. EVERYDAY.", color = PrimaryLight, fontSize = 11.sp, fontWeight = FontWeight.Medium, letterSpacing = 3.2.sp)
             Spacer(Modifier.height(30.dp))
-            Text(
-                "Your JEE command center.",
-                color = TextMuted,
-                fontSize = 10.sp
-            )
+            Text("Your JEE command center.", color = TextMuted, fontSize = 10.sp)
         }
     }
 }
