@@ -47,7 +47,7 @@ fun TasksScreen(repo: JeeRepository, selectedTab: AppTab, onTabSelected: (AppTab
             }
             Spacer(Modifier.height(12.dp))
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(listOf("All", "Today", "Upcoming", "Completed")) { value -> FilterChip(value, value == filter) { filter = value } }
+                items(listOf("All", "Today", "Upcoming", "Completed")) { value -> JeeFilterChip(value, value == filter) { filter = value } }
             }
             Spacer(Modifier.height(14.dp))
             if (filter != "All") {
@@ -67,18 +67,11 @@ fun TasksScreen(repo: JeeRepository, selectedTab: AppTab, onTabSelected: (AppTab
                     if (all.isEmpty()) emptyTaskState()
                 } else {
                     if (visible.isEmpty()) emptyTaskState()
-                    else visible.forEach { task ->
-                        item(key = task.id) { TaskListItem(task, repo, { selectedTask = it }, { refresh++ }) }
-                    }
+                    else visible.forEach { task -> item(key = task.id) { TaskListItem(task, repo, { selectedTask = it }, { refresh++ }) } }
                 }
                 item { Spacer(Modifier.height(8.dp)) }
             }
-            Button(
-                onClick = { showAdd = true },
-                modifier = Modifier.fillMaxWidth().height(52.dp),
-                shape = RoundedCornerShape(17.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = AccentBlue)
-            ) {
+            Button(onClick = { showAdd = true }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(17.dp), colors = ButtonDefaults.buttonColors(containerColor = AccentBlue)) {
                 Icon(Icons.Filled.Add, null, tint = Color(0xFF17120A)); Spacer(Modifier.width(7.dp)); Text("Add task", color = Color(0xFF17120A))
             }
             Spacer(Modifier.height(8.dp))
@@ -90,42 +83,25 @@ fun TasksScreen(repo: JeeRepository, selectedTab: AppTab, onTabSelected: (AppTab
         AlertDialog(
             onDismissRequest = { selectedTask = null },
             title = { Text(task.title) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("${task.subject} · ${task.durationMin} min", color = TextSecondary)
-                    Text("${task.activityType.name.lowercase().replace('_', ' ')} · ${task.dueDay}", color = TextMuted, fontSize = 12.sp)
-                    Text(if (task.done) "Completed" else "Not completed", color = if (task.done) AccentGreen else TextSecondary, fontSize = 12.sp)
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    repo.toggleTask(task.id)
-                    selectedTask = null
-                    refresh++
-                }) { Text(if (task.done) "Mark incomplete" else "Complete") }
-            },
-            dismissButton = {
-                Row {
-                    TextButton(onClick = { repo.deleteTask(task.id); selectedTask = null; refresh++ }) { Text("Delete", color = AccentPink) }
-                    TextButton(onClick = { selectedTask = null }) { Text("Close") }
-                }
-            }
+            text = { Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("${task.subject} · ${task.durationMin} min", color = TextSecondary)
+                Text("${task.activityType.name.lowercase().replace('_', ' ')} · ${task.dueDay}", color = TextMuted, fontSize = 12.sp)
+                Text(if (task.done) "Completed" else "Not completed", color = if (task.done) AccentGreen else TextSecondary, fontSize = 12.sp)
+            } },
+            confirmButton = { TextButton(onClick = { repo.toggleTask(task.id); selectedTask = null; refresh++ }) { Text(if (task.done) "Mark incomplete" else "Complete") } },
+            dismissButton = { Row {
+                TextButton(onClick = { repo.deleteTask(task.id); selectedTask = null; refresh++ }) { Text("Delete", color = Danger) }
+                TextButton(onClick = { selectedTask = null }) { Text("Close") }
+            } }
         )
     }
 }
 
-private fun LazyListScope.taskGroup(
-    title: String,
-    tasks: List<AppTask>,
-    repo: JeeRepository,
-    onOpen: (AppTask) -> Unit,
-    onRefresh: () -> Unit
-) {
+private fun LazyListScope.taskGroup(title: String, tasks: List<AppTask>, repo: JeeRepository, onOpen: (AppTask) -> Unit, onRefresh: () -> Unit) {
     if (tasks.isEmpty()) return
     item(key = "header_$title") {
         Row(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 5.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(title, style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.width(6.dp)); Text("· ${tasks.size}", color = TextMuted, fontSize = 11.sp)
+            Text(title, style = MaterialTheme.typography.titleMedium); Spacer(Modifier.width(6.dp)); Text("· ${tasks.size}", color = TextMuted, fontSize = 11.sp)
         }
     }
     items(tasks, key = { it.id }) { task -> TaskListItem(task, repo, onOpen, onRefresh) }
@@ -133,15 +109,8 @@ private fun LazyListScope.taskGroup(
 
 @Composable
 private fun TaskListItem(task: AppTask, repo: JeeRepository, onOpen: (AppTask) -> Unit, onRefresh: () -> Unit) {
-    Row(
-        Modifier.fillMaxWidth().premiumClick { onOpen(task) }.padding(vertical = 11.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            Modifier.size(23.dp).clip(RoundedCornerShape(7.dp)).background(if (task.done) AccentGreen else Color.Transparent)
-                .premiumClick(haptic = HapticFeedbackConstants.KEYBOARD_TAP) { repo.toggleTask(task.id); onRefresh() },
-            Alignment.Center
-        ) {
+    Row(Modifier.fillMaxWidth().premiumClick { onOpen(task) }.padding(vertical = 11.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(23.dp).clip(RoundedCornerShape(7.dp)).background(if (task.done) AccentGreen else Color.Transparent).premiumClick(haptic = HapticFeedbackConstants.KEYBOARD_TAP) { repo.toggleTask(task.id); onRefresh() }, Alignment.Center) {
             if (task.done) Icon(Icons.Filled.Check, null, tint = AccentGreenDark, modifier = Modifier.size(14.dp))
         }
         Spacer(Modifier.width(12.dp))
@@ -179,11 +148,11 @@ private fun AddTaskDialogPreview(repo: JeeRepository, onDone: () -> Unit) {
             Column {
                 OutlinedTextField(title, { title = it }, label = { Text("Task") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 Spacer(Modifier.height(10.dp)); Text("Subject", color = TextMuted, fontSize = 11.sp)
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) { items(subjects) { FilterChip(it, it == subject) { subject = it } } }
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) { items(subjects) { JeeFilterChip(it, it == subject) { subject = it } } }
                 Spacer(Modifier.height(10.dp))
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) { items(listOf(ActivityType.LEARNING, ActivityType.PRACTICE, ActivityType.REVISION, ActivityType.TEST)) { FilterChip(it.name.lowercase().replace('_', ' '), it == activity) { activity = it } } }
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) { items(listOf(ActivityType.LEARNING, ActivityType.PRACTICE, ActivityType.REVISION, ActivityType.TEST)) { JeeFilterChip(it.name.lowercase().replace('_', ' '), it == activity) { activity = it } } }
                 Spacer(Modifier.height(10.dp)); OutlinedTextField(duration, { duration = it.filter(Char::isDigit).take(4) }, label = { Text("Minutes") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                Spacer(Modifier.height(8.dp)); Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { FilterChip("Today", due == "Today") { due = "Today" }; FilterChip("Upcoming", due == "Upcoming") { due = "Upcoming" } }
+                Spacer(Modifier.height(8.dp)); Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { JeeFilterChip("Today", due == "Today") { due = "Today" }; JeeFilterChip("Upcoming", due == "Upcoming") { due = "Upcoming" } }
             }
         },
         confirmButton = {
