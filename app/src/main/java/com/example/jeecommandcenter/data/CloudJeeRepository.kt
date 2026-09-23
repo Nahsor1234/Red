@@ -114,9 +114,8 @@ class CloudJeeRepository(
         }.decodeList()
 
     suspend fun setTopicCompleted(userId: String, topicId: String, completed: Boolean) {
-        db["topic_progress"].insert(
+        db["topic_progress"].upsert(
             CloudTopicProgress(userId, topicId, completed),
-            upsert = true,
             onConflict = "user_id,topic_id"
         )
     }
@@ -127,14 +126,13 @@ class CloudJeeRepository(
         progress: Float,
         confidence: Int = 0
     ) {
-        db["chapter_progress"].insert(
+        db["chapter_progress"].upsert(
             CloudChapterProgress(
                 userId = userId,
                 chapterId = chapterId,
                 progress = progress.coerceIn(0f, 1f),
                 confidence = confidence.coerceIn(0, 5)
             ),
-            upsert = true,
             onConflict = "user_id,chapter_id"
         )
     }
@@ -188,7 +186,7 @@ class CloudJeeRepository(
         JeeCatalog.chapters.forEach { chapter ->
             topicsRepo.topicsFor(chapter)
                 .filter { it.completed }
-                .forEach { topicRows += CloudTopicProgress(user.id, topic.id, true) }
+                .forEach { topicRows += CloudTopicProgress(user.id, it.id, true) }
 
             val state = localRepo.getChapterState(chapter.id)
             if (state.progress > 0f || state.confidence > 0) {
@@ -202,17 +200,15 @@ class CloudJeeRepository(
         }
 
         if (topicRows.isNotEmpty()) {
-            db["topic_progress"].insert(
+            db["topic_progress"].upsert(
                 topicRows,
-                upsert = true,
                 onConflict = "user_id,topic_id"
             )
         }
 
         if (chapterRows.isNotEmpty()) {
-            db["chapter_progress"].insert(
+            db["chapter_progress"].upsert(
                 chapterRows,
-                upsert = true,
                 onConflict = "user_id,chapter_id"
             )
         }
