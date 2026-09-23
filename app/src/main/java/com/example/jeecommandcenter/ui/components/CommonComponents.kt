@@ -1,13 +1,16 @@
 package com.example.jeecommandcenter.ui.components
 
+import android.graphics.Paint
+import android.graphics.Typeface
 import android.view.HapticFeedbackConstants
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
@@ -22,13 +25,50 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.jeecommandcenter.ui.theme.*
+import kotlin.math.abs
+
+private val PatternSymbols = listOf("π", "Σ", "√", "∫", "Δ", "θ", "λ", "μ", "→", "↗", "∇", "∞", "α", "β", "γ", "Ω", "∂", "≈", "≠", "x²", "F=ma", "PV=nRT", "E=mc²")
+
+@Composable
+fun JeeBackground(modifier: Modifier = Modifier) {
+    val density = LocalDensity.current
+    Canvas(modifier.fillMaxSize()) {
+        val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.White.copy(alpha = 0.055f).toArgb()
+            textSize = with(density) { 10.dp.toPx() }
+            typeface = Typeface.create("sans-serif", Typeface.NORMAL)
+        }
+        val stepX = with(density) { 58.dp.toPx() }
+        val stepY = with(density) { 48.dp.toPx() }
+        val rows = (size.height / stepY).toInt() + 2
+        val cols = (size.width / stepX).toInt() + 2
+        for (row in 0 until rows) {
+            for (col in 0 until cols) {
+                val index = abs((row * 31 + col * 17 + row * col * 3) % PatternSymbols.size)
+                val xJitter = ((row * 19 + col * 7) % 17) - 8
+                val yJitter = ((row * 11 + col * 13) % 15) - 7
+                val x = col * stepX + with(density) { xJitter.dp.toPx() }
+                val y = row * stepY + with(density) { yJitter.dp.toPx() }
+                canvas.nativeCanvas.drawText(PatternSymbols[index], x, y, textPaint)
+                if ((row + col) % 4 == 0) {
+                    val gx = x + with(density) { 22.dp.toPx() }
+                    val gy = y - with(density) { 4.dp.toPx() }
+                    drawLine(Color.White.copy(alpha = 0.035f), androidx.compose.ui.geometry.Offset(gx, gy), androidx.compose.ui.geometry.Offset(gx + with(density) { 10.dp.toPx() }, gy), strokeWidth = with(density) { 1.dp.toPx() })
+                    drawLine(Color.White.copy(alpha = 0.035f), androidx.compose.ui.geometry.Offset(gx, gy), androidx.compose.ui.geometry.Offset(gx, gy - with(density) { 9.dp.toPx() }), strokeWidth = with(density) { 1.dp.toPx() })
+                }
+            }
+        }
+    }
+}
 
 enum class AppTab { HOME, SYLLABUS, TASKS, STATS }
 
@@ -82,37 +122,51 @@ fun TaskRow(task: TaskItem, onToggle: (String) -> Unit, onClick: () -> Unit = {}
 
 @Composable
 fun JeeFilterChip(label: String, selected: Boolean, onClick: () -> Unit) {
-    FilterChip(
-        selected = selected,
-        onClick = onClick,
-        label = { Text(label, fontSize = 12.sp, fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal) },
-        shape = JeeShapes.pill,
-        colors = FilterChipDefaults.filterChipColors(
-            containerColor = BgCard,
-            labelColor = TextSecondary,
-            selectedContainerColor = AccentBlue,
-            selectedLabelColor = Color(0xFF17120A)
-        )
-    )
+    FilterChip(selected = selected, onClick = onClick, label = { Text(label, fontSize = 12.sp, fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal) }, shape = JeeShapes.pill, colors = FilterChipDefaults.filterChipColors(containerColor = BgCard, labelColor = TextSecondary, selectedContainerColor = AccentBlue, selectedLabelColor = Color(0xFF17120A)))
 }
 
 @Composable
 fun BottomNavBar(selected: AppTab, onTabSelected: (AppTab) -> Unit, onAiClick: () -> Unit) {
     val view = LocalView.current
-    NavigationBar(modifier = Modifier.height(64.dp), containerColor = BgCard, tonalElevation = 0.dp, windowInsets = NavigationBarDefaults.windowInsets) {
-        NavIcon(Icons.Filled.Home, "Home", selected == AppTab.HOME) { onTabSelected(AppTab.HOME) }
-        NavIcon(Icons.Filled.MenuBook, "Syllabus", selected == AppTab.SYLLABUS) { onTabSelected(AppTab.SYLLABUS) }
-        NavigationBarItem(selected = false, onClick = { view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK); onAiClick() }, icon = {
-            Box(Modifier.size(42.dp).clip(CircleShape).background(AccentBlue), Alignment.Center) { Icon(Icons.Filled.AutoAwesome, "AI", tint = Color(0xFF17120A), modifier = Modifier.size(20.dp)) }
-        }, label = { Text("AI", fontSize = 9.sp) }, colors = NavigationBarItemDefaults.colors(selectedIconColor = AccentBlue, unselectedIconColor = AccentBlue, selectedTextColor = AccentBlueLight, unselectedTextColor = TextSecondary, indicatorColor = Color.Transparent))
-        NavIcon(Icons.Filled.CheckCircle, "Tasks", selected == AppTab.TASKS) { onTabSelected(AppTab.TASKS) }
-        NavIcon(Icons.Filled.Timer, "Timer", selected == AppTab.STATS) { onTabSelected(AppTab.STATS) }
+    val items = listOf(
+        AppTab.HOME to (Icons.Filled.Home to "Home"),
+        AppTab.SYLLABUS to (Icons.Filled.MenuBook to "Syllabus"),
+        AppTab.TASKS to (Icons.Filled.CheckCircle to "Tasks"),
+        AppTab.STATS to (Icons.Filled.Timer to "Timer")
+    )
+    val selectedIndex = items.indexOfFirst { it.first == selected }.coerceAtLeast(0)
+    Box(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp), contentAlignment = Alignment.Center) {
+        BoxWithConstraints(Modifier.fillMaxWidth().height(62.dp).clip(RoundedCornerShape(24.dp)).background(BgCard).border(1.dp, BgCardBorder.copy(alpha = .9f), RoundedCornerShape(24.dp)).padding(5.dp)) {
+            val slotWidth = maxWidth / 5
+            val indicatorX by animateDpAsState(slotWidth * (selectedIndex + 1), animationSpec = tween(280), label = "nav-indicator-x")
+            Box(Modifier.offset(x = indicatorX).width(slotWidth).fillMaxHeight().clip(RoundedCornerShape(19.dp)).background(BgCardAlt).border(1.dp, BgCardBorder.copy(alpha = .8f), RoundedCornerShape(19.dp)))
+            Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
+                NavDestination(items[0].second.first, items[0].second.second, selected == AppTab.HOME, Modifier.weight(1f)) { onTabSelected(AppTab.HOME) }
+                NavDestination(items[1].second.first, items[1].second.second, selected == AppTab.SYLLABUS, Modifier.weight(1f)) { onTabSelected(AppTab.SYLLABUS) }
+                AiDestination(Modifier.weight(1f), view, onAiClick)
+                NavDestination(items[2].second.first, items[2].second.second, selected == AppTab.TASKS, Modifier.weight(1f)) { onTabSelected(AppTab.TASKS) }
+                NavDestination(items[3].second.first, items[3].second.second, selected == AppTab.STATS, Modifier.weight(1f)) { onTabSelected(AppTab.STATS) }
+            }
+        }
     }
 }
 
 @Composable
-private fun RowScope.NavIcon(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, selected: Boolean, onClick: () -> Unit) {
+private fun RowScope.NavDestination(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
     val view = LocalView.current
-    val scale by animateFloatAsState(if (selected) 1.08f else 1f, animationSpec = tween(180), label = "nav-scale")
-    NavigationBarItem(selected = selected, onClick = { if (!selected) view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK); onClick() }, icon = { Icon(icon, label, tint = if (selected) AccentBlue else TextMuted, modifier = Modifier.size(21.dp).graphicsLayer(scaleX = scale, scaleY = scale)) }, label = { Text(label, fontSize = 9.sp) }, colors = NavigationBarItemDefaults.colors(selectedIconColor = AccentBlue, unselectedIconColor = TextMuted, selectedTextColor = AccentBlueLight, unselectedTextColor = TextSecondary, indicatorColor = AccentBlueSoft))
+    val contentScale by animateFloatAsState(if (selected) 1.04f else 1f, animationSpec = tween(220), label = "nav-content-scale")
+    Box(modifier.fillMaxHeight().premiumClick { if (!selected) view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK); onClick() }, contentAlignment = Alignment.Center) {
+        Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically, modifier = Modifier.graphicsLayer(scaleX = contentScale, scaleY = contentScale)) {
+            Icon(icon, label, tint = if (selected) AccentBlueLight else TextSecondary, modifier = Modifier.size(22.dp))
+            if (selected) { Spacer(Modifier.width(6.dp)); Text(label, color = AccentBlueLight, fontSize = 11.sp, fontWeight = FontWeight.Medium) }
+        }
+    }
+}
+
+@Composable
+private fun RowScope.AiDestination(modifier: Modifier, view: android.view.View, onClick: () -> Unit) {
+    val scale by animateFloatAsState(1f, animationSpec = tween(220), label = "ai-nav-scale")
+    Box(modifier.fillMaxHeight().premiumClick { view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK); onClick() }, contentAlignment = Alignment.Center) {
+        Icon(Icons.Filled.AutoAwesome, "AI", tint = AccentBlueLight, modifier = Modifier.size(23.dp).graphicsLayer(scaleX = scale, scaleY = scale))
+    }
 }
