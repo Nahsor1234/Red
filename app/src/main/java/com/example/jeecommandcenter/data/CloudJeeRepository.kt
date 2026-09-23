@@ -100,8 +100,7 @@ class CloudJeeRepository(
 
     /**
      * Cloud is the preferred question source. The bundled bank remains an
-     * intentional offline fallback so practice still works before the cloud
-     * catalog/question seed has been uploaded.
+     * intentional offline fallback so practice still works before or without cloud access.
      */
     suspend fun questions(chapterId: String): List<CloudQuestion> {
         val canonicalId = JeeCatalog.normalizeChapterId(chapterId)
@@ -113,7 +112,7 @@ class CloudJeeRepository(
 
         if (remote.isNotEmpty()) return remote
 
-        return StarterQuestionBank.fallback
+        return (StarterQuestionBank.fallback + CuratedQuestionBank.questions)
             .filter { JeeCatalog.normalizeChapterId(it.chapterId) == canonicalId }
             .map { question ->
                 CloudQuestion(
