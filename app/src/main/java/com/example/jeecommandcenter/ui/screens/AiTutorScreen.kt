@@ -1,5 +1,6 @@
 package com.example.jeecommandcenter.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -233,7 +234,6 @@ private fun CoachPrompt(title: String, subtitle: String, icon: androidx.compose.
                 Text(subtitle, color = TextMuted, fontSize = 10.sp, lineHeight = 14.sp)
             }
         }
-    }
 }
 
 @Composable
@@ -256,7 +256,7 @@ private fun MarkdownText(markdown: String) {
 }
 
 private fun String.inlineMarkdown() = buildAnnotatedString {
-    val regex = Regex("\*\*(.+?)\*\*")
+    val regex = Regex("\\\\*\\\\*(.+?)\\\\*\\\\*")
     var cursor = 0
     regex.findAll(this@inlineMarkdown).forEach { match ->
         append(this@inlineMarkdown.substring(cursor, match.range.first))
