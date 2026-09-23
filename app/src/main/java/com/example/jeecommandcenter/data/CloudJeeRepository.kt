@@ -75,15 +75,22 @@ class CloudJeeRepository(
 ) {
     private val db = client.postgrest
 
+    /**
+     * Restores the persisted Supabase session. Cloud sync requires a real
+     * authenticated account; the app no longer depends on anonymous sign-in.
+     */
     suspend fun ensureSession() = run {
         client.auth.loadFromStorage(autoRefresh = true)
-        client.auth.currentSessionOrNull()?.user?.let { return@run it }
-        client.auth.signInAnonymously()
         client.auth.currentSessionOrNull()?.user
-            ?: error("Supabase session could not be created.")
+            ?: error("Sign in to a Sigma JE account before using cloud sync.")
     }
 
-    suspend fun currentUser() = client.auth.currentSessionOrNull()?.user
+    suspend fun currentUser() = run {
+        client.auth.loadFromStorage(autoRefresh = true)
+        client.auth.currentSessionOrNull()?.user
+    }
+
+    suspend fun hasAuthenticatedSession(): Boolean = currentUser() != null
 
     suspend fun subjects(): List<CloudSubject> =
         db["subjects"].select().decodeList<CloudSubject>().sortedBy { it.sortOrder }
@@ -188,14 +195,14 @@ class CloudJeeRepository(
 
     suspend fun signUp(email: String, password: String) {
         client.auth.signUpWith(Email) {
-            this.email = email
+            this.email = email.trim()
             this.password = password
         }
     }
 
     suspend fun signIn(email: String, password: String) {
         client.auth.signInWith(Email) {
-            this.email = email
+            this.email = email.trim()
             this.password = password
         }
     }
@@ -204,14 +211,18 @@ class CloudJeeRepository(
         client.auth.signOut()
     }
 
+    /**
+     * One-time migration of local syllabus progress into the signed-in account.
+     * Question attempts are handled incrementally by CloudSyncCoordinator.
+     */
     suspend fun migrateLocalProgress(context: Context) {
-        val prefs = context.getSharedPreferences("sigma_cloud_migration", Context.MODE_PRIVATE)
-        if (prefs.getBoolean("topic_progress_v1", false)) return
-
         val user = ensureSession()
+        val prefs = context.getSharedPreferences("sigma_cloud_migration", Context.MODE_PRIVATE)
+        val migrationKey = "topic_progress_v2_${user.id}"
+        if (prefs.getBoolean(migrationKey, false)) return
+
         val localRepo = JeeRepository(context)
         val topicsRepo = TopicRepository(context)
-
         val topicRows = mutableListOf<CloudTopicProgress>()
         val chapterRows = mutableListOf<CloudChapterProgress>()
 
@@ -238,6 +249,6 @@ class CloudJeeRepository(
             db["chapter_progress"].upsert(chapterRows, onConflict = "user_id,chapter_id")
         }
 
-        prefs.edit().putBoolean("topic_progress_v1", true).apply()
+        prefs.edit().putBoolean(migrationKey, true).apply()
     }
 }
