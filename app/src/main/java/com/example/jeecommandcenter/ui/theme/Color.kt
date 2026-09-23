@@ -3,7 +3,8 @@ package com.example.jeecommandcenter.ui.theme
 import androidx.compose.ui.graphics.Color
 
 // Warm Graphite palette
-val BgApp = Color(0xFF0C0C0D)
+// The app backdrop is rendered globally so the academic wallpaper remains behind transparent screen scaffolds.
+val BgApp = Color.Transparent
 val BgCard = Color(0xFF18181B)
 val BgCardAlt = Color(0xFF1E1E21)
 val BgCardBorder = Color(0xFF3F3F42)
