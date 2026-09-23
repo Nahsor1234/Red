@@ -2,6 +2,7 @@ plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
     id 'org.jetbrains.kotlin.plugin.compose'
+    id 'org.jetbrains.kotlin.plugin.serialization'
 }
 
 android {
@@ -12,12 +13,18 @@ android {
         applicationId 'com.example.jeecommandcenter'
         minSdk 23
         targetSdk 35
-        versionCode 3
-        versionName '2.1'
+        versionCode 4
+        versionName '2.2'
+
+        def supabaseUrl = project.findProperty("SUPABASE_URL") ?: "https://clirtdxtqtiatuqkitmy.supabase.co"
+        def supabaseKey = project.findProperty("SUPABASE_PUBLISHABLE_KEY") ?: "sb_publishable_VjQYGoJjFoAQXHSGwOohtQ_XL1XWIjU"
+        buildConfigField "String", "SUPABASE_URL", "\"" + supabaseUrl + "\""
+        buildConfigField "String", "SUPABASE_PUBLISHABLE_KEY", "\"" + supabaseKey + "\""
     }
 
     buildFeatures {
         compose true
+        buildConfig true
     }
 
     compileOptions {
@@ -43,4 +50,8 @@ dependencies {
     debugImplementation 'androidx.compose.ui:ui-tooling'
 
     implementation 'com.google.android.material:material:1.12.0'
+
+    implementation 'io.github.jan-tennert.supabase:gotrue-kt:2.6.0'
+    implementation 'io.github.jan-tennert.supabase:postgrest-kt:2.6.0'
+    implementation 'io.ktor:ktor-client-android:2.3.12'
 }
