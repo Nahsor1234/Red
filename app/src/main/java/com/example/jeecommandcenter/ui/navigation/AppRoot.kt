@@ -18,7 +18,7 @@ import com.example.jeecommandcenter.data.TestAttemptRecord
 import com.example.jeecommandcenter.ui.components.AppTab
 import com.example.jeecommandcenter.ui.screens.*
 
-private enum class SecondaryPage { PLANNER, REVISION, SETTINGS, AI_SETTINGS, AI_HUB, AI_TUTOR, AI_HISTORY, ANALYTICS, ASSESSMENT, ASSESSMENT_HISTORY, ASSESSMENT_RESULT, MISTAKES, CHAPTER_DETAIL }
+private enum class SecondaryPage { PLANNER, REVISION, SETTINGS, CLOUD_ACCOUNT, AI_SETTINGS, AI_HUB, AI_TUTOR, AI_HISTORY, ANALYTICS, ASSESSMENT, ASSESSMENT_HISTORY, ASSESSMENT_RESULT, MISTAKES, CHAPTER_DETAIL, CHAPTER_QUESTIONS }
 
 @Composable
 fun AppRoot() {
@@ -48,7 +48,8 @@ fun AppRoot() {
         when (targetSecondary) {
             SecondaryPage.PLANNER -> StudyPlannerScreen(repo, ::popPage) { openPage(SecondaryPage.REVISION) }
             SecondaryPage.REVISION -> RevisionScreen(repo, ::popPage) { openPage(SecondaryPage.PLANNER) }
-            SecondaryPage.SETTINGS -> SettingsScreen(::popPage, { openPage(SecondaryPage.ANALYTICS) }, { openPage(SecondaryPage.AI_SETTINGS) })
+            SecondaryPage.SETTINGS -> SettingsScreen(::popPage, { openPage(SecondaryPage.ANALYTICS) }, { openPage(SecondaryPage.AI_SETTINGS) }) { openPage(SecondaryPage.CLOUD_ACCOUNT) }
+            SecondaryPage.CLOUD_ACCOUNT -> CloudAccountScreen(context, ::popPage)
             SecondaryPage.AI_SETTINGS -> AiSettingsScreen(context, ::popPage)
             SecondaryPage.AI_HUB -> AiHubScreen(context, ::popPage, { openPage(SecondaryPage.AI_TUTOR) }, { openPage(SecondaryPage.AI_SETTINGS) })
             SecondaryPage.AI_TUTOR -> AiTutorScreen(context, repo, learning, ::popPage, { openPage(SecondaryPage.AI_SETTINGS) }, { openPage(SecondaryPage.AI_HISTORY) }, activeAiConversationId) { id -> activeAiConversationId = id; aiHistory.setActiveConversationId(id) }
@@ -58,7 +59,8 @@ fun AppRoot() {
             SecondaryPage.ASSESSMENT_HISTORY -> AssessmentHistoryScreen(learning, ::popPage) { attempt -> selectedAttempt = attempt; openPage(SecondaryPage.ASSESSMENT_RESULT) }
             SecondaryPage.ASSESSMENT_RESULT -> selectedAttempt?.let { AssessmentResultScreen(it, ::popPage) }
             SecondaryPage.MISTAKES -> MistakeBankScreen(learning, ::popPage) { openPage(SecondaryPage.AI_TUTOR) }
-            SecondaryPage.CHAPTER_DETAIL -> selectedChapter?.let { ChapterDetailScreen(context, repo, it, ::popPage) }
+            SecondaryPage.CHAPTER_DETAIL -> selectedChapter?.let { chapter -> ChapterDetailScreen(context, repo, chapter, ::popPage) { openPage(SecondaryPage.CHAPTER_QUESTIONS) } }
+            SecondaryPage.CHAPTER_QUESTIONS -> selectedChapter?.let { chapter -> ChapterQuestionPracticeScreen(chapter.id, chapter.name, ::popPage) }
             null -> when (targetTab ?: AppTab.HOME) {
                 AppTab.HOME -> DashboardScreen(repo, selectedTab, ::selectTab, { openPage(SecondaryPage.AI_TUTOR) }, { openPage(SecondaryPage.PLANNER) }, { openPage(SecondaryPage.REVISION) }, { openPage(SecondaryPage.SETTINGS) }, { openPage(SecondaryPage.ASSESSMENT) }, { openPage(SecondaryPage.MISTAKES) }, { selectTab(AppTab.STATS) })
                 AppTab.SYLLABUS -> SyllabusScreen(repo, selectedTab, ::selectTab, { openPage(SecondaryPage.AI_TUTOR) }, { openPage(SecondaryPage.PLANNER) }, { openPage(SecondaryPage.REVISION) }) { chapter -> selectedChapter = chapter; openPage(SecondaryPage.CHAPTER_DETAIL) }
