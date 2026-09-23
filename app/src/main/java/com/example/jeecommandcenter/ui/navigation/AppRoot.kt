@@ -35,7 +35,7 @@ fun AppRoot() {
     fun selectTab(tab: AppTab) { secondaryStack = emptyList(); selectedTab = tab }
     fun openPage(page: SecondaryPage) { secondaryStack = secondaryStack + page }
     fun popPage() { if (secondaryStack.isNotEmpty()) secondaryStack = secondaryStack.dropLast(1) }
-    fun openAiConversation(id: Long) { activeAiConversationId = id; aiHistory.setActiveConversationId(id); secondaryStack = secondaryStack.dropLast(1) + SecondaryPage.AI_TUTOR }
+    fun openAiConversation(id: Long) { activeAiConversationId = id; aiHistory.setActiveConversationId(id); secondaryStack = secondaryStack.dropLast(2) + SecondaryPage.AI_TUTOR }
     BackHandler(enabled = secondaryStack.isNotEmpty()) { popPage() }
     val screenKey = secondaryPage?.let { "secondary:" + it.name } ?: ("tab:" + selectedTab.name)
 
