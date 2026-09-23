@@ -1,7 +1,5 @@
 package com.example.jeecommandcenter.ui.components
 
-import android.graphics.Paint
-import android.graphics.Typeface
 import android.view.HapticFeedbackConstants
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
@@ -25,9 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
@@ -40,24 +36,47 @@ private val PatternSymbols = listOf("π", "Σ", "√", "∫", "Δ", "θ", "λ", 
 
 @Composable
 fun JeeBackground(modifier: Modifier = Modifier) {
-    val density = LocalDensity.current
     Canvas(modifier.fillMaxSize()) {
-        val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.White.copy(alpha = 0.055f).toArgb(); textSize = with(density) { 10.dp.toPx() }; typeface = Typeface.create("sans-serif", Typeface.NORMAL) }
-        val stepX = with(density) { 58.dp.toPx() }
-        val stepY = with(density) { 48.dp.toPx() }
+        val textSize = 10.dp.toPx()
+        val stepX = 58.dp.toPx()
+        val stepY = 48.dp.toPx()
         val rows = (size.height / stepY).toInt() + 2
         val cols = (size.width / stepX).toInt() + 2
         for (row in 0 until rows) for (col in 0 until cols) {
             val index = abs((row * 31 + col * 17 + row * col * 3) % PatternSymbols.size)
-            val xJitter = ((row * 19 + col * 7) % 17) - 8
-            val yJitter = ((row * 11 + col * 13) % 15) - 7
-            val x = col * stepX + with(density) { xJitter.dp.toPx() }
-            val y = row * stepY + with(density) { yJitter.dp.toPx() }
-            drawContext.canvas.nativeCanvas.drawText(PatternSymbols[index], x, y, textPaint)
-            if ((row + col) % 4 == 0) {
-                val gx = x + with(density) { 22.dp.toPx() }; val gy = y - with(density) { 4.dp.toPx() }
-                drawLine(Color.White.copy(alpha = 0.035f), androidx.compose.ui.geometry.Offset(gx, gy), androidx.compose.ui.geometry.Offset(gx + with(density) { 10.dp.toPx() }, gy), strokeWidth = with(density) { 1.dp.toPx() })
-                drawLine(Color.White.copy(alpha = 0.035f), androidx.compose.ui.geometry.Offset(gx, gy), androidx.compose.ui.geometry.Offset(gx, gy - with(density) { 9.dp.toPx() }), strokeWidth = with(density) { 1.dp.toPx() })
+            val xJitter = (((row * 19 + col * 7) % 17) - 8).dp.toPx()
+            val yJitter = (((row * 11 + col * 13) % 15) - 7).dp.toPx()
+            val x = col * stepX + xJitter
+            val y = row * stepY + yJitter
+            // Keep the wallpaper implementation compatible with the project's Compose version:
+            // use lightweight vector-like primitives rather than Android Canvas APIs.
+            val motif = index % 6
+            val centerX = x + 5.dp.toPx()
+            val centerY = y - 5.dp.toPx()
+            val motifColor = Color.White.copy(alpha = 0.045f)
+            when (motif) {
+                0 -> {
+                    drawLine(motifColor, androidx.compose.ui.geometry.Offset(x, y), androidx.compose.ui.geometry.Offset(x + 11.dp.toPx(), y), strokeWidth = 1.dp.toPx())
+                    drawLine(motifColor, androidx.compose.ui.geometry.Offset(x + 3.dp.toPx(), y - 7.dp.toPx()), androidx.compose.ui.geometry.Offset(x + 8.dp.toPx(), y + 6.dp.toPx()), strokeWidth = 1.dp.toPx())
+                }
+                1 -> drawCircle(motifColor, radius = 5.dp.toPx(), center = androidx.compose.ui.geometry.Offset(centerX, centerY), style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.dp.toPx()))
+                2 -> {
+                    drawLine(motifColor, androidx.compose.ui.geometry.Offset(x, y), androidx.compose.ui.geometry.Offset(x + 12.dp.toPx(), y - 8.dp.toPx()), strokeWidth = 1.dp.toPx())
+                    drawLine(motifColor, androidx.compose.ui.geometry.Offset(x + 12.dp.toPx(), y - 8.dp.toPx()), androidx.compose.ui.geometry.Offset(x + 12.dp.toPx(), y + 3.dp.toPx()), strokeWidth = 1.dp.toPx())
+                }
+                3 -> {
+                    drawLine(motifColor, androidx.compose.ui.geometry.Offset(x, y), androidx.compose.ui.geometry.Offset(x + 10.dp.toPx(), y), strokeWidth = 1.dp.toPx())
+                    drawLine(motifColor, androidx.compose.ui.geometry.Offset(x + 5.dp.toPx(), y - 6.dp.toPx()), androidx.compose.ui.geometry.Offset(x + 5.dp.toPx(), y + 6.dp.toPx()), strokeWidth = 1.dp.toPx())
+                }
+                4 -> {
+                    drawCircle(motifColor, radius = 2.dp.toPx(), center = androidx.compose.ui.geometry.Offset(centerX, centerY))
+                    drawLine(motifColor, androidx.compose.ui.geometry.Offset(centerX - 8.dp.toPx(), centerY), androidx.compose.ui.geometry.Offset(centerX + 8.dp.toPx(), centerY), strokeWidth = 1.dp.toPx())
+                    drawLine(motifColor, androidx.compose.ui.geometry.Offset(centerX, centerY - 8.dp.toPx()), androidx.compose.ui.geometry.Offset(centerX, centerY + 8.dp.toPx()), strokeWidth = 1.dp.toPx())
+                }
+                else -> {
+                    drawLine(motifColor, androidx.compose.ui.geometry.Offset(x, y - 4.dp.toPx()), androidx.compose.ui.geometry.Offset(x + 10.dp.toPx(), y - 4.dp.toPx()), strokeWidth = 1.dp.toPx())
+                    drawLine(motifColor, androidx.compose.ui.geometry.Offset(x + 2.dp.toPx(), y - 9.dp.toPx()), androidx.compose.ui.geometry.Offset(x + 2.dp.toPx(), y + 1.dp.toPx()), strokeWidth = 1.dp.toPx())
+                }
             }
         }
     }
