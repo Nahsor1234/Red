@@ -38,43 +38,46 @@ fun TasksScreen(repo: JeeRepository, selectedTab: AppTab, onTabSelected: (AppTab
     val upcoming = all.filter { it.dueDay != "Today" && !it.done }
     val completed = all.filter { it.done }
 
-    Scaffold(containerColor = BgApp, bottomBar = { BottomNavBar(selectedTab, onTabSelected, onAiClick) }) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 18.dp)) {
-            Spacer(Modifier.height(10.dp))
-            Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
-                Text("Tasks", style = MaterialTheme.typography.headlineSmall)
-                Icon(Icons.Filled.Refresh, "Refresh", tint = TextSecondary, modifier = Modifier.premiumClick { refresh++ })
-            }
-            Spacer(Modifier.height(12.dp))
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(listOf("All", "Today", "Upcoming", "Completed")) { value -> JeeFilterChip(value, value == filter) { filter = value } }
-            }
-            Spacer(Modifier.height(14.dp))
-            if (filter != "All") {
-                val count = visible.size
-                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(BgCardAlt).padding(17.dp)) {
-                    Text(filter.uppercase(), color = TextSecondary, fontSize = 11.sp)
-                    Text("$count ${if (count == 1) "task" else "tasks"}", style = MaterialTheme.typography.titleLarge)
-                    Text("${visible.sumOf { it.durationMin }} minutes planned", color = TextMuted, fontSize = 11.sp)
+    Box(Modifier.fillMaxSize()) {
+        JeeBackground()
+        Scaffold(containerColor = BgApp.copy(alpha = 0f), bottomBar = { BottomNavBar(selectedTab, onTabSelected, onAiClick) }) { padding ->
+            Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 18.dp)) {
+                Spacer(Modifier.height(10.dp))
+                Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+                    Text("Tasks", style = MaterialTheme.typography.headlineSmall)
+                    Icon(Icons.Filled.Refresh, "Refresh", tint = TextSecondary, modifier = Modifier.premiumClick { refresh++ })
+                }
+                Spacer(Modifier.height(12.dp))
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(listOf("All", "Today", "Upcoming", "Completed")) { value -> JeeFilterChip(value, value == filter) { filter = value } }
+                }
+                Spacer(Modifier.height(14.dp))
+                if (filter != "All") {
+                    val count = visible.size
+                    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(BgCardAlt).padding(17.dp)) {
+                        Text(filter.uppercase(), color = TextSecondary, fontSize = 11.sp)
+                        Text("$count ${if (count == 1) "task" else "tasks"}", style = MaterialTheme.typography.titleLarge)
+                        Text("${visible.sumOf { it.durationMin }} minutes planned", color = TextMuted, fontSize = 11.sp)
+                    }
+                    Spacer(Modifier.height(8.dp))
+                }
+                LazyColumn(Modifier.weight(1f)) {
+                    if (filter == "All") {
+                        taskGroup("Today", today, repo, { selectedTask = it }, { refresh++ })
+                        taskGroup("Upcoming", upcoming, repo, { selectedTask = it }, { refresh++ })
+                        if (completed.isNotEmpty()) taskGroup("Completed", completed, repo, { selectedTask = it }, { refresh++ })
+                        if (all.isEmpty()) emptyTaskState()
+                    } else {
+                        if (visible.isEmpty()) emptyTaskState()
+                        else visible.forEach { task -> item(key = task.id) { TaskListItem(task, repo, { selectedTask = it }, { refresh++ }) } }
+                    }
+                    item { Spacer(Modifier.height(8.dp)) }
+                }
+                Button(onClick = { showAdd = true }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(17.dp), colors = ButtonDefaults.buttonColors(containerColor = AccentBlue)) {
+                    Icon(Icons.Filled.Add, null, tint = Color(0xFF17120A)); Spacer(Modifier.width(7.dp)); Text("Add task", color = Color(0xFF17120A))
                 }
                 Spacer(Modifier.height(8.dp))
             }
-            LazyColumn(Modifier.weight(1f)) {
-                if (filter == "All") {
-                    taskGroup("Today", today, repo, { selectedTask = it }, { refresh++ })
-                    taskGroup("Upcoming", upcoming, repo, { selectedTask = it }, { refresh++ })
-                    if (completed.isNotEmpty()) taskGroup("Completed", completed, repo, { selectedTask = it }, { refresh++ })
-                    if (all.isEmpty()) emptyTaskState()
-                } else {
-                    if (visible.isEmpty()) emptyTaskState()
-                    else visible.forEach { task -> item(key = task.id) { TaskListItem(task, repo, { selectedTask = it }, { refresh++ }) } }
-                }
-                item { Spacer(Modifier.height(8.dp)) }
-            }
-            Button(onClick = { showAdd = true }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(17.dp), colors = ButtonDefaults.buttonColors(containerColor = AccentBlue)) {
-                Icon(Icons.Filled.Add, null, tint = Color(0xFF17120A)); Spacer(Modifier.width(7.dp)); Text("Add task", color = Color(0xFF17120A))
-            }
-            Spacer(Modifier.height(8.dp))
         }
     }
 
@@ -159,6 +162,7 @@ private fun AddTaskDialogPreview(repo: JeeRepository, onDone: () -> Unit) {
             val m = duration.toIntOrNull()
             TextButton(enabled = title.isNotBlank() && m != null && m in 1..1440, onClick = { m?.let { repo.addTask(title.trim(), subject, it, due, chapter, activity); onDone() } }) { Text("Add") }
         },
-        dismissButton = { TextButton(onClick = onDone) { Text("Cancel") } }
+        dismissButton = { TextButton(onClick = onDone) { Text("Cancel") }
+        }
     )
 }
