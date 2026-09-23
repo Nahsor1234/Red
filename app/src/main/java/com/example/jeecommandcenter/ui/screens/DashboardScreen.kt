@@ -22,9 +22,6 @@ import androidx.compose.ui.unit.sp
 import com.example.jeecommandcenter.data.*
 import com.example.jeecommandcenter.ui.components.*
 import com.example.jeecommandcenter.ui.theme.*
-import java.time.LocalDate
-import java.time.LocalTime
-import java.time.temporal.ChronoUnit
 
 @Composable
 fun DashboardScreen(
@@ -145,7 +142,7 @@ fun DashboardScreen(
                 SectionHeader("Today at a glance")
                 JeeCard {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        HomeMetric(todayMinutes.toString().let { (todayMinutes / 60).toString() + "h " + (todayMinutes % 60).toString() + "m" }, "Study", Modifier.weight(1f))
+                        HomeMetric((todayMinutes / 60).toString() + "h " + (todayMinutes % 60).toString() + "m", "Study", Modifier.weight(1f))
                         HomeMetric(todayTasks.count { it.done }.toString() + "/" + todayTasks.size, "Tasks", Modifier.weight(1f))
                         HomeMetric(revisionDue.toString(), "Due", Modifier.weight(1f))
                         HomeMetric((coverage * 100).toInt().toString() + "%", "Coverage", Modifier.weight(1f))
@@ -198,6 +195,24 @@ fun DashboardScreen(
 }
 
 @Composable
-private fun HomeActionCard(title: String, value: String, subtitle: String, modifier: Modifier, onClick: () -> Unit) {
-    Column(modifier.clip(JeeShapes.medium).background(BgCard).border(1.dp, BgCardBorder.copy(alpha = .72f), JeeShapes.medium).premiumClick(onClick).padding(16.dp)) { Text(title, color = TextSecondary, fontSize = 13.sp); Spacer(Modifier.height(4.dp)); Text(value, style = MaterialTheme.typography.titleMedium); Text(subtitle, color = TextMuted, fontSize = 10.sp, maxLines = 1) }
+private fun QuickAction(title: String, icon: androidx.compose.ui.graphics.vector.ImageVector, modifier: Modifier = Modifier, primary: Boolean = false, onClick: () -> Unit) {
+    Column(
+        modifier.clip(RoundedCornerShape(15.dp))
+            .background(if (primary) BgCardAlt else BgCard)
+            .border(1.dp, if (primary) Primary.copy(alpha = .55f) else BgCardBorder.copy(alpha = .8f), RoundedCornerShape(15.dp))
+            .premiumClick(onClick)
+            .padding(horizontal = 14.dp, vertical = 13.dp)
+    ) {
+        Icon(icon, null, tint = if (primary) PrimaryLight else TextSecondary, modifier = Modifier.size(21.dp))
+        Spacer(Modifier.height(8.dp))
+        Text(title, color = TextPrimary, fontSize = 12.sp, fontWeight = if (primary) FontWeight.SemiBold else FontWeight.Medium)
+    }
+}
+
+@Composable
+private fun HomeMetric(value: String, label: String, modifier: Modifier = Modifier) {
+    Column(modifier.clip(RoundedCornerShape(12.dp)).background(BgCard.copy(alpha = .6f)).padding(horizontal = 8.dp, vertical = 9.dp)) {
+        Text(value, color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+        Text(label, color = TextMuted, fontSize = 8.sp, maxLines = 1)
+    }
 }
