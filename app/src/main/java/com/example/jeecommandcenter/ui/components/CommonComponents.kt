@@ -106,7 +106,8 @@ fun BottomNavBar(selected: AppTab, onTabSelected: (AppTab) -> Unit, onAiClick: (
         Modifier
             .fillMaxWidth()
             .navigationBarsPadding()
-            .padding(horizontal = 28.dp, bottom = 16.dp),
+            .padding(horizontal = 28.dp)
+            .padding(bottom = 16.dp),
         contentAlignment = Alignment.Center
     ) {
         Box(
