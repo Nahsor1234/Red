@@ -4,7 +4,12 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
@@ -29,15 +34,17 @@ fun AppRoot() {
     var selectedChapter by remember { mutableStateOf<JeeChapter?>(null) }
     var selectedAttempt by remember { mutableStateOf<TestAttemptRecord?>(null) }
     var authMode by remember { mutableStateOf(CloudAuthMode.SIGN_IN) }
+    var navigationDirection by remember { mutableIntStateOf(1) }
     var activeAiConversationId by remember { mutableStateOf(aiHistory.getActiveConversationId()?.takeIf { aiHistory.getConversation(it) != null }) }
     val secondaryPage = secondaryStack.lastOrNull()
-    fun selectTab(tab: AppTab) { secondaryStack = emptyList(); selectedTab = tab }
-    fun openPage(page: SecondaryPage) { secondaryStack = secondaryStack + page }
-    fun popPage() { if (secondaryStack.isNotEmpty()) secondaryStack = secondaryStack.dropLast(1) }
+    fun selectTab(tab: AppTab) { navigationDirection = 1; secondaryStack = emptyList(); selectedTab = tab }
+    fun openPage(page: SecondaryPage) { navigationDirection = 1; secondaryStack = secondaryStack + page }
+    fun popPage() { if (secondaryStack.isNotEmpty()) { navigationDirection = -1; secondaryStack = secondaryStack.dropLast(1) } }
     fun openAuth(mode: CloudAuthMode) { authMode = mode; openPage(SecondaryPage.AUTH) }
     fun openAiConversation(id: Long) {
         activeAiConversationId = id
         aiHistory.setActiveConversationId(id)
+        navigationDirection = 1
         secondaryStack = when (secondaryStack.lastOrNull()) {
             SecondaryPage.AI_HISTORY -> secondaryStack.dropLast(1)
             SecondaryPage.AI_TUTOR -> secondaryStack
@@ -55,7 +62,17 @@ fun AppRoot() {
     AnimatedContent(
         targetState = screenKey,
         transitionSpec = {
-            fadeIn(tween(130)).togetherWith(fadeOut(tween(90)))
+            val forward = navigationDirection >= 0
+            val enterOffset: (Int) -> Int = { full -> if (forward) full / 14 else -full / 14 }
+            val exitOffset: (Int) -> Int = { full -> if (forward) -full / 24 else full / 24 }
+            (fadeIn(tween(250, easing = FastOutSlowInEasing)) +
+                slideInHorizontally(tween(270, easing = FastOutSlowInEasing), enterOffset) +
+                scaleIn(tween(270, easing = FastOutSlowInEasing), initialScale = .985f))
+                .togetherWith(
+                    fadeOut(tween(180, easing = FastOutSlowInEasing)) +
+                        slideOutHorizontally(tween(220, easing = FastOutSlowInEasing), exitOffset) +
+                        scaleOut(tween(220, easing = FastOutSlowInEasing), targetScale = .992f)
+                )
         },
         label = "app-screen-transition"
     ) { key ->
