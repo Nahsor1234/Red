@@ -12,16 +12,16 @@ class AiOrchestrator(context: android.content.Context) {
         val weekly = intelligence.weeklyReview()
         val prompt = buildString {
             appendLine("Analyze this JEE student's preparation using only the supplied data.")
-            appendLine("7-day study: __DOLLAR__{analytics.studyMinutes7d} minutes")
-            appendLine("Question accuracy: __DOLLAR__{(analytics.accuracy * 100).toInt()}%")
-            appendLine("Tests: __DOLLAR__{analytics.testsCompleted}")
-            appendLine("Average test score: __DOLLAR__{analytics.averageTestScore.toInt()}%")
-            appendLine("Unresolved mistakes: __DOLLAR__{analytics.unresolvedMistakes}")
-            appendLine("Repeated mistakes: __DOLLAR__{analytics.repeatedMistakes}")
-            appendLine("Weekly revisions: __DOLLAR__{weekly.revisions}")
-            appendLine("Weak chapters: __DOLLAR__{intelligence.weakChapters(5).joinToString { it.chapter.name }}")
+            appendLine("7-day study: ${analytics.studyMinutes7d} minutes")
+            appendLine("Question accuracy: ${(analytics.accuracy * 100).toInt()}%")
+            appendLine("Tests: ${analytics.testsCompleted}")
+            appendLine("Average test score: ${analytics.averageTestScore.toInt()}%")
+            appendLine("Unresolved mistakes: ${analytics.unresolvedMistakes}")
+            appendLine("Repeated mistakes: ${analytics.repeatedMistakes}")
+            appendLine("Weekly revisions: ${weekly.revisions}")
+            appendLine("Weak chapters: ${intelligence.weakChapters(5).joinToString { it.chapter.name }}")
             appendLine("Return 3 observations, 3 concrete actions, and one risk to watch.")
-        }.replace("__DOLLAR__", "$")
+        }
         return AiEngine(settings).ask(prompt)
     }
 
@@ -30,10 +30,10 @@ class AiOrchestrator(context: android.content.Context) {
         val prompt = buildString {
             appendLine("Turn this deterministic priority list into a practical JEE study plan.")
             priorities.forEachIndexed { index, item ->
-                appendLine("__DOLLAR__{index + 1}. __DOLLAR__{item.title} — __DOLLAR__{item.durationMin} min — __DOLLAR__{item.reason}")
+                appendLine("${index + 1}. ${item.title} — ${item.durationMin} min — ${item.reason}")
             }
             appendLine("Do not invent chapters or student data.")
-        }.replace("__DOLLAR__", "$")
+        }
         return AiEngine(settings).ask(prompt)
     }
 
@@ -43,12 +43,12 @@ class AiOrchestrator(context: android.content.Context) {
             appendLine("Analyze these recurring JEE mistakes.")
             mistakes.forEach {
                 appendLine(
-                    "- __DOLLAR__{it.subject} / __DOLLAR__{it.questionPrompt}: " +
-                        "type=__DOLLAR__{it.mistakeType}, repeats=__DOLLAR__{it.count}, correction=__DOLLAR__{it.correction}"
+                    "- ${it.subject} / ${it.questionPrompt}: " +
+                        "type=${it.mistakeType}, repeats=${it.count}, correction=${it.correction}"
                 )
             }
             appendLine("Return recurring patterns, root causes, and the next practice action.")
-        }.replace("__DOLLAR__", "$")
+        }
         return AiEngine(settings).ask(prompt)
     }
 }
