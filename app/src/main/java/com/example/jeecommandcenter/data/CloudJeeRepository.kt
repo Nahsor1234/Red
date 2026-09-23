@@ -147,7 +147,11 @@ class CloudJeeRepository(
 
     suspend fun setTopicCompleted(userId: String, topicId: String, completed: Boolean) {
         db["topic_progress"].upsert(
-            CloudTopicProgress(userId, topicId, completed),
+            buildJsonObject {
+                put("user_id", userId)
+                put("topic_id", topicId)
+                put("completed", completed)
+            },
             onConflict = "user_id,topic_id"
         )
     }
@@ -159,12 +163,12 @@ class CloudJeeRepository(
         confidence: Int = 0
     ) {
         db["chapter_progress"].upsert(
-            CloudChapterProgress(
-                userId = userId,
-                chapterId = JeeCatalog.normalizeChapterId(chapterId),
-                progress = progress.coerceIn(0f, 1f),
-                confidence = confidence.coerceIn(0, 5)
-            ),
+            buildJsonObject {
+                put("user_id", userId)
+                put("chapter_id", JeeCatalog.normalizeChapterId(chapterId))
+                put("progress", progress.coerceIn(0f, 1f).toDouble())
+                put("confidence", confidence.coerceIn(0, 5))
+            },
             onConflict = "user_id,chapter_id"
         )
     }
@@ -238,11 +242,26 @@ class CloudJeeRepository(
             }
         }
 
-        if (topicRows.isNotEmpty()) {
-            db["topic_progress"].upsert(topicRows, onConflict = "user_id,topic_id")
+        topicRows.forEach { row ->
+            db["topic_progress"].upsert(
+                buildJsonObject {
+                    put("user_id", row.userId)
+                    put("topic_id", row.topicId)
+                    put("completed", row.completed)
+                },
+                onConflict = "user_id,topic_id"
+            )
         }
-        if (chapterRows.isNotEmpty()) {
-            db["chapter_progress"].upsert(chapterRows, onConflict = "user_id,chapter_id")
+        chapterRows.forEach { row ->
+            db["chapter_progress"].upsert(
+                buildJsonObject {
+                    put("user_id", row.userId)
+                    put("chapter_id", row.chapterId)
+                    put("progress", row.progress.coerceIn(0f, 1f).toDouble())
+                    put("confidence", row.confidence.coerceIn(0, 5))
+                },
+                onConflict = "user_id,chapter_id"
+            )
         }
 
         prefs.edit().putBoolean(migrationKey, true).apply()
