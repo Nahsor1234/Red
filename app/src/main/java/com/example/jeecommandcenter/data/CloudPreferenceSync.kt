@@ -1,20 +1,17 @@
 package com.example.jeecommandcenter.data
 
 import android.content.Context
-import android.content.SharedPreferences
 import java.security.MessageDigest
+import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
-import kotlinx.serialization.json.contentOrNull
-import io.github.jan.supabase.postgrest.postgrest
 
 @Serializable
 data class CloudPreferenceRecord(
@@ -33,9 +30,9 @@ data class PreferenceSyncResult(
 
 /**
  * Syncs persistent SharedPreferences state that is not already represented by the
- * typed chapter/topic/question cloud tables. This deliberately works at key level,
- * so existing repositories remain the local source of truth and future preference-
- * backed user data is covered without creating duplicate domain models.
+ * typed chapter/topic/question cloud tables. It works at key level so the existing
+ * repositories remain the local source of truth while future preference-backed
+ * user data is covered without creating duplicate domain models.
  */
 class CloudPreferenceSync(
     private val context: Context,
@@ -60,7 +57,6 @@ class CloudPreferenceSync(
         val allKeys = (local.keys + remoteByKey.keys).toSortedSet()
 
         val uploads = mutableListOf<CloudPreferenceRecord>()
-        val restored = mutableListOf<CloudPreferenceRecord>()
         var uploadedCount = 0
         var restoredCount = 0
 
@@ -71,7 +67,7 @@ class CloudPreferenceSync(
             val localEntry = local[compoundKey]
             val remoteEntry = remoteByKey[compoundKey]
             val lastHash = state.getString(hashKey(namespace, prefKey), null)
-            val localHash = localEntry?.let { hash(it) }
+            val localHash = localEntry?.let(::hash)
             val remoteHash = remoteEntry?.takeUnless { it.deleted }?.let { hash(it.payload) }
 
             when {
@@ -80,13 +76,14 @@ class CloudPreferenceSync(
                 localEntry == null -> {
                     if (remoteEntry!!.deleted) {
                         state.edit().putString(hashKey(namespace, prefKey), tombstoneHash(remoteEntry)).apply()
-                    } else if (lastHash == null || lastHash == remoteHash) {
+                    } else if (lastHash == null) {
                         restore(namespace, prefKey, remoteEntry.payload)
                         state.edit().putString(hashKey(namespace, prefKey), remoteHash).apply()
-                        restored += remoteEntry
                         restoredCount++
                     } else {
-                        uploads += tombstone(userId, namespace, prefKey)
+                        val record = tombstone(userId, namespace, prefKey)
+                        uploads += record
+                        state.edit().putString(hashKey(namespace, prefKey), tombstoneHash(record)).apply()
                         uploadedCount++
                     }
                 }
@@ -107,15 +104,14 @@ class CloudPreferenceSync(
 
                 remoteEntry.deleted -> {
                     when {
+                        localHash == null && lastHash == tombstoneHash(remoteEntry) -> Unit
                         localHash == lastHash -> {
                             removeLocal(namespace, prefKey)
                             state.edit().putString(hashKey(namespace, prefKey), tombstoneHash(remoteEntry)).apply()
-                            restored += remoteEntry
                             restoredCount++
                         }
-                        localHash == tombstoneHash(remoteEntry) -> Unit
                         else -> {
-                            uploads += CloudPreferenceRecord(
+                            val record = CloudPreferenceRecord(
                                 userId = userId,
                                 namespace = namespace,
                                 key = prefKey,
@@ -123,6 +119,7 @@ class CloudPreferenceSync(
                                 deleted = false,
                                 updatedAt = System.currentTimeMillis()
                             )
+                            uploads += record
                             state.edit().putString(hashKey(namespace, prefKey), localHash).apply()
                             uploadedCount++
                         }
@@ -136,12 +133,11 @@ class CloudPreferenceSync(
                 localHash == lastHash -> {
                     restore(namespace, prefKey, remoteEntry.payload)
                     state.edit().putString(hashKey(namespace, prefKey), remoteHash).apply()
-                    restored += remoteEntry
                     restoredCount++
                 }
 
                 remoteHash == lastHash || lastHash == null -> {
-                    uploads += CloudPreferenceRecord(
+                    val record = CloudPreferenceRecord(
                         userId = userId,
                         namespace = namespace,
                         key = prefKey,
@@ -149,14 +145,16 @@ class CloudPreferenceSync(
                         deleted = false,
                         updatedAt = System.currentTimeMillis()
                     )
+                    uploads += record
                     state.edit().putString(hashKey(namespace, prefKey), localHash).apply()
                     uploadedCount++
                 }
 
                 else -> {
                     // Both sides changed since the last common state. Keep the current
-                    // device's user-visible state and publish it; never silently discard it.
-                    uploads += CloudPreferenceRecord(
+                    // device's user-visible state and publish it rather than silently
+                    // discarding local work.
+                    val record = CloudPreferenceRecord(
                         userId = userId,
                         namespace = namespace,
                         key = prefKey,
@@ -164,6 +162,7 @@ class CloudPreferenceSync(
                         deleted = false,
                         updatedAt = System.currentTimeMillis()
                     )
+                    uploads += record
                     state.edit().putString(hashKey(namespace, prefKey), localHash).apply()
                     uploadedCount++
                 }
@@ -232,7 +231,7 @@ class CloudPreferenceSync(
         is Boolean -> buildJsonObject { put("type", "boolean"); put("value", value) }
         is Set<*> -> buildJsonObject {
             put("type", "stringSet")
-            put("value", buildJsonArray { value.filterIsInstance<String>().forEach(::add) })
+            put("value", buildJsonArray { value.filterIsInstance<String>().forEach { add(it) } })
         }
         else -> null
     }
@@ -253,11 +252,17 @@ class CloudPreferenceSync(
 
     private fun hash(payload: JsonObject): String = sha256(payload.toString())
 
-    private fun tombstone(record: CloudPreferenceRecord): CloudPreferenceRecord =
-        record.copy(payload = buildJsonObject { }, deleted = true, updatedAt = System.currentTimeMillis())
+    private fun tombstone(userId: String, namespace: String, prefKey: String): CloudPreferenceRecord =
+        CloudPreferenceRecord(
+            userId = userId,
+            namespace = namespace,
+            key = prefKey,
+            payload = buildJsonObject { },
+            deleted = true,
+            updatedAt = System.currentTimeMillis()
+        )
 
-    private fun tombstoneHash(record: CloudPreferenceRecord): String =
-        "deleted:" + record.updatedAt
+    private fun tombstoneHash(record: CloudPreferenceRecord): String = "deleted:" + record.updatedAt
 
     private fun hashKey(namespace: String, prefKey: String): String = "hash_$namespace$KEY_SEPARATOR$prefKey"
 
