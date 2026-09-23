@@ -4,8 +4,6 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.*
@@ -37,14 +35,30 @@ fun AppRoot() {
     fun openPage(page: SecondaryPage) { secondaryStack = secondaryStack + page }
     fun popPage() { if (secondaryStack.isNotEmpty()) secondaryStack = secondaryStack.dropLast(1) }
     fun openAuth(mode: CloudAuthMode) { authMode = mode; openPage(SecondaryPage.AUTH) }
-    fun openAiConversation(id: Long) { activeAiConversationId = id; aiHistory.setActiveConversationId(id); secondaryStack = secondaryStack.dropLast(2) + SecondaryPage.AI_TUTOR }
+    fun openAiConversation(id: Long) {
+        activeAiConversationId = id
+        aiHistory.setActiveConversationId(id)
+        secondaryStack = when (secondaryStack.lastOrNull()) {
+            SecondaryPage.AI_HISTORY -> secondaryStack.dropLast(1)
+            SecondaryPage.AI_TUTOR -> secondaryStack
+            else -> secondaryStack + SecondaryPage.AI_TUTOR
+        }
+    }
+
+    fun clearAiConversation() {
+        activeAiConversationId = null
+        aiHistory.setActiveConversationId(null)
+    }
     BackHandler(enabled = secondaryStack.isNotEmpty()) { popPage() }
     val screenKey = secondaryPage?.let { "secondary:" + it.name } ?: ("tab:" + selectedTab.name)
 
-    AnimatedContent(targetState = screenKey, transitionSpec = {
-        (fadeIn(tween(180)) + slideInHorizontally(tween(190), initialOffsetX = { it / 36 }))
-            .togetherWith(fadeOut(tween(150)) + slideOutHorizontally(tween(150), targetOffsetX = { -it / 42 }))
-    }, label = "app-screen-transition") { key ->
+    AnimatedContent(
+        targetState = screenKey,
+        transitionSpec = {
+            fadeIn(tween(130)).togetherWith(fadeOut(tween(90)))
+        },
+        label = "app-screen-transition"
+    ) { key ->
         val targetSecondary = if (key.startsWith("secondary:")) SecondaryPage.valueOf(key.removePrefix("secondary:")) else null
         val targetTab = if (key.startsWith("tab:")) AppTab.valueOf(key.removePrefix("tab:")) else null
         when (targetSecondary) {
@@ -55,7 +69,17 @@ fun AppRoot() {
             SecondaryPage.AUTH -> AuthScreen(authMode, ::popPage) { popPage() }
             SecondaryPage.AI_SETTINGS -> AiSettingsScreen(context, ::popPage)
             SecondaryPage.AI_HUB -> AiHubScreen(context, ::popPage, { openPage(SecondaryPage.AI_TUTOR) }, { openPage(SecondaryPage.AI_SETTINGS) })
-            SecondaryPage.AI_TUTOR -> AiTutorScreen(context, repo, learning, ::popPage, { openPage(SecondaryPage.AI_SETTINGS) }, { openPage(SecondaryPage.AI_HISTORY) }, activeAiConversationId) { id -> activeAiConversationId = id; aiHistory.setActiveConversationId(id) }
+            SecondaryPage.AI_TUTOR -> AiTutorScreen(
+                context = context,
+                jee = repo,
+                learning = learning,
+                onBack = ::popPage,
+                onOpenSettings = { openPage(SecondaryPage.AI_SETTINGS) },
+                onOpenHistory = { openPage(SecondaryPage.AI_HISTORY) },
+                conversationId = activeAiConversationId,
+                onConversationOpened = { id -> activeAiConversationId = id; aiHistory.setActiveConversationId(id) },
+                onConversationCleared = ::clearAiConversation
+            )
             SecondaryPage.AI_HISTORY -> AiHistoryScreen(context, ::popPage, ::openAiConversation)
             SecondaryPage.ANALYTICS -> AnalyticsScreen(repo, learning, ::popPage) { openPage(SecondaryPage.AI_TUTOR) }
             SecondaryPage.ASSESSMENT -> AssessmentScreen(learning, repo, ::popPage, { openPage(SecondaryPage.MISTAKES) }) { openPage(SecondaryPage.ASSESSMENT_HISTORY) }
