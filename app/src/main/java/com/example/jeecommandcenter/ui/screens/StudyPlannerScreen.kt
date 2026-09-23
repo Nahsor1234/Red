@@ -8,7 +8,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -29,51 +28,33 @@ fun StudyPlannerScreen(
     onOpenRevision: () -> Unit
 ) {
     var refresh by remember { mutableIntStateOf(0) }
-    var generating by remember { mutableStateOf(false) }
+    var revisionToRate by remember { mutableStateOf<PlannerItem?>(null) }
+    var confirmRegenerate by remember { mutableStateOf(false) }
     val context = androidx.compose.ui.platform.LocalContext.current.applicationContext
     val learning = remember { LearningRepository(context) }
     val plan = remember(refresh) { repo.getOrCreateDailyPlan(learning) }
     val completed = plan.items.count { it.completed }
     val doneMinutes = plan.items.filter { it.completed }.sumOf { it.durationMin }
     val remainingMinutes = (plan.goalMinutes - doneMinutes).coerceAtLeast(0)
-    val progress = if (plan.goalMinutes == 0) 0f else
-        (doneMinutes.toFloat() / plan.goalMinutes).coerceIn(0f, 1f)
+    val progress = if (plan.goalMinutes == 0) 0f else (doneMinutes.toFloat() / plan.goalMinutes).coerceIn(0f, 1f)
 
     Scaffold(
         containerColor = BgApp,
         topBar = {
-            JeeTopBar(
-                title = "Study planner",
-                subtitle = "Generated from your actual study state",
-                onBack = onBack
-            )
+            JeeTopBar(title = "Study planner", subtitle = "Generated from your actual study state", onBack = onBack)
         }
     ) { padding ->
         LazyColumn(
-            Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 16.dp),
+            Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             item {
-                PlannerSummary(
-                    goalMinutes = plan.goalMinutes,
-                    doneMinutes = doneMinutes,
-                    remainingMinutes = remainingMinutes,
-                    completed = completed,
-                    total = plan.items.size,
-                    progress = progress
-                )
+                PlannerSummary(plan.goalMinutes, doneMinutes, remainingMinutes, completed, plan.items.size, progress)
             }
-
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Button(
-                        onClick = {
-                            repo.regenerateDailyPlan(learning)
-                            refresh++
-                        },
+                        onClick = { if (completed > 0) confirmRegenerate = true else { repo.regenerateDailyPlan(learning); refresh++ } },
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.buttonColors(containerColor = AccentBlue)
                     ) {
@@ -81,17 +62,13 @@ fun StudyPlannerScreen(
                         Spacer(Modifier.width(6.dp))
                         Text("Regenerate")
                     }
-                    OutlinedButton(
-                        onClick = onOpenRevision,
-                        modifier = Modifier.weight(1f)
-                    ) {
+                    OutlinedButton(onClick = onOpenRevision, modifier = Modifier.weight(1f)) {
                         Icon(Icons.Filled.Replay, null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(6.dp))
                         Text("Revision")
                     }
                 }
             }
-
             if (plan.items.isEmpty()) {
                 item {
                     EmptyStateCard(
@@ -102,58 +79,73 @@ fun StudyPlannerScreen(
             } else {
                 items(plan.items, key = { it.id }) { item ->
                     PlannerItemCard(item) {
-                        repo.completePlannerItem(item.id)
-                        refresh++
+                        if (item.completed) return@PlannerItemCard
+                        if (item.type == PlannerItemType.REVISION) revisionToRate = item
+                        else {
+                            repo.completePlannerItem(item.id)
+                            refresh++
+                        }
                     }
                 }
             }
-
             item { Spacer(Modifier.height(24.dp)) }
         }
+    }
+
+    revisionToRate?.let { item ->
+        AlertDialog(
+            onDismissRequest = { revisionToRate = null },
+            title = { Text("How did this revision feel?") },
+            text = { Text(item.title, color = TextSecondary) },
+            confirmButton = {
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    RevisionRating.values().forEach { rating ->
+                        TextButton(onClick = {
+                            repo.completePlannerItem(item.id, rating)
+                            revisionToRate = null
+                            refresh++
+                        }) { Text(rating.name.lowercase().replaceFirstChar { it.uppercase() }) }
+                    }
+                }
+            },
+            dismissButton = { TextButton(onClick = { revisionToRate = null }) { Text("Cancel") } }
+        )
+    }
+
+    if (confirmRegenerate) {
+        AlertDialog(
+            onDismissRequest = { confirmRegenerate = false },
+            title = { Text("Regenerate today's plan?") },
+            text = { Text("Completed blocks will be preserved when matching items remain in the regenerated plan.", color = TextSecondary) },
+            confirmButton = {
+                TextButton(onClick = {
+                    repo.regenerateDailyPlan(learning)
+                    confirmRegenerate = false
+                    refresh++
+                }) { Text("Regenerate") }
+            },
+            dismissButton = { TextButton(onClick = { confirmRegenerate = false }) { Text("Cancel") } }
+        )
     }
 }
 
 @Composable
-private fun PlannerSummary(
-    goalMinutes: Int,
-    doneMinutes: Int,
-    remainingMinutes: Int,
-    completed: Int,
-    total: Int,
-    progress: Float
-) {
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
-            .background(BgCardAlt)
-            .padding(16.dp)
-    ) {
+private fun PlannerSummary(goalMinutes: Int, doneMinutes: Int, remainingMinutes: Int, completed: Int, total: Int, progress: Float) {
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(BgCardAlt).padding(16.dp)) {
         Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.Top) {
             Column {
                 Text("Today's plan", style = MaterialTheme.typography.titleLarge)
                 Spacer(Modifier.height(4.dp))
-                Text(
-                    doneMinutes.toString() + " / " + goalMinutes + " min",
-                    color = TextSecondary,
-                    fontSize = 13.sp
-                )
+                Text("$doneMinutes / $goalMinutes min", color = TextSecondary, fontSize = 13.sp)
             }
-            Text(
-                (progress * 100).toInt().toString() + "%",
-                style = MaterialTheme.typography.headlineMedium
-            )
+            Text("${(progress * 100).toInt()}%", style = MaterialTheme.typography.headlineMedium)
         }
         Spacer(Modifier.height(12.dp))
         LinearStatBar(progress)
         Spacer(Modifier.height(10.dp))
         Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
-            Text(completed.toString() + " / " + total + " blocks complete", color = TextMuted, fontSize = 11.sp)
-            Text(
-                if (remainingMinutes > 0) remainingMinutes.toString() + " min left" else "Goal complete",
-                color = if (remainingMinutes > 0) TextMuted else AccentGreen,
-                fontSize = 11.sp
-            )
+            Text("$completed / $total blocks complete", color = TextMuted, fontSize = 11.sp)
+            Text(if (remainingMinutes > 0) "$remainingMinutes min left" else "Goal complete", color = if (remainingMinutes > 0) TextMuted else AccentGreen, fontSize = 11.sp)
         }
     }
 }
@@ -170,59 +162,24 @@ private fun PlannerItemCard(item: PlannerItem, onComplete: () -> Unit) {
         PlannerItemType.STUDY -> AccentBlueLight
         PlannerItemType.PRACTICE -> AccentGreen
     }
-
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .background(BgCard)
-            .padding(14.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            Modifier
-                .size(38.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(typeColor.copy(alpha = 0.14f)),
-            contentAlignment = Alignment.Center
-        ) {
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(BgCard).padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(38.dp).clip(RoundedCornerShape(10.dp)).background(typeColor.copy(alpha = 0.14f)), contentAlignment = Alignment.Center) {
             Text(typeLabel.take(1), color = typeColor, fontSize = 12.sp)
         }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
-            Text(
-                item.title,
-                color = if (item.completed) TextMuted else TextOnCard,
-                fontSize = 13.sp
-            )
-            Text(
-                item.subject + " · " + item.durationMin + "m",
-                color = TextMuted,
-                fontSize = 11.sp
-            )
+            Text(item.title, color = if (item.completed) TextMuted else TextOnCard, fontSize = 13.sp)
+            Text("${item.subject} · ${item.durationMin}m", color = TextMuted, fontSize = 11.sp)
         }
-        IconButton(
-            onClick = onComplete,
-            enabled = !item.completed
-        ) {
-            Icon(
-                Icons.Filled.CheckCircle,
-                "Complete",
-                tint = if (item.completed) AccentGreen else TextSecondary
-            )
+        IconButton(onClick = onComplete, enabled = !item.completed) {
+            Icon(Icons.Filled.CheckCircle, "Complete", tint = if (item.completed) AccentGreen else TextSecondary)
         }
     }
 }
 
 @Composable
 private fun EmptyStateCard(title: String, body: String) {
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(BgCard)
-            .padding(18.dp)
-    ) {
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(BgCard).padding(18.dp)) {
         Text(title, style = MaterialTheme.typography.titleMedium)
         Spacer(Modifier.height(6.dp))
         Text(body, color = TextMuted, fontSize = 12.sp)
