@@ -15,6 +15,7 @@ class CloudSyncCoordinator(
     suspend fun sync(): SyncResult {
         val user = cloud.ensureSession()
         val local = JeeRepository(context)
+        val learning = LearningRepository(context)
         val topics = TopicRepository(context)
 
         var chapterCount = 0
@@ -37,7 +38,7 @@ class CloudSyncCoordinator(
         }
 
         val syncedIds = syncPrefs.getStringSet("question_attempt_ids", emptySet()).orEmpty().toMutableSet()
-        local.getQuestionAttempts().forEach { attempt ->
+        learning.getQuestionAttempts().forEach { attempt ->
             if (attempt.id.toString() in syncedIds) return@forEach
 
             val question = cloud.questions(attempt.chapterId)
