@@ -9,12 +9,236 @@ concurrency:
   group: android-build-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Apply JL identity and app-state fixes
+        if: ${{ github.event_name == 'push' && !contains(github.event.head_commit.message, '[auto-fix]') }}
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          # 1) New installed package/application ID. Keep the existing Kotlin namespace
+          # for this migration so R imports and relative component names remain stable.
+          gradle = Path('app/build.gradle')
+          text = gradle.read_text()
+          text = text.replace("applicationId 'com.example.jeecommandcenter'", "applicationId 'com.sigmaje.app'")
+          gradle.write_text(text)
+
+          # 2) User-facing app name.
+          strings = Path('app/src/main/res/values/strings.xml')
+          strings.write_text(strings.read_text().replace('<string name="app_name">Sigma JE</string>', '<string name="app_name">JL</string>'))
+
+          # 3) Remove the custom in-app opening screen/animation completely.
+          main = Path('app/src/main/java/com/example/jeecommandcenter/MainActivity.kt')
+          main.write_text('''package com.example.jeecommandcenter
+
+import android.content.Intent
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.Surface
+import androidx.compose.ui.Modifier
+import androidx.lifecycle.lifecycleScope
+import com.example.jeecommandcenter.data.SupabaseClientProvider
+import com.example.jeecommandcenter.ui.components.JeeBackground
+import com.example.jeecommandcenter.ui.navigation.AppRoot
+import com.example.jeecommandcenter.ui.theme.BgAppBase
+import com.example.jeecommandcenter.ui.theme.JeePrepTheme
+import io.github.jan.supabase.annotations.SupabaseInternal
+import io.github.jan.supabase.gotrue.auth
+import io.github.jan.supabase.gotrue.parseFragmentAndImportSession
+import kotlinx.coroutines.launch
+
+class MainActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+        handleSupabaseAuthIntent(intent)
+        setContent {
+            JeePrepTheme {
+                Surface(modifier = Modifier.fillMaxSize(), color = BgAppBase) {
+                    Box(Modifier.fillMaxSize().background(BgAppBase)) {
+                        JeeBackground()
+                        AppRoot()
+                    }
+                }
+            }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleSupabaseAuthIntent(intent)
+    }
+
+    @OptIn(SupabaseInternal::class)
+    private fun handleSupabaseAuthIntent(intent: Intent?) {
+        val fragment = intent?.data?.fragment?.takeIf { it.isNotBlank() } ?: return
+        val client = SupabaseClientProvider.client
+        lifecycleScope.launch {
+            runCatching { client.auth.parseFragmentAndImportSession(fragment) }
+        }
+    }
+}
+''')
+          Path('app/src/main/java/com/example/jeecommandcenter/ui/screens/OpeningScreen.kt').unlink(missing_ok=True)
+
+          # 4) Persist the study-session context so changing tabs does not reset it.
+          timer = Path('app/src/main/java/com/example/jeecommandcenter/ui/screens/StudyTimerScreen.kt')
+          t = timer.read_text()
+          t = t.replace('import androidx.compose.ui.platform.LocalView\n', 'import androidx.compose.ui.platform.LocalView\nimport androidx.compose.ui.platform.LocalContext\n')
+          t = t.replace('    val view = LocalView.current\n    val subjects = listOf("General", "Physics", "Chemistry", "Mathematics")', '''    val view = LocalView.current
+    val appContext = LocalContext.current.applicationContext
+    val contextPrefs = remember { appContext.getSharedPreferences("jee_command_center", 0) }
+    val subjects = listOf("General", "Physics", "Chemistry", "Mathematics")''')
+          t = t.replace('    var subject by remember { mutableStateOf("General") }\n    var chapter by remember { mutableStateOf<String?>(null) }\n    var activity by remember { mutableStateOf(ActivityType.LEARNING) }', '''    var subject by remember {
+        mutableStateOf(contextPrefs.getString("study_context_subject", "General") ?: "General")
+    }
+    var chapter by remember {
+        mutableStateOf(contextPrefs.getString("study_context_chapter", null))
+    }
+    var activity by remember {
+        mutableStateOf(
+            runCatching {
+                ActivityType.valueOf(
+                    contextPrefs.getString("study_context_activity", ActivityType.LEARNING.name)
+                        ?: ActivityType.LEARNING.name
+                )
+            }.getOrDefault(ActivityType.LEARNING)
+        )
+    }''')
+          t = t.replace('''JeeFilterChip(value, value == subject) { subject = value; chapter = null; chapterPickerExpanded = false }''', '''JeeFilterChip(value, value == subject) {
+                                        subject = value
+                                        chapter = null
+                                        chapterPickerExpanded = false
+                                        contextPrefs.edit()
+                                            .putString("study_context_subject", value)
+                                            .remove("study_context_chapter")
+                                            .apply()
+                                    }''')
+          t = t.replace('''TextButton(onClick = { chapter = value.id; chapterPickerExpanded = false }, modifier = Modifier.fillMaxWidth())''', '''TextButton(onClick = {
+                                            chapter = value.id
+                                            chapterPickerExpanded = false
+                                            contextPrefs.edit().putString("study_context_chapter", value.id).apply()
+                                        }, modifier = Modifier.fillMaxWidth())''')
+          t = t.replace('''JeeFilterChip(value.name.lowercase().replace('_', ' '), value == activity) { activity = value }''', '''JeeFilterChip(value.name.lowercase().replace('_', ' '), value == activity) {
+                                        activity = value
+                                        contextPrefs.edit().putString("study_context_activity", value.name).apply()
+                                    }''')
+          timer.write_text(t)
+
+          # 5) Fix the first AI response disappearing. Parent navigation updates
+          # conversationId immediately after the first message creates a conversation;
+          # do not reload messages while the local screen is already on that conversation.
+          ai = Path('app/src/main/java/com/example/jeecommandcenter/ui/screens/AiTutorScreen.kt')
+          a = ai.read_text()
+          old = '''    LaunchedEffect(conversationId) { activeId = conversationId; messages = conversationId?.let { history.getConversation(it)?.messages }.orEmpty() }'''
+          new = '''    LaunchedEffect(conversationId) {
+        if (conversationId != activeId && activeRequestJob == null) {
+            activeId = conversationId
+            messages = conversationId?.let { history.getConversation(it)?.messages }.orEmpty()
+            streamingText = ""
+            streamingMessageId = null
+            busy = false
+        }
+    }'''
+          if old not in a:
+              raise SystemExit('AI conversation effect target not found')
+          ai.write_text(a.replace(old, new))
+
+          # 6) Replace the launcher artwork with a vector/adaptive icon so the
+          # launcher no longer depends on the previous bitmap artwork.
+          foreground = '''<?xml version="1.0" encoding="utf-8"?>
+          <vector xmlns:android="http://schemas.android.com/apk/res/android"
+              android:width="108dp"
+              android:height="108dp"
+              android:viewportWidth="108"
+              android:viewportHeight="108">
+              <path
+                  android:fillColor="#B7F36A"
+                  android:pathData="M25,18 L84,18 Q90,18 90,24 L90,38 Q90,44 84,44 L57,44 L70,57 L57,70 L84,70 Q90,70 90,76 L90,90 L25,90 L25,75 L46,75 L59,62 L46,49 L25,49 Z" />
+          </vector>
+          '''.strip() + '\n'
+          Path('app/src/main/res/drawable/ic_launcher_foreground.xml').write_text(foreground)
+
+          legacy = '''<?xml version="1.0" encoding="utf-8"?>
+          <vector xmlns:android="http://schemas.android.com/apk/res/android"
+              android:width="108dp"
+              android:height="108dp"
+              android:viewportWidth="108"
+              android:viewportHeight="108">
+              <path android:fillColor="#0B120D" android:pathData="M0,0h108v108h-108z" />
+              <path
+                  android:fillColor="#B7F36A"
+                  android:pathData="M25,18 L84,18 Q90,18 90,24 L90,38 Q90,44 84,44 L57,44 L70,57 L57,70 L84,70 Q90,70 90,76 L90,90 L25,90 L25,75 L46,75 L59,62 L46,49 L25,49 Z" />
+          </vector>
+          '''.strip() + '\n'
+          Path('app/src/main/res/drawable/ic_launcher_legacy.xml').write_text(legacy)
+
+          mono = '''<?xml version="1.0" encoding="utf-8"?>
+          <vector xmlns:android="http://schemas.android.com/apk/res/android"
+              android:width="108dp"
+              android:height="108dp"
+              android:viewportWidth="108"
+              android:viewportHeight="108">
+              <path
+                  android:fillColor="#FFFFFFFF"
+                  android:pathData="M25,18 L84,18 Q90,18 90,24 L90,38 Q90,44 84,44 L57,44 L70,57 L57,70 L84,70 Q90,70 90,76 L90,90 L25,90 L25,75 L46,75 L59,62 L46,49 L25,49 Z" />
+          </vector>
+          '''.strip() + '\n'
+          Path('app/src/main/res/drawable/ic_launcher_monochrome.xml').write_text(mono)
+
+          v21 = '''<?xml version="1.0" encoding="utf-8"?>
+          <vector xmlns:android="http://schemas.android.com/apk/res/android"
+              android:width="108dp"
+              android:height="108dp"
+              android:viewportWidth="108"
+              android:viewportHeight="108">
+              <path android:fillColor="#0B120D" android:pathData="M0,0h108v108h-108z" />
+              <path
+                  android:fillColor="#B7F36A"
+                  android:pathData="M25,18 L84,18 Q90,18 90,24 L90,38 Q90,44 84,44 L57,44 L70,57 L57,70 L84,70 Q90,70 90,76 L90,90 L25,90 L25,75 L46,75 L59,62 L46,49 L25,49 Z" />
+          </vector>
+          '''.strip() + '\n'
+          Path('app/src/main/res/mipmap-anydpi-v21/ic_launcher.xml').write_text(v21)
+          Path('app/src/main/res/mipmap-anydpi-v21/ic_launcher_round.xml').write_text(v21)
+
+          adaptive = '''<?xml version="1.0" encoding="utf-8"?>
+          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+              <background android:drawable="@color/cc_background" />
+              <foreground android:drawable="@drawable/ic_launcher_foreground" />
+              <monochrome android:drawable="@drawable/ic_launcher_monochrome" />
+          </adaptive-icon>
+          '''.strip() + '\n'
+          Path('app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml').write_text(adaptive)
+          Path('app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml').write_text(adaptive)
+          Path('app/src/main/res/mipmap-anydpi-v26/ic_launcher_monochrome.xml').write_text('''<?xml version="1.0" encoding="utf-8"?>
+          <vector xmlns:android="http://schemas.android.com/apk/res/android"
+              android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+              <path android:fillColor="#FFFFFFFF" android:pathData="M25,18 L84,18 Q90,18 90,24 L90,38 Q90,44 84,44 L57,44 L70,57 L57,70 L84,70 Q90,70 90,76 L90,90 L25,90 L25,75 L46,75 L59,62 L46,49 L25,49 Z" />
+          </vector>
+          '''.strip() + '\n')
+          PY
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/build.gradle app/src/main/res/values/strings.xml app/src/main/java/com/example/jeecommandcenter/MainActivity.kt app/src/main/java/com/example/jeecommandcenter/ui/screens/StudyTimerScreen.kt app/src/main/java/com/example/jeecommandcenter/ui/screens/AiTutorScreen.kt app/src/main/java/com/example/jeecommandcenter/ui/screens/OpeningScreen.kt app/src/main/res/drawable/ic_launcher_foreground.xml app/src/main/res/drawable/ic_launcher_legacy.xml app/src/main/res/drawable/ic_launcher_monochrome.xml app/src/main/res/mipmap-anydpi-v21/ic_launcher.xml app/src/main/res/mipmap-anydpi-v21/ic_launcher_round.xml app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml app/src/main/res/mipmap-anydpi-v26/ic_launcher_monochrome.xml
+          git commit -m "Apply JL identity and state fixes [auto-fix]"
+          git push origin HEAD:main
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -41,7 +265,7 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: JEECommandCenter-debug-apk
+          name: JL-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
 
       # Verification build for the current implementation batch.
