@@ -54,6 +54,9 @@ fun DashboardScreen(
     val todayTasks = tasks.filter { it.dueDay == "Today" }
     val nextTask = todayTasks.firstOrNull { !it.done } ?: tasks.firstOrNull { !it.done }
     val focus = priorities.firstOrNull()
+    val unresolvedMistakes = remember(refresh) { learning.getMistakes().count { !it.resolved } }
+    val questionsAttempted = remember(refresh) { learning.getQuestionAttempts().size }
+    val daysTo2027 = remember { ChronoUnit.DAYS.between(java.time.LocalDate.now(), java.time.LocalDate.of(2027, 1, 1)).coerceAtLeast(0) }
     val greeting = when (java.time.LocalTime.now().hour) {
         in 5..11 -> "Good morning"
         in 12..16 -> "Good afternoon"
@@ -84,7 +87,38 @@ fun DashboardScreen(
                     }
                 }
 
-                JeeCard(featured = true) {
+                JeeCard {
+    Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+        Column {
+            Text("JEE 2027", color = PrimaryLight, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = .8.sp)
+            Spacer(Modifier.height(4.dp))
+            Text(daysTo2027.toString(), fontSize = 27.sp, fontWeight = FontWeight.SemiBold)
+            Text("days remaining to 2027", color = TextSecondary, fontSize = 11.sp)
+        }
+        Surface(shape = RoundedCornerShape(14.dp), color = PrimarySoft, border = BorderStroke(1.dp, BgCardBorder.copy(alpha = .75f))) {
+            Icon(Icons.Filled.Event, "JEE 2027 countdown", tint = PrimaryLight, modifier = Modifier.padding(12.dp).size(22.dp))
+        }
+    }
+}
+
+Spacer(Modifier.height(16.dp))
+SectionHeader("Today at a glance")
+JeeCard {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        HomeMetric((todayMinutes / 60).toString() + "h " + (todayMinutes % 60).toString() + "m", "Study", Modifier.weight(1f))
+        HomeMetric(todayTasks.count { it.done }.toString() + "/" + todayTasks.size, "Tasks", Modifier.weight(1f))
+        HomeMetric(revisionDue.toString(), "Due", Modifier.weight(1f))
+        HomeMetric((coverage * 100).toInt().toString() + "%", "Coverage", Modifier.weight(1f))
+    }
+    Spacer(Modifier.height(12.dp))
+    LinearStatBar(if (goalMinutes == 0) 0f else (todayMinutes.toFloat() / goalMinutes).coerceIn(0f, 1f), height = 6.dp, fillColor = Primary)
+    Spacer(Modifier.height(5.dp))
+    Text(if (goalMinutes == 0) "Daily goal not set" else todayMinutes.coerceAtMost(goalMinutes).toString() + " / " + goalMinutes + " min daily goal", color = TextMuted, fontSize = 10.sp)
+}
+
+Spacer(Modifier.height(18.dp))
+
+JeeCard(featured = true) {
                     Text("YOUR FOCUS", color = PrimaryLight, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
                     Spacer(Modifier.height(8.dp))
                     when {
@@ -129,13 +163,13 @@ fun DashboardScreen(
                 Spacer(Modifier.height(18.dp))
                 SectionHeader("Quick actions")
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    QuickAction("Practice", Icons.Filled.Quiz, Modifier.weight(1f), true, onOpenAssessment)
-                    QuickAction("Revision", Icons.Filled.Replay, Modifier.weight(1f), false, onOpenRevision)
+                    QuickAction("Practice", questionsAttempted.toString() + " questions", Icons.Filled.Quiz, Modifier.weight(1f), true, onOpenAssessment)
+                    QuickAction("Revision", revisionDue.toString() + " due", Icons.Filled.Replay, Modifier.weight(1f), false, onOpenRevision)
                 }
                 Spacer(Modifier.height(10.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    QuickAction("Mistakes", Icons.Filled.ErrorOutline, Modifier.weight(1f), false, onOpenMistakes)
-                    QuickAction("Study", Icons.Filled.Timer, Modifier.weight(1f), false, onOpenStudyTimer)
+                    QuickAction("Mistakes", unresolvedMistakes.toString() + " unresolved", Icons.Filled.ErrorOutline, Modifier.weight(1f), false, onOpenMistakes)
+                    QuickAction("Study", (todayMinutes / 60).toString() + "h " + (todayMinutes % 60).toString() + "m today", Icons.Filled.Timer, Modifier.weight(1f), false, onOpenStudyTimer)
                 }
 
                 Spacer(Modifier.height(18.dp))
@@ -195,24 +229,28 @@ fun DashboardScreen(
 }
 
 @Composable
-private fun QuickAction(title: String, icon: androidx.compose.ui.graphics.vector.ImageVector, modifier: Modifier = Modifier, primary: Boolean = false, onClick: () -> Unit) {
+private fun QuickAction(title: String, metric: String, icon: androidx.compose.ui.graphics.vector.ImageVector, modifier: Modifier = Modifier, primary: Boolean = false, onClick: () -> Unit) {
     Column(
-        modifier.clip(RoundedCornerShape(15.dp))
+        modifier.height(74.dp).clip(RoundedCornerShape(15.dp))
             .background(if (primary) BgCardAlt else BgCard)
             .border(1.dp, if (primary) Primary.copy(alpha = .55f) else BgCardBorder.copy(alpha = .8f), RoundedCornerShape(15.dp))
             .premiumClick(onClick)
-            .padding(horizontal = 14.dp, vertical = 13.dp)
+            .padding(horizontal = 14.dp, vertical = 11.dp)
     ) {
-        Icon(icon, null, tint = if (primary) PrimaryLight else TextSecondary, modifier = Modifier.size(21.dp))
-        Spacer(Modifier.height(8.dp))
-        Text(title, color = TextPrimary, fontSize = 12.sp, fontWeight = if (primary) FontWeight.SemiBold else FontWeight.Medium)
+        Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.Top) {
+            Icon(icon, null, tint = if (primary) PrimaryLight else TextSecondary, modifier = Modifier.size(21.dp))
+            Text(metric, color = if (primary) PrimaryLight else TextSecondary, fontSize = 10.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+        }
+        Spacer(Modifier.height(5.dp))
+        Text(title, color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
     }
 }
 
 @Composable
 private fun HomeMetric(value: String, label: String, modifier: Modifier = Modifier) {
-    Column(modifier.clip(RoundedCornerShape(12.dp)).background(BgCard.copy(alpha = .6f)).padding(horizontal = 8.dp, vertical = 9.dp)) {
-        Text(value, color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
-        Text(label, color = TextMuted, fontSize = 8.sp, maxLines = 1)
+    Column(modifier.clip(RoundedCornerShape(12.dp)).background(BgCard.copy(alpha = .6f)).padding(horizontal = 8.dp, vertical = 10.dp)) {
+        Text(value, color = TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+        Text(label, color = TextMuted, fontSize = 9.sp, maxLines = 1)
     }
 }
+
