@@ -16,6 +16,7 @@ import com.example.jeecommandcenter.ui.components.JeeBackground
 import com.example.jeecommandcenter.ui.navigation.AppRoot
 import com.example.jeecommandcenter.ui.theme.BgAppBase
 import com.example.jeecommandcenter.ui.theme.JeePrepTheme
+import io.github.jan.supabase.gotrue.auth
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {

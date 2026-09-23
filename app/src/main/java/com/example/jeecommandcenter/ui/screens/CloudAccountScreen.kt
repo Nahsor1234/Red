@@ -53,7 +53,7 @@ fun CloudAccountScreen(
             connected = true
             if (syncAfterLogin) {
                 val result = syncCoordinator.sync()
-                message = "Synced ${result.chaptersUploaded} chapters, ${result.topicsUploaded} topics and ${result.attemptsUploaded} new question attempts."
+                message = "Synced: ↑ ${result.chaptersUploaded} chapters, ${result.topicsUploaded} topics, ${result.attemptsUploaded} attempts · ↓ ${result.chaptersRestored} chapters, ${result.topicsRestored} topics, ${result.attemptsRestored} attempts restored."
             }
         }.onFailure {
             connected = false

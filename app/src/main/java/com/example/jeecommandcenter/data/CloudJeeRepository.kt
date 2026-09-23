@@ -203,7 +203,7 @@ class CloudJeeRepository(
 
     suspend fun resendConfirmation(email: String) {
         client.auth.resendEmail(
-            type = OtpType.SIGNUP,
+            type = OtpType.Email.SIGNUP,
             email = email.trim(),
             redirectUrl = SupabaseClientProvider.AUTH_REDIRECT_URL
         )
