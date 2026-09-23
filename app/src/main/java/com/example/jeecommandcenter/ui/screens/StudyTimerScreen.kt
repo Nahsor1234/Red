@@ -15,7 +15,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -44,7 +43,6 @@ fun StudyTimerScreen(repo: JeeRepository, selectedTab: AppTab, onTabSelected: (A
     var remaining by remember { mutableIntStateOf(initial.remainingSeconds) }
     var running by remember { mutableStateOf(initial.running) }
     var end by remember { mutableLongStateOf(initial.endAtMillis) }
-    var sessions by remember { mutableStateOf(false) }
     var refresh by remember { mutableIntStateOf(0) }
     var subject by remember { mutableStateOf("General") }
     var chapter by remember { mutableStateOf<String?>(null) }
@@ -53,6 +51,7 @@ fun StudyTimerScreen(repo: JeeRepository, selectedTab: AppTab, onTabSelected: (A
     val view = LocalView.current
     val subjects = listOf("General", "Physics", "Chemistry", "Mathematics")
     val chapters = remember(subject) { if (subject == "General") emptyList() else JeeCatalog.forSubject(subject) }
+    val recentSessions = remember(refresh) { repo.getSessions().take(6) }
 
     LaunchedEffect(running) {
         if (!running) return@LaunchedEffect
@@ -81,39 +80,19 @@ fun StudyTimerScreen(repo: JeeRepository, selectedTab: AppTab, onTabSelected: (A
         view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
     }
 
-    Scaffold(containerColor = BgApp, bottomBar = { BottomNavBar(selectedTab, onTabSelected, onAiClick) }) { p ->
-        Column(Modifier.fillMaxSize().padding(p).padding(horizontal = 18.dp)) {
-            Spacer(Modifier.height(10.dp))
-            Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
-                Text("Study session", style = MaterialTheme.typography.headlineSmall)
-                Text("${remember(refresh) { repo.getTodayMinutes() }} min today", color = TextMuted, fontSize = 11.sp)
-            }
-            Spacer(Modifier.height(12.dp))
-            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(BgCard).border(JeeSurfaceTokens.borderWidth,BgCardBorder.copy(alpha=JeeSurfaceTokens.cardBorderAlpha),JeeShapes.medium).padding(4.dp)) {
-                Segment("Timer", !sessions) { sessions = false }
-                Segment("Sessions", sessions) { sessions = true }
-            }
-            if (sessions) {
-                Spacer(Modifier.height(12.dp))
-                val list = remember(refresh) { repo.getSessions() }
-                LazyColumn(Modifier.weight(1f)) {
-                    items(list, key = { it.id }) { s ->
-                        Row(Modifier.fillMaxWidth().padding(vertical = 12.dp), Arrangement.SpaceBetween) {
-                            Column {
-                                Text(s.subject, fontSize = 14.sp)
-                                Text(s.chapter, color = TextMuted, fontSize = 10.sp)
-                            }
-                            Column(horizontalAlignment = Alignment.End) {
-                                Text("${s.minutes} min", color = AccentGreen, fontSize = 12.sp)
-                                Text(s.date, color = TextMuted, fontSize = 10.sp)
-                            }
-                        }
-                        HorizontalDivider(color = BgDivider, thickness = .5.dp)
-                    }
-                    item { Spacer(Modifier.height(20.dp)) }
+    Scaffold(containerColor = BgApp, bottomBar = { BottomNavBar(selectedTab, onTabSelected, onAiClick) }) { padding ->
+        LazyColumn(
+            Modifier.fillMaxSize().padding(padding).padding(horizontal = 18.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(top = 10.dp, bottom = 120.dp)
+        ) {
+            item {
+                Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+                    Text("Study session", style = MaterialTheme.typography.headlineSmall)
+                    Text(repo.getTodayMinutes().toString() + " min today", color = TextMuted, fontSize = 11.sp)
                 }
-            } else {
-                Spacer(Modifier.height(18.dp))
+            }
+            item {
                 Box(Modifier.fillMaxWidth().height(250.dp), Alignment.Center) {
                     val progress = if (total > 0) remaining.toFloat() / total else 0f
                     Canvas(Modifier.size(224.dp)) {
@@ -126,22 +105,28 @@ fun StudyTimerScreen(repo: JeeRepository, selectedTab: AppTab, onTabSelected: (A
                         Text(if (running) "Focus mode" else "Ready", color = TextMuted, fontSize = 12.sp)
                     }
                 }
-                Spacer(Modifier.height(12.dp))
-                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(BgCardAlt).border(JeeSurfaceTokens.borderWidth,BgCardBorder.copy(alpha=JeeSurfaceTokens.cardBorderAlpha),JeeShapes.medium).padding(15.dp)) {
+            }
+            item {
+                Column(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(BgCardAlt)
+                        .border(JeeSurfaceTokens.borderWidth,BgCardBorder.copy(alpha=JeeSurfaceTokens.cardBorderAlpha),JeeShapes.medium).padding(15.dp)
+                ) {
                     Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
                         Text("SESSION CONTEXT", color = TextSecondary, fontSize = 11.sp)
-                        TextButton(onClick = { if (!running) showContext = true }) { Text("Change", fontSize = 11.sp) }
+                        TextButton(enabled = !running, onClick = { showContext = true }) { Text("Change", fontSize = 11.sp) }
                     }
                     Text(subject, style = MaterialTheme.typography.titleMedium)
                     Text(chapter?.let { JeeCatalog.find(it)?.name } ?: "No chapter linked", color = TextMuted, fontSize = 11.sp)
-                    Text("Activity: ${activity.name.lowercase().replace('_', ' ')}", color = TextMuted, fontSize = 10.sp)
+                    Text("Activity: " + activity.name.lowercase().replace('_', ' '), color = TextMuted, fontSize = 10.sp)
                 }
-                Spacer(Modifier.height(12.dp))
+            }
+            item {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TimerPreset.values().forEach { p -> Preset(p.label, p.sublabel, selected == p, Modifier.weight(1f)) { preset(p) } }
-                    Preset("Custom", "${total / 60} min", selected == null, Modifier.weight(1f)) { custom = (total / 60).coerceAtLeast(1).toString(); showCustom = true }
+                    Preset("Custom", (total / 60).toString() + " min", selected == null, Modifier.weight(1f)) { custom = (total / 60).coerceAtLeast(1).toString(); showCustom = true }
                 }
-                Spacer(Modifier.height(14.dp))
+            }
+            item {
                 Button(
                     onClick = {
                         if (running) {
@@ -165,8 +150,35 @@ fun StudyTimerScreen(repo: JeeRepository, selectedTab: AppTab, onTabSelected: (A
                     Spacer(Modifier.width(8.dp))
                     Text(if (running) "Pause" else "Start session", color = Color(0xFF17120A))
                 }
-                Spacer(Modifier.height(8.dp))
-                Text("Completed sessions are added to your dashboard automatically.", color = TextMuted, fontSize = 11.sp)
+            }
+            item { SectionHeader("Recent sessions") }
+            if (recentSessions.isEmpty()) {
+                item {
+                    JeeCard {
+                        Text("No completed sessions yet.", color = TextMuted, fontSize = 12.sp)
+                        Spacer(Modifier.height(4.dp))
+                        Text("Completed sessions will appear here after your first study block.", color = TextSecondary, fontSize = 11.sp)
+                    }
+                }
+            } else {
+                items(recentSessions, key = { it.id }) { session ->
+                    Row(
+                        Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(BgCard)
+                            .border(1.dp,BgCardBorder.copy(alpha=.72f),RoundedCornerShape(14.dp))
+                            .padding(horizontal=14.dp, vertical=11.dp),
+                        Arrangement.SpaceBetween,
+                        Alignment.CenterVertically
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text(session.subject, color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                            Text(session.chapter + " · " + session.activityType.name.lowercase().replace('_', ' '), color = TextMuted, fontSize = 10.sp)
+                        }
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(session.minutes.toString() + " min", color = PrimaryLight, fontSize = 12.sp)
+                            Text(session.date, color = TextMuted, fontSize = 9.sp)
+                        }
+                    }
+                }
             }
         }
     }
@@ -179,10 +191,7 @@ fun StudyTimerScreen(repo: JeeRepository, selectedTab: AppTab, onTabSelected: (A
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text("Subject", color = TextSecondary, fontSize = 12.sp)
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        subjects.forEach { value -> JeeFilterChip(value, value == subject) {
-                            subject = value
-                            chapter = null
-                        } }
+                        subjects.forEach { value -> JeeFilterChip(value, value == subject) { subject = value; chapter = null } }
                     }
                     if (subject != "General") {
                         Text("Chapter", color = TextSecondary, fontSize = 12.sp)
@@ -190,8 +199,8 @@ fun StudyTimerScreen(repo: JeeRepository, selectedTab: AppTab, onTabSelected: (A
                             items(chapters, key = { it.id }) { value ->
                                 TextButton(onClick = { chapter = value.id }) {
                                     Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
-                                        Text("${value.number}. ${value.name}", color = if (chapter == value.id) AccentBlue else TextOnCard)
-                                        if (chapter == value.id) Text("Selected", color = AccentBlue, fontSize = 10.sp)
+                                        Text("\${value.number}. \${value.name}", color = if (chapter == value.id) PrimaryLight else TextOnCard)
+                                        if (chapter == value.id) Text("Selected", color = PrimaryLight, fontSize = 10.sp)
                                     }
                                 }
                             }
@@ -234,16 +243,13 @@ fun StudyTimerScreen(repo: JeeRepository, selectedTab: AppTab, onTabSelected: (A
 }
 
 @Composable
-private fun RowScope.Segment(label: String, selected: Boolean, onClick: () -> Unit) {
-    val view = LocalView.current
-    Box(Modifier.weight(1f).clip(RoundedCornerShape(9.dp)).background(if (selected) AccentBlue else Color.Transparent).premiumClick(onClick).padding(vertical = 8.dp), Alignment.Center) {
-        Text(label, color = if (selected) Color(0xFF17120A) else TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-    }
-}
-
-@Composable
 private fun Preset(label: String, sub: String, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
-    Column(modifier.clip(RoundedCornerShape(15.dp)).background(BgCard).border(1.dp, if (selected) AccentBlue else Color.Transparent, RoundedCornerShape(15.dp)).premiumClick(onClick).padding(vertical = 11.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(
+        modifier.clip(RoundedCornerShape(15.dp)).background(BgCard)
+            .border(1.dp, if (selected) AccentBlue else Color.Transparent, RoundedCornerShape(15.dp))
+            .premiumClick(onClick).padding(vertical = 11.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
         Text(label, color = if (selected) AccentBlue else TextOnCard, fontSize = 12.sp, fontWeight = FontWeight.Medium)
         Text(sub, color = TextMuted, fontSize = 10.sp)
     }
