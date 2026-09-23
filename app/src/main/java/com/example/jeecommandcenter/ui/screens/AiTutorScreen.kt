@@ -1,27 +1,31 @@
 package com.example.jeecommandcenter.ui.screens
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Analytics
+import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.filled.Today
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.jeecommandcenter.data.*
-import com.example.jeecommandcenter.ui.theme.*
 import com.example.jeecommandcenter.ui.components.*
+import com.example.jeecommandcenter.ui.theme.*
 import kotlinx.coroutines.launch
 
 @Composable
@@ -34,7 +38,6 @@ fun AiTutorScreen(context: android.content.Context, jee: JeeRepository, learning
     var busy by remember { mutableStateOf(false) }
     val analytics = remember { learning.analytics(jee) }
     val intelligence = remember { JeeIntelligence(jee, learning) }
-    val mistakes = remember { learning.getMistakes().filterNot { it.resolved } }
     val weak = remember { intelligence.weakChapters(3) }
     val priorities = remember { intelligence.dailyPriorities(3) }
     val revisions = remember { intelligence.revisionRecommendations(3) }
@@ -59,7 +62,7 @@ fun AiTutorScreen(context: android.content.Context, jee: JeeRepository, learning
         if (prompt.isBlank() || busy || !settings.hasApiKey()) return
         busy = true; input = ""; response = ""
         scope.launch {
-            val result = AiEngine(settings).stream(prompt + "\n\nStudent context:\n" + contextSummary(analytics, topMistakes), "You are the JeE JEE preparation tutor. Explain clearly, use step-by-step reasoning, identify misconceptions, and never invent student performance data.") { chunk -> response += chunk }
+            val result = AiEngine(settings).stream(prompt + "\n\nStudent context:\n" + contextSummary(analytics, topMistakes), "You are the JEE preparation tutor. Explain clearly, use step-by-step reasoning, identify misconceptions, and never invent student performance data.") { chunk -> response += chunk }
             if (!result.success) response = result.error ?: "AI request failed."
             busy = false
         }
@@ -115,7 +118,7 @@ fun AiTutorScreen(context: android.content.Context, jee: JeeRepository, learning
                 SectionHeader("Next actions")
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        CoachAction("Analyze preparation", Icons.Filled.Insights, Modifier.weight(1f)) { action { orchestrator.analyzePerformance() } }
+                        CoachAction("Analyze preparation", Icons.Filled.Analytics, Modifier.weight(1f)) { action { orchestrator.analyzePerformance() } }
                         CoachAction("Plan my day", Icons.Filled.Today, Modifier.weight(1f)) { action { orchestrator.buildDailyStudyPlan() } }
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -173,6 +176,32 @@ fun AiTutorScreen(context: android.content.Context, jee: JeeRepository, learning
             item { Spacer(Modifier.height(24.dp)) }
         }
     }
+}
+
+@Composable
+private fun CoachMetric(value: String, label: String, modifier: Modifier = Modifier) {
+    Column(modifier.clip(RoundedCornerShape(12.dp)).background(BgCard.copy(alpha = .65f)).padding(horizontal = 8.dp, vertical = 8.dp)) {
+        Text(value, color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, maxLines = 1)
+        Text(label, color = TextMuted, fontSize = 8.sp, maxLines = 1)
+    }
+}
+
+@Composable
+private fun CoachAction(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    Surface(
+        modifier = modifier.heightIn(min = 58.dp),
+        shape = RoundedCornerShape(14.dp),
+        color = BgCard,
+        border = androidx.compose.foundation.BorderStroke(1.dp, BgCardBorder.copy(alpha = .8f)),
+        onClick = onClick
+    ) {
+        Row(Modifier.fillMaxSize().padding(horizontal = 11.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(icon, null, tint = PrimaryLight, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(label, color = TextPrimary, fontSize = 11.sp, lineHeight = 14.sp)
+        }
+    }
+}
 
 @Composable
 private fun MarkdownText(markdown: String) {
@@ -185,7 +214,7 @@ private fun MarkdownText(markdown: String) {
                 line.startsWith("# ") -> Text(line.removePrefix("# "), style = MaterialTheme.typography.headlineSmall, color = TextPrimary)
                 line.startsWith("- ") || line.startsWith("* ") -> Text("• " + line.substring(2).inlineMarkdown(), color = TextOnCard, fontSize = 13.sp)
                 line.matches(Regex("^\\d+\\. .*")) -> Text(line, color = TextOnCard, fontSize = 13.sp)
-                line.startsWith("```") -> Text(line.removePrefix("```").ifBlank { " " }, color = TextSecondary, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace, fontSize = 12.sp)
+                line.startsWith("```") -> Text(line.removePrefix("```").ifBlank { " " }, color = TextSecondary, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
                 line.isBlank() -> Spacer(Modifier.height(2.dp))
                 else -> Text(line.inlineMarkdown(), color = TextOnCard, fontSize = 13.sp)
             }
