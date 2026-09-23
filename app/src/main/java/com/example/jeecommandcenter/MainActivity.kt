@@ -18,6 +18,7 @@ import com.example.jeecommandcenter.ui.theme.BgAppBase
 import com.example.jeecommandcenter.ui.theme.JeePrepTheme
 import io.github.jan.supabase.gotrue.auth
 import io.github.jan.supabase.gotrue.parseFragmentAndImportSession
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
