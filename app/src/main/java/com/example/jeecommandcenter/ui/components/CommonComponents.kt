@@ -32,6 +32,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -140,8 +141,8 @@ fun BottomNavBar(selected: AppTab, onTabSelected: (AppTab) -> Unit, onAiClick: (
         AppTab.TASKS to (Icons.Filled.CheckCircle to "Tasks"),
         AppTab.STATS to (Icons.Filled.Timer to "Timer")
     )
-    Box(Modifier.fillMaxWidth().navigationBarsPadding().padding(start=16.dp,end=16.dp,bottom=17.dp),contentAlignment=Alignment.Center){
-        Box(Modifier.fillMaxWidth().height(66.dp).clip(RoundedCornerShape(33.dp)).background(BgCard).border(1.dp,BgCardBorder.copy(alpha=.88f),RoundedCornerShape(22.dp))){
+    Box(Modifier.fillMaxWidth().navigationBarsPadding().padding(start=16.dp,end=16.dp,bottom=22.dp),contentAlignment=Alignment.Center){
+        Box(Modifier.fillMaxWidth().height(66.dp).clip(RoundedCornerShape(33.dp)).shadow(6.dp,RoundedCornerShape(33.dp),clip=false).background(BgCard).border(1.dp,BgCardBorder.copy(alpha=.88f),RoundedCornerShape(33.dp))){
             val targetPos=positions[selected]?:0.dp
             val targetWidth=widths[selected]?:0.dp
             val pillX by animateDpAsState(targetPos,animationSpec=spring(dampingRatio=Spring.DampingRatioNoBouncy,stiffness=Spring.StiffnessMediumLow),label="nav-pill-x")
@@ -163,11 +164,12 @@ private fun RowScope.NavDestination(icon:androidx.compose.ui.graphics.vector.Ima
     val color by animateColorAsState(if (selected) AccentBlueLight else TextSecondary, animationSpec = spring(stiffness = Spring.StiffnessMedium), label = "color")
     val scale by animateFloatAsState(if (selected) 1.08f else 1f, animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow), label = "scale")
     val pad by animateDpAsState(if (selected) 11.dp else 12.dp, animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow), label = "pad")
+    val rotation by animateFloatAsState(if(selected) 3f else 0f, animationSpec=spring(dampingRatio=Spring.DampingRatioNoBouncy,stiffness=Spring.StiffnessMedium), label="nav-rotation")
     val interaction=remember{androidx.compose.foundation.interaction.MutableInteractionSource()}
     val pressed by interaction.collectIsPressedAsState()
     val pressScale by animateFloatAsState(if(pressed).94f else 1f,animationSpec=spring(dampingRatio=Spring.DampingRatioMediumBouncy,stiffness=Spring.StiffnessMedium),label="nav-press")
     Row(modifier.widthIn(min=48.dp).graphicsLayer(scaleX=pressScale,scaleY=pressScale).clip(RoundedCornerShape(18.dp)).clickable(interactionSource=interaction,indication=androidx.compose.foundation.LocalIndication.current,onClick=onClick).padding(horizontal=pad,vertical=10.dp),horizontalArrangement=Arrangement.Center,verticalAlignment=Alignment.CenterVertically){
-        Icon(icon,label,tint=color,modifier=Modifier.size(22.dp).graphicsLayer(scaleX=scale,scaleY=scale))
+        Icon(icon,label,tint=color,modifier=Modifier.size(24.dp).graphicsLayer(scaleX=scale,scaleY=scale,translationY=if(selected)-1.5f else 0f,rotationZ=rotation))
         AnimatedVisibility(selected,enter=fadeIn(spring(stiffness=Spring.StiffnessMediumLow))+expandHorizontally(spring(stiffness=Spring.StiffnessMediumLow)),exit=fadeOut(spring(stiffness=Spring.StiffnessMediumLow))+shrinkHorizontally(spring(stiffness=Spring.StiffnessMediumLow))){
             Row(verticalAlignment=Alignment.CenterVertically){Spacer(Modifier.width(6.dp));Text(label,color=color,fontSize=11.sp,fontWeight=FontWeight.Medium,maxLines=1)}
         }
@@ -176,7 +178,25 @@ private fun RowScope.NavDestination(icon:androidx.compose.ui.graphics.vector.Ima
 
 @Composable
 private fun AiDestination(modifier:Modifier,view:android.view.View,onClick:()->Unit){
-    Box(modifier.widthIn(min=48.dp).fillMaxHeight().clip(RoundedCornerShape(18.dp)).clickable(interactionSource=remember{androidx.compose.foundation.interaction.MutableInteractionSource()},indication=LocalIndication.current){view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK);onClick()},contentAlignment=Alignment.Center){
-        Icon(Icons.Filled.AutoAwesome,"AI",tint=TextSecondary,modifier=Modifier.size(22.dp))
+    val interaction=remember{androidx.compose.foundation.interaction.MutableInteractionSource()}
+    val pressed by interaction.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        if (pressed) .94f else 1f,
+        animationSpec=spring(dampingRatio=Spring.DampingRatioMediumBouncy,stiffness=Spring.StiffnessMedium),
+        label="ai-press"
+    )
+    Box(
+        modifier
+            .height(52.dp)
+            .widthIn(min=48.dp)
+            .graphicsLayer(scaleX=scale,scaleY=scale,translationY=-1f)
+            .clip(RoundedCornerShape(26.dp))
+            .clickable(interactionSource=interaction,indication=androidx.compose.foundation.LocalIndication.current){
+                view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                onClick()
+            },
+        contentAlignment=Alignment.Center
+    ){
+        Icon(Icons.Filled.AutoAwesome,"AI",tint=PrimaryLight,modifier=Modifier.size(24.dp))
     }
 }
