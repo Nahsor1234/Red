@@ -71,7 +71,24 @@ fun AssessmentScreen(learning: LearningRepository, jee: JeeRepository, onBack: (
         state = AssessmentState.RESULT
     }
 
-    Scaffold(containerColor = BgApp, topBar = { JeeTopBar(title = when (state) { AssessmentState.SETUP -> "Assessment"; AssessmentState.RUNNING -> if (mode == TestMode.MOCK) "Starter mock" else "Practice test"; AssessmentState.RESULT -> "Result" }, onBack = onBack, trailing = { if (state == AssessmentState.SETUP) IconButton(onClick = onOpenHistory) { Icon(Icons.Filled.History, "Test history") } }) }) { padding ->
+    Scaffold(
+        containerColor = BgApp,
+        topBar = {
+            JeeTopBar(
+                title = when (state) { AssessmentState.SETUP -> "Assessment"; AssessmentState.RUNNING -> if (mode == TestMode.MOCK) "Starter mock" else "Practice test"; AssessmentState.RESULT -> "Result" },
+                onBack = onBack,
+                trailing = {
+                    if (state == AssessmentState.SETUP) {
+                        TextButton(onClick = onOpenHistory) {
+                            Icon(Icons.Filled.History, null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text("History", fontSize = 12.sp)
+                        }
+                    }
+                }
+            )
+        }
+    ) { padding ->
         when (state) {
             AssessmentState.SETUP -> SetupContent(mode, subject, { mode = it }, { subject = it }, ::start, onOpenMistakes, Modifier.padding(padding), settings.hasApiKey(), { showAiDialog = true })
             AssessmentState.RUNNING -> {
@@ -106,7 +123,7 @@ private fun SetupContent(mode: TestMode, subject: String, onMode: (TestMode) -> 
     LazyColumn(modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item { Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(BgCardAlt).border(JeeSurfaceTokens.borderWidth,BgCardBorder.copy(alpha=JeeSurfaceTokens.cardBorderAlpha),JeeShapes.medium).padding(16.dp)) { Text("Assessment engine", style = MaterialTheme.typography.titleLarge); Spacer(Modifier.height(6.dp)); Text("Practice tests and AI-generated quizzes create real question attempts, mistakes and analytics.", color = TextMuted, fontSize = 11.sp) } }
         item { Text("Mode", color = TextSecondary, fontSize = 12.sp); Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { JeeFilterChip("Practice", mode == TestMode.PRACTICE) { onMode(TestMode.PRACTICE) }; JeeFilterChip("Starter mock", mode == TestMode.MOCK) { onMode(TestMode.MOCK) } } }
-        if (mode == TestMode.PRACTICE) item { Text("Subject", color = TextSecondary, fontSize = 12.sp); Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { listOf("Physics", "Chemistry", "Mathematics").forEach { JeeFilterChip(it, subject == it) { onSubject(it) } } } }
+        if (mode == TestMode.PRACTICE) item { Text("Subject", color = TextSecondary, fontSize = 12.sp); Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { listOf("Physics", "Chemistry", "Mathematics").forEach { JeeFilterChip(it, subject == it) { onSubject(it) } } }
         item { Button(onClick = onStart, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = AccentBlue)) { Icon(Icons.Filled.PlayArrow, null); Spacer(Modifier.width(7.dp)); Text(if (mode == TestMode.MOCK) "Start 10-question mock" else "Start 5-question practice") } }
         item { OutlinedButton(onClick = onCreateAi, enabled = aiAvailable, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Filled.AutoAwesome, null); Spacer(Modifier.width(7.dp)); Text(if (aiAvailable) "Create quiz with AI" else "Configure AI to create quiz") } }
         item { OutlinedButton(onClick = onOpenMistakes, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Filled.ErrorOutline, null); Spacer(Modifier.width(7.dp)); Text("Open mistake bank") } }
