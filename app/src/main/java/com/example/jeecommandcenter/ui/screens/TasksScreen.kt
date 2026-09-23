@@ -2,9 +2,11 @@ package com.example.jeecommandcenter.ui.screens
 
 import android.view.HapticFeedbackConstants
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -15,6 +17,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.font.FontWeight
 import com.example.jeecommandcenter.data.*
 import com.example.jeecommandcenter.ui.components.*
 import com.example.jeecommandcenter.ui.theme.*
@@ -54,7 +57,7 @@ fun TasksScreen(repo: JeeRepository, selectedTab: AppTab, onTabSelected: (AppTab
                 Spacer(Modifier.height(14.dp))
                 if (filter != "All") {
                     val count = visible.size
-                    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(BgCardAlt).padding(17.dp)) {
+                    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(BgCardAlt).border(JeeSurfaceTokens.borderWidth,BgCardBorder.copy(alpha=JeeSurfaceTokens.cardBorderAlpha),JeeShapes.medium).padding(17.dp)) {
                         Text(filter.uppercase(), color = TextSecondary, fontSize = 11.sp)
                         Text("$count ${if (count == 1) "task" else "tasks"}", style = MaterialTheme.typography.titleLarge)
                         Text("${visible.sumOf { it.durationMin }} minutes planned", color = TextMuted, fontSize = 11.sp)
@@ -112,18 +115,23 @@ private fun LazyListScope.taskGroup(title: String, tasks: List<AppTask>, repo: J
 
 @Composable
 private fun TaskListItem(task: AppTask, repo: JeeRepository, onOpen: (AppTask) -> Unit, onRefresh: () -> Unit) {
-    Row(Modifier.fillMaxWidth().premiumClick { onOpen(task) }.padding(vertical = 11.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(BgCard).border(1.dp, BgCardBorder.copy(alpha=JeeSurfaceTokens.cardBorderAlpha), RoundedCornerShape(16.dp)).premiumClick { onOpen(task) }.padding(horizontal=14.dp, vertical=12.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.size(23.dp).clip(RoundedCornerShape(7.dp)).background(if (task.done) AccentGreen else Color.Transparent).premiumClick(haptic = HapticFeedbackConstants.KEYBOARD_TAP) { repo.toggleTask(task.id); onRefresh() }, Alignment.Center) {
             if (task.done) Icon(Icons.Filled.Check, null, tint = AccentGreenDark, modifier = Modifier.size(14.dp))
         }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(task.title, color = if (task.done) TextMuted else TextOnCard, fontSize = 15.sp)
-            Text("${task.subject} · ${task.durationMin}m", color = TextMuted, fontSize = 11.sp)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("${task.subject} · ${task.durationMin}m", color = TextMuted, fontSize = 11.sp)
+                Spacer(Modifier.width(7.dp))
+                Box(Modifier.clip(RoundedCornerShape(6.dp)).background(AccentBlueSoft).padding(horizontal=6.dp,vertical=2.dp)) {
+                    Text(task.activityType.name.lowercase().replace('_',' '), color=AccentBlueLight, fontSize=9.sp, fontWeight=FontWeight.Medium)
+                }
+            }
         }
         Icon(Icons.Filled.ChevronRight, "Open task", tint = AccentBlue, modifier = Modifier.size(19.dp))
     }
-    HorizontalDivider(color = BgDivider, thickness = .5.dp)
 }
 
 private fun LazyListScope.emptyTaskState() {
@@ -142,27 +150,79 @@ private fun AddTaskDialogPreview(repo: JeeRepository, onDone: () -> Unit) {
     var subject by remember { mutableStateOf("Physics") }
     var duration by remember { mutableStateOf("30") }
     var due by remember { mutableStateOf("Today") }
-    var chapter by remember { mutableStateOf<String?>(null) }
     var activity by remember { mutableStateOf(ActivityType.REVISION) }
-    AlertDialog(
-        onDismissRequest = onDone,
-        title = { Text("Add task") },
-        text = {
-            Column {
-                OutlinedTextField(title, { title = it }, label = { Text("Task") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                Spacer(Modifier.height(10.dp)); Text("Subject", color = TextMuted, fontSize = 11.sp)
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) { items(subjects) { JeeFilterChip(it, it == subject) { subject = it } } }
-                Spacer(Modifier.height(10.dp))
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) { items(listOf(ActivityType.LEARNING, ActivityType.PRACTICE, ActivityType.REVISION, ActivityType.TEST)) { JeeFilterChip(it.name.lowercase().replace('_', ' '), it == activity) { activity = it } } }
-                Spacer(Modifier.height(10.dp)); OutlinedTextField(duration, { duration = it.filter(Char::isDigit).take(4) }, label = { Text("Minutes") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                Spacer(Modifier.height(8.dp)); Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { JeeFilterChip("Today", due == "Today") { due = "Today" }; JeeFilterChip("Upcoming", due == "Upcoming") { due = "Upcoming" } }
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDone) {
+        Column(
+            Modifier.fillMaxWidth().widthIn(max = 420.dp).heightIn(max = 650.dp)
+                .clip(RoundedCornerShape(24.dp)).background(BgCardAlt)
+                .border(1.dp, BgCardBorder.copy(alpha = .9f), RoundedCornerShape(24.dp))
+                .padding(horizontal = 22.dp, vertical = 20.dp)
+                .verticalScroll(androidx.compose.foundation.rememberScrollState())
+        ) {
+            Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Add task", style = MaterialTheme.typography.headlineSmall)
+                    Text("Turn a study intention into an actionable study block.", color = TextMuted, fontSize = 11.sp)
+                }
+                IconButton(onClick = onDone) { Icon(Icons.Filled.Close, "Close") }
             }
-        },
-        confirmButton = {
-            val m = duration.toIntOrNull()
-            TextButton(enabled = title.isNotBlank() && m != null && m in 1..1440, onClick = { m?.let { repo.addTask(title.trim(), subject, it, due, chapter, activity); onDone() } }) { Text("Add") }
-        },
-        dismissButton = { TextButton(onClick = onDone) { Text("Cancel") }
+            Spacer(Modifier.height(18.dp))
+            Text("Task", color = TextSecondary, fontSize = 12.sp)
+            Spacer(Modifier.height(6.dp))
+            OutlinedTextField(
+                value = title, onValueChange = { title = it },
+                placeholder = { Text("e.g. Revise electrostatics") }, singleLine = true,
+                modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(15.dp)
+            )
+            Spacer(Modifier.height(14.dp))
+            Text("Subject", color = TextSecondary, fontSize = 12.sp)
+            Spacer(Modifier.height(7.dp))
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(subjects) { value -> JeeFilterChip(value, value == subject) { subject = value } }
+            }
+            Spacer(Modifier.height(14.dp))
+            Text("Activity", color = TextSecondary, fontSize = 12.sp)
+            Spacer(Modifier.height(7.dp))
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(listOf(ActivityType.LEARNING, ActivityType.PRACTICE, ActivityType.REVISION, ActivityType.TEST)) {
+                    JeeFilterChip(it.name.lowercase().replace('_', ' '), it == activity) { activity = it }
+                }
+            }
+            Spacer(Modifier.height(14.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(Modifier.weight(1f)) {
+                    Text("Duration", color = TextSecondary, fontSize = 12.sp)
+                    Spacer(Modifier.height(6.dp))
+                    OutlinedTextField(
+                        value = duration, onValueChange = { duration = it.filter(Char::isDigit).take(4) },
+                        suffix = { Text("min") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(15.dp)
+                    )
+                }
+                Column(Modifier.weight(1f)) {
+                    Text("Schedule", color = TextSecondary, fontSize = 12.sp)
+                    Spacer(Modifier.height(6.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        JeeFilterChip("Today", due == "Today") { due = "Today" }
+                        JeeFilterChip("Later", due == "Upcoming") { due = "Upcoming" }
+                    }
+                }
+            }
+            Spacer(Modifier.height(18.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
+                TextButton(onClick = onDone) { Text("Cancel") }
+                Spacer(Modifier.width(6.dp))
+                val m = duration.toIntOrNull()
+                Button(
+                    enabled = title.isNotBlank() && m != null && m in 1..1440,
+                    onClick = { m?.let { repo.addTask(title.trim(), subject, it, due, null, activity); onDone() } },
+                    shape = RoundedCornerShape(14.dp)
+                ) {
+                    Icon(Icons.Filled.Add, null, modifier = Modifier.size(17.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Add task")
+                }
+            }
         }
-    )
+    }
 }

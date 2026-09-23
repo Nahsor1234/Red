@@ -3,6 +3,7 @@ package com.example.jeecommandcenter.ui.screens
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -34,7 +35,7 @@ fun ChapterDetailScreen(context: android.content.Context, repo: JeeRepository, c
     }) { padding ->
         LazyColumn(Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             item {
-                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(BgCardAlt).padding(16.dp)) {
+                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(BgCardAlt).border(JeeSurfaceTokens.borderWidth,BgCardBorder.copy(alpha=JeeSurfaceTokens.cardBorderAlpha),JeeShapes.medium).padding(16.dp)) {
                     Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) { Text("Topic progress", style = MaterialTheme.typography.titleMedium); Text("$completed / ${topics.size}", color = AccentBlueLight) }
                     Spacer(Modifier.height(10.dp)); LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth(), color = AccentBlue, trackColor = BgDivider)
                     Spacer(Modifier.height(6.dp)); Text("Check topics as you complete them. Chapter progress follows this checklist.", color = TextSecondary, fontSize = 11.sp)
@@ -43,7 +44,7 @@ fun ChapterDetailScreen(context: android.content.Context, repo: JeeRepository, c
             item { Text("Topics", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 6.dp)) }
             items(topics, key = { it.id }) { topic ->
                 val checkColor by animateColorAsState(if (topic.completed) AccentGreen else BgCard, label = "topic-color")
-                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(15.dp)).background(BgCard).clickable {
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(15.dp)).background(BgCard).border(1.dp,BgCardBorder.copy(alpha=JeeSurfaceTokens.cardBorderAlpha),RoundedCornerShape(15.dp)).clickable {
                     val next = !topic.completed
                     topicsRepo.setCompleted(chapter.id, topic.id, next)
                     topics = topics.map { if (it.id == topic.id) it.copy(completed = next) else it }

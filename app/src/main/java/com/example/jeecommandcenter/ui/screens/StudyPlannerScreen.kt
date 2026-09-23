@@ -1,6 +1,7 @@
 package com.example.jeecommandcenter.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -131,7 +132,7 @@ fun StudyPlannerScreen(
 
 @Composable
 private fun PlannerSummary(goalMinutes: Int, doneMinutes: Int, remainingMinutes: Int, completed: Int, total: Int, progress: Float) {
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(BgCardAlt).padding(16.dp)) {
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(BgCardAlt).border(JeeSurfaceTokens.borderWidth,BgCardBorder.copy(alpha=JeeSurfaceTokens.cardBorderAlpha),JeeShapes.medium).padding(16.dp)) {
         Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.Top) {
             Column {
                 Text("Today's plan", style = MaterialTheme.typography.titleLarge)
@@ -162,7 +163,7 @@ private fun PlannerItemCard(item: PlannerItem, onComplete: () -> Unit) {
         PlannerItemType.STUDY -> AccentBlueLight
         PlannerItemType.PRACTICE -> AccentGreen
     }
-    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(BgCard).padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(BgCard).border(JeeSurfaceTokens.borderWidth,BgCardBorder.copy(alpha=JeeSurfaceTokens.cardBorderAlpha),JeeShapes.medium).padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.size(38.dp).clip(RoundedCornerShape(10.dp)).background(typeColor.copy(alpha = 0.14f)), contentAlignment = Alignment.Center) {
             Text(typeLabel.take(1), color = typeColor, fontSize = 12.sp)
         }
@@ -179,7 +180,7 @@ private fun PlannerItemCard(item: PlannerItem, onComplete: () -> Unit) {
 
 @Composable
 private fun EmptyStateCard(title: String, body: String) {
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(BgCard).padding(18.dp)) {
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(BgCard).border(JeeSurfaceTokens.borderWidth,BgCardBorder.copy(alpha=JeeSurfaceTokens.cardBorderAlpha),JeeShapes.medium).padding(18.dp)) {
         Text(title, style = MaterialTheme.typography.titleMedium)
         Spacer(Modifier.height(6.dp))
         Text(body, color = TextMuted, fontSize = 12.sp)

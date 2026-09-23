@@ -1,6 +1,7 @@
 package com.example.jeecommandcenter.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.*
@@ -59,7 +60,7 @@ fun AiTutorScreen(context: android.content.Context, jee: JeeRepository, learning
             } }
             item { AssistChip(onClick = { action { orchestrator.explainMistakes() } }, label = { Text("Analyze mistakes") }) }
             if (response.isNotBlank()) item {
-                Column(Modifier.fillMaxWidth().clip(JeeShapes.large).background(BgCard).padding(16.dp)) {
+                Column(Modifier.fillMaxWidth().clip(JeeShapes.large).background(BgCard).border(JeeSurfaceTokens.borderWidth,BgCardBorder.copy(alpha=JeeSurfaceTokens.cardBorderAlpha),JeeShapes.medium).padding(16.dp)) {
                     Text("AI", color = AccentBlueLight, fontSize = 11.sp)
                     Spacer(Modifier.height(8.dp))
                     MarkdownText(response)

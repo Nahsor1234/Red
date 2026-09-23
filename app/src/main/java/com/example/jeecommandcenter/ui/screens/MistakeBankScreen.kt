@@ -1,6 +1,7 @@
 package com.example.jeecommandcenter.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -26,7 +27,7 @@ fun MistakeBankScreen(learning: LearningRepository, onBack: () -> Unit, onOpenTu
     }) { padding ->
         LazyColumn(Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             if (mistakes.isEmpty()) {
-                item { Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(BgCard).padding(18.dp)) { Text("No unresolved mistakes", style = MaterialTheme.typography.titleMedium); Text("Incorrect test answers are added here automatically.", color = TextMuted, fontSize = 12.sp) } }
+                item { Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(BgCard).border(JeeSurfaceTokens.borderWidth,BgCardBorder.copy(alpha=JeeSurfaceTokens.cardBorderAlpha),JeeShapes.medium).padding(18.dp)) { Text("No unresolved mistakes", style = MaterialTheme.typography.titleMedium); Text("Incorrect test answers are added here automatically.", color = TextMuted, fontSize = 12.sp) } }
             } else items(mistakes, key = { it.id }) { mistake -> MistakeCard(mistake, learning) { refresh++ } }
             item {
                 Button(onClick = onOpenTutor, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Primary)) {
@@ -42,7 +43,7 @@ fun MistakeBankScreen(learning: LearningRepository, onBack: () -> Unit, onOpenTu
 private fun MistakeCard(mistake: MistakeRecord, learning: LearningRepository, onRefresh: () -> Unit) {
     var expanded by remember { mutableStateOf(false) }
     var typeMenu by remember { mutableStateOf(false) }
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(BgCard).padding(14.dp)) {
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(BgCard).border(JeeSurfaceTokens.borderWidth,BgCardBorder.copy(alpha=JeeSurfaceTokens.cardBorderAlpha),JeeShapes.medium).padding(14.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Column(Modifier.weight(1f)) { Text(mistake.subject + " · " + mistake.chapterId, color = AccentBlueLight, fontSize = 10.sp); Spacer(Modifier.height(4.dp)); Text(mistake.questionPrompt, style = MaterialTheme.typography.titleMedium) }
             Text("×" + mistake.count, color = if (mistake.count >= 2) AccentAmber else TextMuted)

@@ -1,6 +1,7 @@
 package com.example.jeecommandcenter.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -69,7 +70,7 @@ fun RevisionScreen(
                         Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(16.dp))
-                            .background(BgCard)
+                            .background(BgCard).border(JeeSurfaceTokens.borderWidth, BgCardBorder.copy(alpha = JeeSurfaceTokens.cardBorderAlpha), JeeShapes.medium)
                             .padding(18.dp)
                     ) {
                         Text("Revision queue is clear", style = MaterialTheme.typography.titleMedium)
@@ -108,7 +109,7 @@ private fun RevisionMetric(label: String, value: String, modifier: Modifier) {
     Column(
         modifier
             .clip(RoundedCornerShape(12.dp))
-            .background(BgCard)
+            .background(BgCard).border(JeeSurfaceTokens.borderWidth, BgCardBorder.copy(alpha = JeeSurfaceTokens.cardBorderAlpha), JeeShapes.medium)
             .padding(12.dp)
     ) {
         Text(value, style = MaterialTheme.typography.titleLarge)
@@ -125,7 +126,7 @@ private fun RevisionCard(
         Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(BgCard)
+            .background(BgCard).border(JeeSurfaceTokens.borderWidth, BgCardBorder.copy(alpha = JeeSurfaceTokens.cardBorderAlpha), JeeShapes.medium)
             .padding(14.dp)
     ) {
         Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
