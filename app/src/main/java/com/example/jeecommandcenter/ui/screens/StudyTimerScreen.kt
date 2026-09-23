@@ -4,8 +4,11 @@ import android.view.HapticFeedbackConstants
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -48,7 +51,8 @@ fun StudyTimerScreen(repo: JeeRepository, selectedTab: AppTab, onTabSelected: (A
     var subject by remember { mutableStateOf("General") }
     var chapter by remember { mutableStateOf<String?>(null) }
     var activity by remember { mutableStateOf(ActivityType.LEARNING) }
-    var showContext by remember { mutableStateOf(false) }
+    var contextExpanded by remember { mutableStateOf(false) }
+    var chapterPickerExpanded by remember { mutableStateOf(false) }
     val view = LocalView.current
     val subjects = listOf("General", "Physics", "Chemistry", "Mathematics")
     val chapters = remember(subject) { if (subject == "General") emptyList() else JeeCatalog.forSubject(subject) }
@@ -108,14 +112,150 @@ fun StudyTimerScreen(repo: JeeRepository, selectedTab: AppTab, onTabSelected: (A
                 }
             }
             item {
-                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(BgCardAlt).border(JeeSurfaceTokens.borderWidth,BgCardBorder.copy(alpha = JeeSurfaceTokens.cardBorderAlpha),JeeShapes.medium).padding(15.dp)) {
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(BgCardAlt)
+                        .border(
+                            JeeSurfaceTokens.borderWidth,
+                            BgCardBorder.copy(alpha = JeeSurfaceTokens.cardBorderAlpha),
+                            JeeShapes.medium
+                        )
+                        .padding(15.dp)
+                ) {
                     Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
                         Text("SESSION CONTEXT", color = TextSecondary, fontSize = 11.sp)
-                        TextButton(enabled = !running, onClick = { showContext = true }) { Text("Change", fontSize = 11.sp) }
+                        TextButton(
+                            enabled = !running,
+                            onClick = {
+                                contextExpanded = !contextExpanded
+                                if (!contextExpanded) chapterPickerExpanded = false
+                            }
+                        ) { Text(if (contextExpanded) "Done" else "Change", fontSize = 11.sp) }
+
                     }
                     Text(subject, style = MaterialTheme.typography.titleMedium)
-                    Text(chapter?.let { JeeCatalog.find(it)?.name } ?: "No chapter linked", color = TextMuted, fontSize = 11.sp)
-                    Text("Activity: " + activity.name.lowercase().replace('_', ' '), color = TextMuted, fontSize = 10.sp)
+                    Text(
+                        chapter?.let { JeeCatalog.find(it)?.name } ?: "No chapter linked",
+                        color = TextMuted,
+                        fontSize = 11.sp
+                    )
+                    Text(
+                        "Activity: " + activity.name.lowercase().replace('_', ' '),
+                        color = TextMuted,
+                        fontSize = 10.sp
+                    )
+
+                    AnimatedVisibility(visible = contextExpanded) {
+                        Column(
+                            Modifier.fillMaxWidth().padding(top = 12.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Text("Subject", color = TextSecondary, fontSize = 12.sp)
+                            Row(
+                                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                subjects.forEach { value ->
+                                    JeeFilterChip(value, value == subject) {
+                                        subject = value
+                                        chapter = null
+                                        chapterPickerExpanded = false
+                                    }
+                                }
+                            }
+
+                            Text("Chapter", color = TextSecondary, fontSize = 12.sp)
+                            Surface(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .border(1.dp, BgCardBorder.copy(alpha = .9f), RoundedCornerShape(14.dp))
+                                    .premiumClick(enabled = subject != "General") {
+                                        chapterPickerExpanded = !chapterPickerExpanded
+                                    },
+                                color = BgAppBase.copy(alpha = .72f),
+                                shape = RoundedCornerShape(14.dp)
+                            ) {
+                                Row(
+                                    Modifier.padding(horizontal = 13.dp, vertical = 11.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        chapter?.let { JeeCatalog.find(it)?.name }
+                                            ?: if (subject == "General") "General study" else "Select chapter",
+                                        color = if (chapter != null) TextPrimary else TextMuted,
+                                        fontSize = 12.sp,
+                                        maxLines = 1
+                                    )
+                                    Icon(
+                                        if (chapterPickerExpanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                                        null,
+                                        tint = TextSecondary,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+
+                            AnimatedVisibility(visible = chapterPickerExpanded && subject != "General") {
+                                Column(
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .heightIn(max = 200.dp)
+                                        .clip(RoundedCornerShape(14.dp))
+                                        .background(BgAppBase.copy(alpha = .72f))
+                                        .border(1.dp, BgCardBorder.copy(alpha = .75f), RoundedCornerShape(14.dp))
+                                        .verticalScroll(rememberScrollState())
+                                        .padding(vertical = 4.dp)
+                                ) {
+                                    chapters.forEach { value ->
+                                        TextButton(
+                                            onClick = {
+                                                chapter = value.id
+                                                chapterPickerExpanded = false
+                                            },
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Row(
+                                                Modifier.fillMaxWidth(),
+                                                Arrangement.SpaceBetween,
+                                                Alignment.CenterVertically
+                                            ) {
+                                                Text(
+                                                    "${value.number}. ${value.name}",
+                                                    color = if (chapter == value.id) PrimaryLight else TextOnCard,
+                                                    fontSize = 12.sp
+                                                )
+                                                if (chapter == value.id) {
+                                                    Icon(Icons.Filled.Check, null, tint = PrimaryLight, modifier = Modifier.size(16.dp))
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            Text("Activity", color = TextSecondary, fontSize = 12.sp)
+                            Row(
+                                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                listOf(
+                                    ActivityType.LEARNING,
+                                    ActivityType.PRACTICE,
+                                    ActivityType.REVISION,
+                                    ActivityType.TEST
+                                ).forEach { value ->
+                                    JeeFilterChip(
+                                        value.name.lowercase().replace('_', ' '),
+                                        value == activity
+                                    ) { activity = value }
+                                }
+                            }
+                        }
+                    }
                 }
             }
             item {
@@ -162,23 +302,6 @@ fun StudyTimerScreen(repo: JeeRepository, selectedTab: AppTab, onTabSelected: (A
                 }
             }
         }
-    }
-
-    if (showContext) {
-        AlertDialog(onDismissRequest = { showContext = false }, title = { Text("Study context") }, text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("Subject", color = TextSecondary, fontSize = 12.sp)
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { subjects.forEach { value -> JeeFilterChip(value, value == subject) { subject = value; chapter = null } } }
-                if (subject != "General") {
-                    Text("Chapter", color = TextSecondary, fontSize = 12.sp)
-                    LazyColumn(Modifier.fillMaxWidth().height(220.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        items(chapters, key = { it.id }) { value -> TextButton(onClick = { chapter = value.id }) { Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) { Text("${value.number}. ${value.name}", color = if (chapter == value.id) PrimaryLight else TextOnCard); if (chapter == value.id) Text("Selected", color = PrimaryLight, fontSize = 10.sp) } } }
-                    }
-                }
-                Text("Activity", color = TextSecondary, fontSize = 12.sp)
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { listOf(ActivityType.LEARNING, ActivityType.PRACTICE, ActivityType.REVISION, ActivityType.TEST).forEach { value -> JeeFilterChip(value.name.lowercase().replace('_', ' '), value == activity) { activity = value } } }
-            }
-        }, confirmButton = { TextButton(onClick = { showContext = false }) { Text("Done") } })
     }
 
     if (showCustom) {
