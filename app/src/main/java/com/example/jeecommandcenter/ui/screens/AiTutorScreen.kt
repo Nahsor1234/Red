@@ -99,7 +99,7 @@ fun AiTutorScreen(
         busy = true
 
         scope.launch {
-            val result = runCatching {
+            val result = try {
                 block?.invoke() ?: run {
                     val turns = history.getConversation(id)?.messages.orEmpty()
                         .takeLast(24)
@@ -123,8 +123,8 @@ fun AiTutorScreen(
                         }
                     )
                 }
-            }.getOrElse {
-                AiResult(false, error = it.message ?: "AI request failed.")
+            } catch (error: Throwable) {
+                AiResult(false, error = error.message ?: "AI request failed.")
             }
 
             val coachText = if (result.success && result.text.isNotBlank()) {
