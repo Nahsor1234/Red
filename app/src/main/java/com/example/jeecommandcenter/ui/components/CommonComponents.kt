@@ -14,10 +14,10 @@ import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.LocalIndication
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -36,7 +36,6 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
@@ -44,7 +43,6 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.jeecommandcenter.ui.theme.*
-import kotlin.math.abs
 
 private fun mixHash(row: Int, col: Int, seed: Int): Int {
     var value = row * 1103515245 + col * 12345 + seed * 265443576
@@ -107,7 +105,10 @@ fun LinearStatBar(progress: Float, modifier: Modifier = Modifier, trackColor: Co
 
 @Composable
 fun SectionHeader(title: String, actionLabel: String? = null, onActionClick: () -> Unit = {}) {
-    Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), Arrangement.SpaceBetween, Alignment.CenterVertically) { Text(title, style = MaterialTheme.typography.titleMedium); if (actionLabel != null) Text(actionLabel, color = AccentBlueLight, fontSize = 12.sp, modifier = Modifier.premiumClick { onActionClick() }) }
+    Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+        Text(title, style = MaterialTheme.typography.titleMedium)
+        if (actionLabel != null) Text(actionLabel, color = AccentBlueLight, fontSize = 12.sp, modifier = Modifier.premiumClick { onActionClick() })
+    }
 }
 
 data class TaskItem(val id: String, val title: String, val subtitle: String, val duration: String, val done: Boolean = false, val inProgress: Boolean = false)
@@ -119,7 +120,11 @@ fun TaskRow(task: TaskItem, onToggle: (String) -> Unit, onClick: () -> Unit = {}
     val scale by animateFloatAsState(if (task.done) .985f else 1f, animationSpec = tween(180), label = "task-scale")
     Row(Modifier.fillMaxWidth().graphicsLayer(alpha = alpha, scaleX = scale, scaleY = scale).premiumClick(onClick = onClick).padding(vertical = 11.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.size(22.dp).clip(RoundedCornerShape(7.dp)).background(check).border(1.dp, if (task.done) AccentGreen else BgCardBorder, RoundedCornerShape(7.dp)).premiumClick(haptic = if (!task.done) HapticFeedbackConstants.KEYBOARD_TAP else HapticFeedbackConstants.VIRTUAL_KEY) { onToggle(task.id) }, Alignment.Center) { if (task.done) Icon(Icons.Filled.Check, null, tint = AccentGreenDark, modifier = Modifier.size(14.dp)) }
-        Spacer(Modifier.width(12.dp)); Column(Modifier.weight(1f)) { Text(task.title, color = TextOnCard, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium), textDecoration = if (task.done) TextDecoration.LineThrough else TextDecoration.None); if (task.subtitle.isNotEmpty()) Text(task.subtitle, color = TextSecondary, style = MaterialTheme.typography.bodySmall) }
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(task.title, color = TextOnCard, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium), textDecoration = if (task.done) TextDecoration.LineThrough else TextDecoration.None)
+            if (task.subtitle.isNotEmpty()) Text(task.subtitle, color = TextSecondary, style = MaterialTheme.typography.bodySmall)
+        }
         Text(task.duration, color = TextMuted, style = MaterialTheme.typography.labelMedium)
     }
 }
@@ -131,72 +136,119 @@ fun JeeFilterChip(label: String, selected: Boolean, onClick: () -> Unit) {
 
 @Composable
 fun BottomNavBar(selected: AppTab, onTabSelected: (AppTab) -> Unit, onAiClick: () -> Unit) {
-    val view=LocalView.current
-    val density=LocalDensity.current
-    val positions=remember{mutableStateMapOf<AppTab,androidx.compose.ui.unit.Dp>()}
-    val widths=remember{mutableStateMapOf<AppTab,androidx.compose.ui.unit.Dp>()}
-    val items=listOf(
+    val view = LocalView.current
+    val density = LocalDensity.current
+    var navWidth by remember { mutableStateOf(0.dp) }
+    val itemCount = 5
+    val slotWidth = if (navWidth > 0.dp) (navWidth - 12.dp) / itemCount else 0.dp
+    val activeIndex = when (selected) {
+        AppTab.HOME -> 0
+        AppTab.SYLLABUS -> 1
+        AppTab.TASKS -> 3
+        AppTab.STATS -> 4
+    }
+    val pillX by animateDpAsState(
+        targetValue = 6.dp + slotWidth * activeIndex,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow),
+        label = "nav-pill-position"
+    )
+    val items = listOf(
         AppTab.HOME to (Icons.Filled.Home to "Home"),
         AppTab.SYLLABUS to (Icons.Filled.MenuBook to "Syllabus"),
         AppTab.TASKS to (Icons.Filled.CheckCircle to "Tasks"),
         AppTab.STATS to (Icons.Filled.Timer to "Timer")
     )
-    Box(Modifier.fillMaxWidth().navigationBarsPadding().padding(start=16.dp,end=16.dp,bottom=22.dp),contentAlignment=Alignment.Center){
-        Box(Modifier.fillMaxWidth().height(66.dp).clip(RoundedCornerShape(33.dp)).shadow(6.dp,RoundedCornerShape(33.dp),clip=false).background(BgCard).border(1.dp,BgCardBorder.copy(alpha=.88f),RoundedCornerShape(33.dp))){
-            val targetPos=positions[selected]?:0.dp
-            val targetWidth=widths[selected]?:0.dp
-            val pillX by animateDpAsState(targetPos,animationSpec=spring(dampingRatio=Spring.DampingRatioNoBouncy,stiffness=Spring.StiffnessMediumLow),label="nav-pill-x")
-            val pillW by animateDpAsState(targetWidth,animationSpec=spring(dampingRatio=Spring.DampingRatioNoBouncy,stiffness=Spring.StiffnessMediumLow),label="nav-pill-w")
-            Box(Modifier.matchParentSize().padding(6.dp)){if(targetWidth>0.dp)Box(Modifier.offset(x=pillX).width(pillW).height(52.dp).align(Alignment.Center).clip(RoundedCornerShape(18.dp)).background(BgCardAlt).border(1.dp,BgCardBorder.copy(alpha=.82f),RoundedCornerShape(18.dp)))}
-            Row(Modifier.fillMaxSize().padding(6.dp),verticalAlignment=Alignment.CenterVertically){
-                NavDestination(items[0].second.first,items[0].second.second,selected==items[0].first,Modifier.onGloballyPositioned{co->positions[items[0].first]=with(density){co.positionInParent().x.toDp()};widths[items[0].first]=with(density){co.size.width.toDp()}}){if(selected!=items[0].first)view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK);onTabSelected(items[0].first)}
-                NavDestination(items[1].second.first,items[1].second.second,selected==items[1].first,Modifier.onGloballyPositioned{co->positions[items[1].first]=with(density){co.positionInParent().x.toDp()};widths[items[1].first]=with(density){co.size.width.toDp()}}){if(selected!=items[1].first)view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK);onTabSelected(items[1].first)}
-                AiDestination(Modifier.widthIn(min=48.dp),view,onAiClick)
-                NavDestination(items[2].second.first,items[2].second.second,selected==items[2].first,Modifier.onGloballyPositioned{co->positions[items[2].first]=with(density){co.positionInParent().x.toDp()};widths[items[2].first]=with(density){co.size.width.toDp()}}){if(selected!=items[2].first)view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK);onTabSelected(items[2].first)}
-                NavDestination(items[3].second.first,items[3].second.second,selected==items[3].first,Modifier.onGloballyPositioned{co->positions[items[3].first]=with(density){co.positionInParent().x.toDp()};widths[items[3].first]=with(density){co.size.width.toDp()}}){if(selected!=items[3].first)view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK);onTabSelected(items[3].first)}
+
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .navigationBarsPadding()
+            .padding(start = 16.dp, end = 16.dp, bottom = 17.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(66.dp)
+                .clip(RoundedCornerShape(33.dp))
+                .shadow(8.dp, RoundedCornerShape(33.dp), clip = false)
+                .background(BgCard.copy(alpha = .96f))
+                .border(1.dp, BgCardBorder.copy(alpha = .88f), RoundedCornerShape(33.dp))
+                .onGloballyPositioned { coordinates -> navWidth = with(density) { coordinates.size.width.toDp() } }
+        ) {
+            if (slotWidth > 0.dp) {
+                Box(
+                    Modifier
+                        .offset(x = pillX)
+                        .width(slotWidth)
+                        .height(52.dp)
+                        .padding(vertical = 0.dp)
+                        .align(Alignment.CenterStart)
+                        .clip(RoundedCornerShape(26.dp))
+                        .background(BgCardAlt)
+                        .border(1.dp, BgCardBorder.copy(alpha = .82f), RoundedCornerShape(26.dp))
+                )
+            }
+
+            Row(Modifier.fillMaxSize().padding(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                NavSlot(items[0].first, items[0].second.first, items[0].second.second, selected == items[0].first, Modifier.weight(1f)) { view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK); onTabSelected(items[0].first) }
+                NavSlot(items[1].first, items[1].second.first, items[1].second.second, selected == items[1].first, Modifier.weight(1f)) { view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK); onTabSelected(items[1].first) }
+                AiDestination(Modifier.weight(1f), view, onAiClick)
+                NavSlot(items[2].first, items[2].second.first, items[2].second.second, selected == items[2].first, Modifier.weight(1f)) { view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK); onTabSelected(items[2].first) }
+                NavSlot(items[3].first, items[3].second.first, items[3].second.second, selected == items[3].first, Modifier.weight(1f)) { view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK); onTabSelected(items[3].first) }
             }
         }
     }
 }
 
 @Composable
-private fun RowScope.NavDestination(icon:androidx.compose.ui.graphics.vector.ImageVector,label:String,selected:Boolean,modifier:Modifier,onClick:()->Unit){
-    val color by animateColorAsState(if (selected) AccentBlueLight else TextSecondary, animationSpec = spring(stiffness = Spring.StiffnessMedium), label = "color")
-    val scale by animateFloatAsState(if (selected) 1.08f else 1f, animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow), label = "scale")
-    val pad by animateDpAsState(if (selected) 11.dp else 12.dp, animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow), label = "pad")
-    val rotation by animateFloatAsState(if(selected) 3f else 0f, animationSpec=spring(dampingRatio=Spring.DampingRatioNoBouncy,stiffness=Spring.StiffnessMedium), label="nav-rotation")
-    val interaction=remember{androidx.compose.foundation.interaction.MutableInteractionSource()}
+private fun RowScope.NavSlot(tab: AppTab, icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
+    val color by animateColorAsState(if (selected) AccentBlueLight else TextSecondary, animationSpec = tween(180), label = "nav-color-${tab.name}")
+    val iconScale by animateFloatAsState(if (selected) 1.08f else 1f, animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium), label = "nav-scale-${tab.name}")
+    val iconLift by animateFloatAsState(if (selected) -1.5f else 0f, animationSpec = tween(180), label = "nav-lift-${tab.name}")
+    val interaction = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
-    val pressScale by animateFloatAsState(if(pressed).94f else 1f,animationSpec=spring(dampingRatio=Spring.DampingRatioMediumBouncy,stiffness=Spring.StiffnessMedium),label="nav-press")
-    Row(modifier.widthIn(min=48.dp).graphicsLayer(scaleX=pressScale,scaleY=pressScale).clip(RoundedCornerShape(18.dp)).clickable(interactionSource=interaction,indication=androidx.compose.foundation.LocalIndication.current,onClick=onClick).padding(horizontal=pad,vertical=10.dp),horizontalArrangement=Arrangement.Center,verticalAlignment=Alignment.CenterVertically){
-        Icon(icon,label,tint=color,modifier=Modifier.size(24.dp).graphicsLayer(scaleX=scale,scaleY=scale,translationY=if(selected)-1.5f else 0f,rotationZ=rotation))
-        AnimatedVisibility(selected,enter=fadeIn(spring(stiffness=Spring.StiffnessMediumLow))+expandHorizontally(spring(stiffness=Spring.StiffnessMediumLow)),exit=fadeOut(spring(stiffness=Spring.StiffnessMediumLow))+shrinkHorizontally(spring(stiffness=Spring.StiffnessMediumLow))){
-            Row(verticalAlignment=Alignment.CenterVertically){Spacer(Modifier.width(6.dp));Text(label,color=color,fontSize=11.sp,fontWeight=FontWeight.Medium,maxLines=1)}
+    val pressScale by animateFloatAsState(if (pressed) .93f else 1f, animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium), label = "nav-press-${tab.name}")
+    Row(
+        modifier
+            .fillMaxHeight()
+            .graphicsLayer(scaleX = pressScale, scaleY = pressScale)
+            .clip(RoundedCornerShape(26.dp))
+            .clickable(interactionSource = interaction, indication = LocalIndication.current, onClick = onClick),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(icon, label, tint = color, modifier = Modifier.size(25.dp).graphicsLayer(scaleX = iconScale, scaleY = iconScale, translationY = iconLift))
+        AnimatedVisibility(
+            visible = selected,
+            enter = fadeIn(tween(150)) + expandHorizontally(tween(170)),
+            exit = fadeOut(tween(110)) + shrinkHorizontally(tween(140))
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Spacer(Modifier.width(6.dp))
+                Text(label, color = color, fontSize = 11.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+            }
         }
     }
 }
 
 @Composable
-private fun AiDestination(modifier:Modifier,view:android.view.View,onClick:()->Unit){
-    val interaction=remember{androidx.compose.foundation.interaction.MutableInteractionSource()}
+private fun AiDestination(modifier: Modifier, view: android.view.View, onClick: () -> Unit) {
+    val interaction = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        if (pressed) .94f else 1f,
-        animationSpec=spring(dampingRatio=Spring.DampingRatioMediumBouncy,stiffness=Spring.StiffnessMedium),
-        label="ai-press"
-    )
+    val pulse by animateFloatAsState(if (pressed) .92f else 1f, animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium), label = "ai-press")
+    val rotation by animateFloatAsState(if (pressed) -8f else 0f, animationSpec = tween(160), label = "ai-rotation")
     Box(
         modifier
-            .height(52.dp)
-            .widthIn(min=48.dp)
-            .graphicsLayer(scaleX=scale,scaleY=scale,translationY=-1f)
+            .fillMaxHeight()
+            .graphicsLayer(scaleX = pulse, scaleY = pulse, rotationZ = rotation)
             .clip(RoundedCornerShape(26.dp))
-            .clickable(interactionSource=interaction,indication=androidx.compose.foundation.LocalIndication.current){
+            .clickable(interactionSource = interaction, indication = LocalIndication.current) {
                 view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
                 onClick()
             },
-        contentAlignment=Alignment.Center
-    ){
-        Icon(Icons.Filled.AutoAwesome,"AI",tint=PrimaryLight,modifier=Modifier.size(24.dp))
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(Icons.Filled.AutoAwesome, "AI Study Coach", tint = PrimaryLight, modifier = Modifier.size(26.dp))
     }
 }
