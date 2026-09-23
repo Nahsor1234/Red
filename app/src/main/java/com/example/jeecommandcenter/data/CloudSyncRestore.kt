@@ -1,11 +1,11 @@
 package com.example.jeecommandcenter.data
 
 import android.content.Context
-import org.json.JSONArray
-import org.json.JSONObject
 import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import org.json.JSONArray
+import org.json.JSONObject
 
 @Serializable
 private data class CloudQuestionAttemptRestore(
@@ -24,13 +24,7 @@ data class CloudRestoreResult(
     val restoredAttemptLocalIds: Set<String>
 )
 
-/**
- * Restores authenticated user data from Supabase into the existing offline-first stores.
- * This deliberately merges rather than replacing local state:
- * - chapter progress/confidence never move backwards
- * - completed topics remain completed
- * - question attempts are unioned by stable cloud UUID-derived local id
- */
+/** Restores authenticated cloud state into the existing offline-first stores. */
 class CloudSyncRestore(
     private val context: Context,
     private val cloud: CloudJeeRepository = CloudJeeRepository()
@@ -40,26 +34,19 @@ class CloudSyncRestore(
     suspend fun restore(userId: String): CloudRestoreResult {
         val chapters = cloud.chapterProgressForUser(userId)
         val topics = cloud.topicProgressForUser(userId)
-        val topicChapterMap = buildTopicChapterMap()
 
-        val chapterPrefs = context.getSharedPreferences("jee_command_center", Context.MODE_PRIVATE)
         var chaptersRestored = 0
+        val chapterPrefs = context.getSharedPreferences("jee_command_center", Context.MODE_PRIVATE)
+        val localRepo = JeeRepository(context)
         chapters.forEach { remote ->
             val chapterId = JeeCatalog.normalizeChapterId(remote.chapterId)
-            val localRepo = JeeRepository(context)
             val local = localRepo.getChapterState(chapterId)
             val mergedProgress = maxOf(local.progress, remote.progress)
             val mergedConfidence = maxOf(local.confidence, remote.confidence)
             if (mergedProgress != local.progress || mergedConfidence != local.confidence) {
-                localRepo.setChapterState(
-                    chapterId = chapterId,
-                    progress = mergedProgress,
-                    confidence = mergedConfidence,
-                    studiedAt = local.lastStudiedAt
-                )
+                localRepo.setChapterState(chapterId, mergedProgress, mergedConfidence, local.lastStudiedAt)
                 chaptersRestored++
             }
-            // Keep the legacy chapter-progress key populated for older readers/screens.
             JeeCatalog.find(chapterId)?.let { chapter ->
                 chapterPrefs.edit()
                     .putFloat("chapter_${chapter.subject}_${chapter.number}", mergedProgress)
@@ -67,26 +54,18 @@ class CloudSyncRestore(
             }
         }
 
-        val topicPrefs = context.getSharedPreferences("jee_topics", Context.MODE_PRIVATE)
-        val groupedTopics = topics.filter { it.completed }
-            .mapNotNull { progress ->
-                val chapterId = topicChapterMap[progress.topicId] ?: return@mapNotNull null
-                chapterId to progress
-            }
-            .groupBy({ it.first }, { it.second })
-
         var topicsRestored = 0
-        groupedTopics.forEach { (chapterId, remoteTopics) ->
-            val chapter = JeeCatalog.find(chapterId) ?: return@forEach
-            val key = "chapter_${chapter.id}"
-            val existing = readTopics(topicPrefs, key).associateBy { it.first }.toMutableMap()
+        val topicPrefs = context.getSharedPreferences("jee_topics", Context.MODE_PRIVATE)
+        topics.filter { it.completed }.groupBy { topic ->
+            JeeCatalog.chapters.firstOrNull { chapter -> topic.topicId.startsWith("${chapter.id}_") }?.id
+        }.forEach { (chapterId, remoteTopics) ->
+            if (chapterId == null) return@forEach
+            val key = "chapter_$chapterId"
+            val existing = readTopics(topicPrefs, key).toMutableMap()
             remoteTopics.forEach { remote ->
-                val topic = existing[remote.topicId]
-                if (topic == null || !topic.second) {
-                    val title = topicChapterMap[remote.topicId]?.let { mappedChapterId ->
-                        defaultTopicTitle(mappedChapterId, remote.topicId)
-                    } ?: remote.topicId.substringAfterLast('_').replace('_', ' ')
-                    existing[remote.topicId] = title to true
+                val current = existing[remote.topicId]
+                if (current == null || !current.second) {
+                    existing[remote.topicId] = (current?.first ?: topicTitle(remote.topicId)) to true
                     topicsRestored++
                 }
             }
@@ -95,24 +74,18 @@ class CloudSyncRestore(
 
         val attempts = runCatching {
             db["question_attempts"].select {
-                filter { CloudQuestionAttemptRestore::id.isNotNull() }
-                filter { CloudQuestionAttemptRestore::userId eq userId }
-            }.decodeList<CloudQuestionAttemptRestore>()
-        }.getOrElse {
-            // The property-based user filter above is unavailable on some older
-            // supabase-kt versions; use the raw column filter supported by PostgREST.
-            db["question_attempts"].select {
                 filter { eq("user_id", userId) }
             }.decodeList<CloudQuestionAttemptRestore>()
-        }
+        }.getOrElse { emptyList() }
 
         val learningPrefs = context.getSharedPreferences("jee_learning_engine", Context.MODE_PRIVATE)
-        val localAttempts = readLocalAttempts(learningPrefs).associateBy { it.id }.toMutableMap()
+        val localAttempts = readLocalAttempts(learningPrefs)
         val restoredLocalIds = mutableSetOf<String>()
+        var attemptsRestored = 0
+
         attempts.forEach { remote ->
             val localId = stableLocalId(remote.id)
-            val existing = localAttempts[localId]
-            if (existing == null) {
+            if (!localAttempts.containsKey(localId)) {
                 localAttempts[localId] = JSONObject().apply {
                     put("id", localId)
                     put("testId", "cloud_${remote.id}")
@@ -125,7 +98,7 @@ class CloudSyncRestore(
                     put("mistakeType", "")
                     put("createdAt", System.currentTimeMillis())
                 }
-                attemptsRestoredCount.incrementAndGet()
+                attemptsRestored++
             }
             restoredLocalIds += localId.toString()
         }
@@ -135,35 +108,26 @@ class CloudSyncRestore(
         return CloudRestoreResult(
             chaptersRestored = chaptersRestored,
             topicsRestored = topicsRestored,
-            attemptsRestored = attemptsRestoredCount.get(),
+            attemptsRestored = attemptsRestored,
             restoredAttemptLocalIds = restoredLocalIds
         )
     }
 
-    private val attemptsRestoredCount = java.util.concurrent.atomic.AtomicInteger(0)
-
-    private suspend fun buildTopicChapterMap(): Map<String, String> {
-        val map = mutableMapOf<String, String>()
-        JeeCatalog.chapters.forEach { chapter ->
-            runCatching { cloud.topics(chapter.id) }
-                .getOrDefault(emptyList())
-                .forEach { topic -> map[topic.id] = JeeCatalog.normalizeChapterId(topic.chapterId) }
-        }
-        return map
-    }
-
-    private fun defaultTopicTitle(chapterId: String, topicId: String): String =
+    private fun topicTitle(topicId: String): String =
         topicId.substringAfterLast('_').replace('_', ' ')
 
-    private fun readTopics(prefs: android.content.SharedPreferences, key: String): List<Pair<String, Boolean>> {
-        val raw = prefs.getString(key, null) ?: return emptyList()
+    private fun readTopics(
+        prefs: android.content.SharedPreferences,
+        key: String
+    ): MutableMap<String, Pair<String, Boolean>> {
+        val raw = prefs.getString(key, null) ?: return mutableMapOf()
         return runCatching {
             val array = JSONArray(raw)
-            List(array.length()) { i ->
+            MutableList(array.length()) { i ->
                 val obj = array.getJSONObject(i)
-                obj.getString("id") to obj.optBoolean("completed")
-            }
-        }.getOrDefault(emptyList())
+                obj.getString("id") to (obj.getString("title") to obj.optBoolean("completed"))
+            }.toMap().toMutableMap()
+        }.getOrDefault(mutableMapOf())
     }
 
     private fun writeTopics(
@@ -172,21 +136,24 @@ class CloudSyncRestore(
         topics: Map<String, Pair<String, Boolean>>
     ) {
         val array = JSONArray()
-        topics.forEach { (id, titleAndCompleted) ->
+        topics.forEach { (id, titleCompleted) ->
             array.put(
                 JSONObject()
                     .put("id", id)
-                    .put("title", titleAndCompleted.first)
-                    .put("completed", titleAndCompleted.second)
+                    .put("title", titleCompleted.first)
+                    .put("completed", titleCompleted.second)
             )
         }
         prefs.edit().putString(key, array.toString()).apply()
     }
 
     private fun stableLocalId(cloudId: String): Long =
-        cloudId.hashCode().toLong() shl 32 or (cloudId.reversed().hashCode().toLong() and 0xffffffffL)
+        (cloudId.hashCode().toLong() shl 32) or
+            (cloudId.reversed().hashCode().toLong() and 0xffffffffL)
 
-    private fun readLocalAttempts(prefs: android.content.SharedPreferences): MutableMap<Long, JSONObject> {
+    private fun readLocalAttempts(
+        prefs: android.content.SharedPreferences
+    ): MutableMap<Long, JSONObject> {
         val raw = prefs.getString("question_attempts", null) ?: return mutableMapOf()
         return runCatching {
             val array = JSONArray(raw)
