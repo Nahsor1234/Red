@@ -61,7 +61,9 @@ fun AiTutorScreen(
     var input by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     var streamingText by remember { mutableStateOf("") }
+    var streamingMessageId by remember { mutableStateOf<Long?>(null) }
     var activeRequestJob by remember { mutableStateOf<Job?>(null) }
+    val chatListState = androidx.compose.foundation.lazy.rememberLazyListState()
 
     LaunchedEffect(conversationId) { activeId = conversationId; messages = conversationId?.let { history.getConversation(it)?.messages }.orEmpty() }
 
@@ -80,6 +82,7 @@ fun AiTutorScreen(
         activeId = null
         messages = emptyList()
         streamingText = ""
+        streamingMessageId = null
         busy = false
         history.setActiveConversationId(null)
         onConversationCleared()
@@ -98,7 +101,15 @@ fun AiTutorScreen(
 
         val id = ensureConversation(title)
         history.appendMessage(id, "USER", prompt.trim())
-        messages = history.getConversation(id)?.messages.orEmpty()
+        val placeholderId = -System.currentTimeMillis()
+        messages = history.getConversation(id)?.messages.orEmpty() +
+            AiChatMessage(
+                id = placeholderId,
+                role = "COACH",
+                text = "",
+                createdAt = System.currentTimeMillis()
+            )
+        streamingMessageId = placeholderId
         input = ""
         streamingText = ""
         busy = true
@@ -124,6 +135,13 @@ fun AiTutorScreen(
                         onChunk = { chunk ->
                             withContext(Dispatchers.Main.immediate) {
                                 streamingText += chunk
+                                messages = messages.map { message ->
+                                    if (message.id == placeholderId) {
+                                        message.copy(text = streamingText)
+                                    } else {
+                                        message
+                                    }
+                                }
                             }
                         }
                     )
@@ -148,6 +166,7 @@ fun AiTutorScreen(
                 }
                 messages = history.getConversation(id)?.messages.orEmpty()
                 streamingText = ""
+                streamingMessageId = null
                 busy = false
             }
         }
@@ -181,7 +200,12 @@ fun AiTutorScreen(
             }
         }
     }) { padding ->
-        LazyColumn(Modifier.fillMaxSize().padding(padding).padding(horizontal = 18.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(9.dp), contentPadding = PaddingValues(top = 18.dp, bottom = 18.dp)) {
+        LaunchedEffect(messages.lastOrNull()?.text, streamingText) {
+            if (messages.isNotEmpty()) {
+                chatListState.animateScrollToItem(messages.lastIndex)
+            }
+        }
+        LazyColumn(state = chatListState, Modifier.fillMaxSize().padding(padding).padding(horizontal = 18.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(9.dp), contentPadding = PaddingValues(top = 18.dp, bottom = 18.dp)) {
             if (!inChat) item {
                 Spacer(Modifier.height(90.dp)); Icon(Icons.Filled.AutoAwesome, null, tint = PrimaryLight, modifier = Modifier.size(48.dp)); Spacer(Modifier.height(14.dp))
                 Text("How can I help with your JEE prep?", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold); Spacer(Modifier.height(6.dp))
@@ -189,27 +213,23 @@ fun AiTutorScreen(
             } else {
                 items(messages, key = { it.id }) { message ->
                     val isUser = message.role == "USER"
-                    Surface(Modifier.fillMaxWidth(), color = if (isUser) BgCardAlt else BgCard, shape = RoundedCornerShape(18.dp), border = androidx.compose.foundation.BorderStroke(1.dp, BgCardBorder.copy(alpha = .75f))) {
-                        Column(Modifier.padding(15.dp)) { Text(if (isUser) "YOU" else "COACH", color = PrimaryLight, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = .9.sp); Spacer(Modifier.height(7.dp)); if (isUser) Text(message.text, color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.Medium) else MarkdownText(message.text) }
-                    }
-                }
-                if (busy || streamingText.isNotBlank()) item(key = "streaming-coach-message") {
+                    val isStreamingMessage = message.id == streamingMessageId
                     Surface(
                         Modifier.fillMaxWidth(),
-                        color = BgCard,
+                        color = if (isUser) BgCardAlt else BgCard,
                         shape = RoundedCornerShape(18.dp),
                         border = androidx.compose.foundation.BorderStroke(1.dp, BgCardBorder.copy(alpha = .75f))
                     ) {
                         Column(Modifier.padding(15.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
-                                    "COACH",
+                                    if (isUser) "YOU" else "COACH",
                                     color = PrimaryLight,
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold,
                                     letterSpacing = .9.sp
                                 )
-                                if (streamingText.isBlank()) {
+                                if (isStreamingMessage && busy && message.text.isBlank()) {
                                     Spacer(Modifier.width(9.dp))
                                     CircularProgressIndicator(
                                         Modifier.size(13.dp),
@@ -219,14 +239,19 @@ fun AiTutorScreen(
                                 }
                             }
                             Spacer(Modifier.height(7.dp))
-                            if (streamingText.isBlank()) {
-                                Text(
+                            when {
+                                isUser -> Text(
+                                    message.text,
+                                    color = TextPrimary,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
+                                isStreamingMessage && busy && message.text.isBlank() -> Text(
                                     "Coach is thinking…",
                                     color = TextSecondary,
                                     fontSize = 12.sp
                                 )
-                            } else {
-                                MarkdownText(streamingText)
+                                else -> MarkdownText(message.text)
                             }
                         }
                     }
