@@ -56,8 +56,10 @@ fun CloudAccountScreen(
                 message = "Synced: ↑ ${result.chaptersUploaded} chapters, ${result.topicsUploaded} topics, ${result.attemptsUploaded} attempts, ${result.preferenceDataUploaded} other records · ↓ ${result.chaptersRestored} chapters, ${result.topicsRestored} topics, ${result.attemptsRestored} attempts, ${result.preferenceDataRestored} other records restored."
             }
         }.onFailure {
-            connected = false
-            message = it.message?.takeIf(String::isNotBlank) ?: "Cloud sync failed."
+            // Keep the account state when a sync request fails, and never expose
+            // raw HTTP/Ktor/Supabase exception text because it may contain tokens
+            // or request headers.
+            message = safeCloudErrorMessage(it)
         }
         loading = false
     }
@@ -184,5 +186,20 @@ fun CloudAccountScreen(
                 Text(it, color = if (connected) TextSecondary else Danger, fontSize = 11.sp)
             }
         }
+    }
+}
+
+
+private fun safeCloudErrorMessage(error: Throwable): String {
+    val raw = error.message.orEmpty().lowercase()
+    return when {
+        "not-null" in raw || "null value in column" in raw ->
+            "Cloud sync failed. Some required cloud data could not be saved."
+        "jwt" in raw || "authorization" in raw || "bearer" in raw || "unauthorized" in raw ->
+            "Cloud session expired. Sign in again and retry sync."
+        "network" in raw || "timeout" in raw || "host" in raw ->
+            "Cloud sync could not reach the server. Check your connection and try again."
+        else ->
+            "Cloud sync failed. Please try again."
     }
 }
