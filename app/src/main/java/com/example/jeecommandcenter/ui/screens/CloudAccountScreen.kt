@@ -11,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.jeecommandcenter.data.CloudJeeRepository
+import com.example.jeecommandcenter.data.CloudSyncCoordinator
 import com.example.jeecommandcenter.ui.components.JeeCard
 import com.example.jeecommandcenter.ui.components.JeeTopBar
 import com.example.jeecommandcenter.ui.theme.*
@@ -18,6 +19,7 @@ import com.example.jeecommandcenter.ui.theme.*
 @Composable
 fun CloudAccountScreen(context: android.content.Context, onBack: () -> Unit) {
     val cloud = remember { CloudJeeRepository() }
+    val syncCoordinator = remember { CloudSyncCoordinator(context, cloud) }
     var connected by remember { mutableStateOf(false) }
     var loading by remember { mutableStateOf(true) }
     var syncing by remember { mutableStateOf(false) }
@@ -28,13 +30,13 @@ fun CloudAccountScreen(context: android.content.Context, onBack: () -> Unit) {
         message = null
         runCatching {
             cloud.ensureSession()
-            cloud.migrateLocalProgress(context)
-        }.onSuccess {
+            syncCoordinator.sync()
+        }.onSuccess { result ->
             connected = true
-            message = "Cloud session is active. Local syllabus progress has been migrated when needed."
+            message = "Synced ${result.chaptersUploaded} chapters, ${result.topicsUploaded} topics and ${result.attemptsUploaded} new question attempts."
         }.onFailure {
             connected = false
-            message = "Cloud session unavailable. Enable Anonymous Sign-Ins in Supabase Auth. Local fallback remains available."
+            message = "Cloud sync unavailable. Enable Anonymous Sign-Ins in Supabase Auth. Local data remains available offline."
         }
         loading = false
     }
@@ -81,13 +83,11 @@ fun CloudAccountScreen(context: android.content.Context, onBack: () -> Unit) {
             OutlinedButton(
                 onClick = {
                     syncing = true
-                    // Keep the operation coroutine-safe without introducing another state owner.
-                    loading = true
                 },
                 enabled = !loading && !syncing,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Sync local progress")
+                Text("Sync now")
             }
 
             LaunchedEffect(syncing) {
@@ -97,7 +97,7 @@ fun CloudAccountScreen(context: android.content.Context, onBack: () -> Unit) {
             }
 
             Text(
-                "Anonymous authentication is the first cloud foundation. The app remains usable offline and only uploads the student's own progress.",
+                "Sigma JE stays usable offline. Sync uploads only the student's progress and question attempts; the shared syllabus/question catalog is read-only.",
                 color = TextMuted,
                 fontSize = 10.sp
             )
