@@ -2,20 +2,11 @@ package com.example.jeecommandcenter.data
 
 import android.content.Context
 import io.github.jan.supabase.postgrest.postgrest
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonPrimitive
 import org.json.JSONArray
 import org.json.JSONObject
-
-@Serializable
-private data class CloudQuestionAttemptRestore(
-    val id: String,
-    @SerialName("question_id") val questionId: String,
-    @SerialName("chapter_id") val chapterId: String,
-    @SerialName("selected_index") val selectedIndex: Int,
-    val correct: Boolean,
-    @SerialName("response_time_sec") val responseTimeSec: Int = 0
-)
 
 data class CloudRestoreResult(
     val chaptersRestored: Int,
@@ -49,7 +40,7 @@ class CloudSyncRestore(
             }
             JeeCatalog.find(chapterId)?.let { chapter ->
                 chapterPrefs.edit()
-                    .putFloat("chapter_${chapter.subject}_${chapter.number}", mergedProgress)
+                    .putFloat("chapter_".plus(chapter.subject).plus("_").plus(chapter.number), mergedProgress)
                     .apply()
             }
         }
@@ -57,7 +48,7 @@ class CloudSyncRestore(
         var topicsRestored = 0
         val topicPrefs = context.getSharedPreferences("jee_topics", Context.MODE_PRIVATE)
         topics.filter { it.completed }.groupBy { topic ->
-            JeeCatalog.chapters.firstOrNull { chapter -> topic.topicId.startsWith("${chapter.id}_") }?.id
+            JeeCatalog.chapters.firstOrNull { chapter -> topic.topicId.startsWith(chapter.id + "_") }?.id
         }.forEach { (chapterId, remoteTopics) ->
             if (chapterId == null) return@forEach
             val key = "chapter_$chapterId"
@@ -72,11 +63,12 @@ class CloudSyncRestore(
             writeTopics(topicPrefs, key, existing)
         }
 
-        val attempts = runCatching {
-            db["question_attempts"].select {
-                filter { eq("user_id", userId) }
-            }.decodeList<CloudQuestionAttemptRestore>()
-        }.getOrElse { emptyList() }
+        // Decode the row as JSON instead of assuming a Kotlin scalar type. This
+        // handles the current numeric column and also remains tolerant if the
+        // backend represents the identifier as a JSON string.
+        val attempts = db["question_attempts"].select {
+            filter { eq("user_id", userId) }
+        }.decodeList<JsonObject>()
 
         val learningPrefs = context.getSharedPreferences("jee_learning_engine", Context.MODE_PRIVATE)
         val localAttempts = readLocalAttempts(learningPrefs)
@@ -84,17 +76,24 @@ class CloudSyncRestore(
         var attemptsRestored = 0
 
         attempts.forEach { remote ->
-            val localId = stableLocalId(remote.id)
+            val cloudId = remote["id"]?.jsonPrimitive?.contentOrNull ?: return@forEach
+            val questionId = remote["question_id"]?.jsonPrimitive?.contentOrNull ?: return@forEach
+            val chapterId = remote["chapter_id"]?.jsonPrimitive?.contentOrNull ?: return@forEach
+            val selectedIndex = remote["selected_index"]?.jsonPrimitive?.content?.toIntOrNull() ?: return@forEach
+            val correct = parseBoolean(remote["correct"]?.jsonPrimitive?.contentOrNull)
+            val responseTimeSec = remote["response_time_sec"]?.jsonPrimitive?.content?.toIntOrNull()?.coerceAtLeast(0) ?: 0
+
+            val localId = stableLocalId(cloudId)
             if (!localAttempts.containsKey(localId)) {
                 localAttempts[localId] = JSONObject().apply {
                     put("id", localId)
-                    put("testId", "cloud_${remote.id}")
-                    put("questionId", remote.questionId)
-                    put("selectedIndex", remote.selectedIndex)
-                    put("correct", remote.correct)
-                    put("responseTimeSec", remote.responseTimeSec.coerceAtLeast(0))
-                    put("subject", JeeCatalog.find(remote.chapterId)?.subject ?: "General")
-                    put("chapterId", JeeCatalog.normalizeChapterId(remote.chapterId))
+                    put("testId", "cloud_$cloudId")
+                    put("questionId", questionId)
+                    put("selectedIndex", selectedIndex)
+                    put("correct", correct)
+                    put("responseTimeSec", responseTimeSec)
+                    put("subject", JeeCatalog.find(chapterId)?.subject ?: "General")
+                    put("chapterId", JeeCatalog.normalizeChapterId(chapterId))
                     put("mistakeType", "")
                     put("createdAt", System.currentTimeMillis())
                 }
@@ -112,6 +111,9 @@ class CloudSyncRestore(
             restoredAttemptLocalIds = restoredLocalIds
         )
     }
+
+    private fun parseBoolean(value: String?): Boolean =
+        value.equals("true", ignoreCase = true) || value == "1"
 
     private fun topicTitle(topicId: String): String =
         topicId.substringAfterLast('_').replace('_', ' ')
