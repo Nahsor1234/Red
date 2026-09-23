@@ -110,7 +110,6 @@ object JeeCatalog {
         chapter("Physics", 27, "Atoms", 2, 120),
         chapter("Physics", 28, "Nuclei", 2, 120),
         chapter("Physics", 29, "Semiconductor electronics", 3, 180),
-
         chapter("Chemistry", 1, "Some basic concepts of chemistry", 2, 150),
         chapter("Chemistry", 2, "Structure of atom", 2, 150),
         chapter("Chemistry", 3, "Classification of elements", 2, 150),
@@ -133,7 +132,6 @@ object JeeCatalog {
         chapter("Chemistry", 20, "Amines", 3, 180),
         chapter("Chemistry", 21, "Biomolecules and polymers", 2, 150),
         chapter("Chemistry", 22, "Practical chemistry", 2, 120),
-
         chapter("Mathematics", 1, "Sets", 2, 90),
         chapter("Mathematics", 2, "Relations and functions", 3, 180),
         chapter("Mathematics", 3, "Trigonometric functions", 4, 240),
@@ -178,10 +176,17 @@ object JeeCatalog {
     fun forSubject(subject: String): List<JeeChapter> =
         chapters.filter { it.subject == subject }
 
-    fun find(chapterId: String): JeeChapter? =
-        chapters.firstOrNull { it.id == chapterId }
-}
+    fun normalizeChapterId(chapterId: String): String {
+        val trimmed = chapterId.trim()
+        return chapters.firstOrNull { it.id.equals(trimmed, ignoreCase = true) }?.id
+            ?: trimmed.lowercase()
+    }
 
+    fun find(chapterId: String): JeeChapter? {
+        val normalized = normalizeChapterId(chapterId)
+        return chapters.firstOrNull { it.id == normalized }
+    }
+}
 
 enum class ActivityType {
     LEARNING,
