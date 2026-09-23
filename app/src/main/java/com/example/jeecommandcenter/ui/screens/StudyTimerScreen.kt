@@ -5,6 +5,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -12,6 +13,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
@@ -172,9 +176,10 @@ fun StudyTimerScreen(repo: JeeRepository, selectedTab: AppTab, onTabSelected: (A
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(14.dp))
                                     .border(1.dp, BgCardBorder.copy(alpha = .9f), RoundedCornerShape(14.dp))
-                                    .premiumClick(enabled = subject != "General") {
-                                        chapterPickerExpanded = !chapterPickerExpanded
-                                    },
+                                    .clickable(
+                                        enabled = subject != "General",
+                                        onClick = { chapterPickerExpanded = !chapterPickerExpanded }
+                                    ),
                                 color = BgAppBase.copy(alpha = .72f),
                                 shape = RoundedCornerShape(14.dp)
                             ) {
