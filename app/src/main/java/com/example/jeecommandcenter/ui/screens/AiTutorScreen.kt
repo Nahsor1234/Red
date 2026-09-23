@@ -64,20 +64,22 @@ fun AiTutorScreen(
         else -> "Start collecting real study data"
     }
 
-    fun stream(prompt: String, title: String) {
+    fun askCoach(prompt: String, title: String) {
         if (prompt.isBlank() || busy) return
         if (!settings.hasApiKey()) { onOpenSettings(); return }
         busy = true
-        input = ""
         lastPrompt = prompt
+        input = ""
         response = ""
         scope.launch {
-            val result = AiEngine(settings).stream(
-                prompt + "\n\nStudent context:\n" + contextSummary(analytics, topMistakes),
-                "You are the JEE study coach. Use only supplied student data. Never invent performance data."
-            ) { chunk -> response += chunk }
-            if (result.success) history.save(title, prompt, result.text)
-            else response = result.error ?: "AI request failed."
+            val result = runCatching {
+                AiEngine(settings).ask(
+                    prompt + "\n\nStudent context:\n" + contextSummary(analytics, topMistakes),
+                    "You are the JEE study coach. Use only supplied student data. Never invent performance data. Give concise, actionable guidance."
+                )
+            }.getOrElse { AiResult(false, error = it.message ?: "AI request failed.") }
+            response = if (result.success && result.text.isNotBlank()) result.text else (result.error ?: "The coach returned no response. Try again.")
+            if (result.success && result.text.isNotBlank()) history.save(title, prompt, result.text)
             busy = false
         }
     }
@@ -89,13 +91,9 @@ fun AiTutorScreen(
         lastPrompt = prompt
         response = ""
         scope.launch {
-            val result = block()
-            if (result.success) {
-                response = result.text
-                history.save(title, prompt, result.text)
-            } else {
-                response = result.error ?: "AI request failed."
-            }
+            val result = runCatching { block() }.getOrElse { AiResult(false, error = it.message ?: "AI request failed.") }
+            response = if (result.success && result.text.isNotBlank()) result.text else (result.error ?: "The coach returned no response. Try again.")
+            if (result.success && result.text.isNotBlank()) history.save(title, prompt, result.text)
             busy = false
         }
     }
@@ -108,96 +106,87 @@ fun AiTutorScreen(
                 onBack = onBack,
                 trailing = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = onOpenHistory) {
-                            Icon(Icons.Filled.History, "Chat history")
-                        }
-                        Box(Modifier.size(8.dp).clip(CircleShape).background(if (settings.hasApiKey()) Primary else TextMuted))
+                        TextButton(onClick = onOpenHistory) { Icon(Icons.Filled.History, null, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(4.dp)); Text("History", fontSize = 12.sp) }
+                        Box(Modifier.size(7.dp).clip(CircleShape).background(if (settings.hasApiKey()) Primary else TextMuted))
                         Spacer(Modifier.width(5.dp))
                     }
                 }
             )
         },
         bottomBar = {
-            Row(
+            Column(
                 Modifier.fillMaxWidth()
                     .navigationBarsPadding()
-                    .padding(start = 16.dp, end = 16.dp, bottom = 12.dp, top = 6.dp)
-                    .clip(RoundedCornerShape(28.dp))
-                    .background(BgCardAlt)
-                    .border(1.dp, BgCardBorder.copy(alpha = .85f), RoundedCornerShape(28.dp))
-                    .padding(horizontal = 5.dp, vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .padding(start = 16.dp, end = 16.dp, bottom = 10.dp, top = 5.dp),
+                verticalArrangement = Arrangement.spacedBy(7.dp)
             ) {
-                Icon(Icons.Filled.Add, null, tint = TextSecondary, modifier = Modifier.padding(8.dp).size(21.dp))
-                TextField(
-                    value = input,
-                    onValueChange = { input = it },
-                    modifier = Modifier.weight(1f),
-                    placeholder = { Text("Ask your study coach", color = TextMuted) },
-                    singleLine = false,
-                    maxLines = 3,
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = androidx.compose.ui.graphics.Color.Transparent,
-                        unfocusedContainerColor = androidx.compose.ui.graphics.Color.Transparent,
-                        disabledContainerColor = androidx.compose.ui.graphics.Color.Transparent,
-                        focusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
-                        unfocusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent
+                if (!busy && response.isBlank()) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                        CoachQuickAction("Analyze my preparation", Icons.Filled.Analytics, Modifier.weight(1f)) {
+                            action("Preparation analysis", "Analyze my preparation", { orchestrator.analyzePerformance() })
+                        }
+                        CoachQuickAction("What should I study?", Icons.Filled.Today, Modifier.weight(1f)) {
+                            askCoach("What should I study now? Use my current study data, revision backlog, mistakes, and weak chapters to recommend the next concrete JEE study action.", "Daily study recommendation")
+                        }
+                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                        CoachQuickAction("Analyze my mistakes from now", Icons.Filled.ErrorOutline, Modifier.weight(1f)) {
+                            action("Mistake analysis", "Analyze my mistakes from now", { orchestrator.explainMistakes() })
+                        }
+                        CoachQuickAction("Chat with coach", Icons.Filled.AutoAwesome, Modifier.weight(1f)) { }
+                    }
+                }
+                Row(
+                    Modifier.fillMaxWidth()
+                        .clip(RoundedCornerShape(28.dp))
+                        .background(BgCardAlt)
+                        .border(1.dp, BgCardBorder.copy(alpha = .85f), RoundedCornerShape(28.dp))
+                        .padding(horizontal = 5.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Filled.Add, null, tint = TextSecondary, modifier = Modifier.padding(8.dp).size(21.dp))
+                    TextField(
+                        value = input,
+                        onValueChange = { input = it },
+                        modifier = Modifier.weight(1f),
+                        placeholder = { Text("Ask your study coach", color = TextMuted) },
+                        singleLine = false,
+                        maxLines = 3,
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = androidx.compose.ui.graphics.Color.Transparent,
+                            unfocusedContainerColor = androidx.compose.ui.graphics.Color.Transparent,
+                            disabledContainerColor = androidx.compose.ui.graphics.Color.Transparent,
+                            focusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
+                            unfocusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent
+                        )
                     )
-                )
-                IconButton(onClick = { stream(input, "Study coach") }, enabled = input.isNotBlank() && !busy) {
-                    Icon(Icons.Filled.Send, "Ask coach", tint = if (input.isNotBlank() && !busy) PrimaryLight else TextMuted)
+                    IconButton(onClick = { askCoach(input, "Study coach") }, enabled = input.isNotBlank() && !busy) {
+                        Icon(Icons.Filled.Send, "Ask coach", tint = if (input.isNotBlank() && !busy) PrimaryLight else TextMuted)
+                    }
                 }
             }
         }
     ) { padding ->
         LazyColumn(
-            Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp),
+            Modifier.fillMaxSize().padding(padding).padding(horizontal = 18.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(9.dp),
-            contentPadding = PaddingValues(top = 22.dp, bottom = 18.dp)
+            contentPadding = PaddingValues(top = 18.dp, bottom = 18.dp)
         ) {
             if (response.isBlank()) {
                 item {
-                    Spacer(Modifier.height(38.dp))
-                    Icon(Icons.Filled.AutoAwesome, null, tint = PrimaryLight, modifier = Modifier.size(46.dp))
+                    Spacer(Modifier.height(90.dp))
+                    Icon(Icons.Filled.AutoAwesome, null, tint = PrimaryLight, modifier = Modifier.size(48.dp))
+                    Spacer(Modifier.height(14.dp))
+                    Text("How can I help with your JEE prep?", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.height(6.dp))
+                    Text("Your study data is available to the coach. Ask anything, or use a quick action below.", color = TextSecondary, fontSize = 12.sp)
                     Spacer(Modifier.height(12.dp))
-                    Text("What can I help you with today?", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
-                    Spacer(Modifier.height(5.dp))
-                    Text("Your personal JEE study coach", color = TextSecondary, fontSize = 12.sp)
-                    if (coachingHeadline.isNotBlank()) {
-                        Spacer(Modifier.height(12.dp))
-                        Text("Current focus · " + coachingHeadline, color = TextMuted, fontSize = 10.sp)
-                    }
-                }
-                item {
-                    CoachPrompt("Analyze my preparation", "Find the biggest strengths and gaps in your current data.", Icons.Filled.Analytics) {
-                        action("Preparation analysis", "Analyze my preparation", { orchestrator.analyzePerformance() })
-                    }
-                }
-                item {
-                    CoachPrompt("What should I study?", "Get the next concrete study action and the reason behind it.", Icons.Filled.Today) {
-                        stream(
-                            "What should I study today? Use my current study data, revision backlog, mistakes, and weak chapters to recommend the next concrete JEE study action.",
-                            "Daily study recommendation"
-                        )
-                    }
-                }
-                item {
-                    CoachPrompt("Analyze my mistakes", "Find recurring error patterns and what to do differently.", Icons.Filled.ErrorOutline) {
-                        action("Mistake analysis", "Analyze my mistakes", { orchestrator.explainMistakes() })
-                    }
-                }
-                if (!settings.hasApiKey()) {
-                    item { TextButton(onClick = onOpenSettings) { Text("Configure AI to start coaching") } }
+                    Text("Current signal · $coachingHeadline", color = TextMuted, fontSize = 10.sp)
                 }
             } else {
                 item {
-                    Surface(
-                        Modifier.fillMaxWidth(),
-                        color = BgCardAlt,
-                        shape = RoundedCornerShape(18.dp),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, BgCardBorder.copy(alpha = .75f))
-                    ) {
+                    Surface(Modifier.fillMaxWidth(), color = BgCardAlt, shape = RoundedCornerShape(18.dp), border = androidx.compose.foundation.BorderStroke(1.dp, BgCardBorder.copy(alpha = .75f))) {
                         Text(lastPrompt, color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(15.dp))
                     }
                 }
@@ -217,23 +206,21 @@ fun AiTutorScreen(
 }
 
 @Composable
-private fun CoachPrompt(title: String, subtitle: String, icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit) {
+private fun CoachQuickAction(title: String, icon: androidx.compose.ui.graphics.vector.ImageVector, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth()
+        modifier.fillMaxWidth()
+            .height(48.dp)
             .clip(RoundedCornerShape(18.dp))
             .background(BgCard)
             .border(1.dp, BgCardBorder.copy(alpha = .8f), RoundedCornerShape(18.dp))
             .premiumClick(onClick)
-            .padding(horizontal = 14.dp, vertical = 12.dp),
+            .padding(horizontal = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-            Icon(icon, null, tint = PrimaryLight, modifier = Modifier.size(20.dp))
-            Spacer(Modifier.width(10.dp))
-            Column(Modifier.weight(1f)) {
-                Text(title, color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-                Text(subtitle, color = TextMuted, fontSize = 10.sp, lineHeight = 14.sp)
-            }
-        }
+        Icon(icon, null, tint = PrimaryLight, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(7.dp))
+        Text(title, color = TextOnCard, fontSize = 10.sp, fontWeight = FontWeight.Medium, maxLines = 2)
+    }
 }
 
 @Composable
@@ -268,10 +255,6 @@ private fun String.inlineMarkdown() = buildAnnotatedString {
 
 private fun contextSummary(analytics: AnalyticsSnapshot, mistakes: List<MistakeRecord>): String {
     val subjects = analytics.subjectAnalytics.joinToString("; ") { it.subject + ": " + it.attempted + " attempted, " + (it.accuracy * 100).toInt() + "% accuracy" }
-    val errors = mistakes.joinToString("; ") { it.subject + "/" + it.chapterId + " repeated " + it.count + "x, type=" + it.mistakeType.name }
-        .ifBlank { "No unresolved mistakes recorded." }
-    return "7-day study: " + analytics.studyMinutes7d + " minutes. Overall accuracy: " +
-        (analytics.accuracy * 100).toInt() + "%. Tests: " + analytics.testsCompleted +
-        ". Unresolved mistakes: " + analytics.unresolvedMistakes + ". Repeated mistakes: " +
-        analytics.repeatedMistakes + ". Subjects: " + subjects + ". Recurring errors: " + errors + "."
+    val errors = mistakes.joinToString("; ") { it.subject + "/" + it.chapterId + " repeated " + it.count + "x, type=" + it.mistakeType.name }.ifBlank { "No unresolved mistakes recorded." }
+    return "7-day study: " + analytics.studyMinutes7d + " minutes. Overall accuracy: " + (analytics.accuracy * 100).toInt() + "%. Tests: " + analytics.testsCompleted + ". Unresolved mistakes: " + analytics.unresolvedMistakes + ". Repeated mistakes: " + analytics.repeatedMistakes + ". Subjects: " + subjects + ". Recurring errors: " + errors + "."
 }
