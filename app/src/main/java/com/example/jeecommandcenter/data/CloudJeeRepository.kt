@@ -2,9 +2,9 @@ package com.example.jeecommandcenter.data
 
 import android.content.Context
 import io.github.jan.supabase.SupabaseClient
+import io.github.jan.supabase.gotrue.OtpType
 import io.github.jan.supabase.gotrue.auth
 import io.github.jan.supabase.gotrue.providers.builtin.Email
-import io.github.jan.supabase.gotrue.OtpType
 import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -203,7 +203,7 @@ class CloudJeeRepository(
 
     suspend fun resendConfirmation(email: String) {
         client.auth.resendEmail(
-            type = OtpType.Email,
+            type = OtpType.SIGNUP,
             email = email.trim(),
             redirectUrl = SupabaseClientProvider.AUTH_REDIRECT_URL
         )
