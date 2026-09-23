@@ -70,108 +70,25 @@ fun JeeBackground(modifier: Modifier = Modifier) {
             val s = scale * 11.dp.toPx()
             val stroke = (0.8f + (h2 % 40) / 100f).dp.toPx()
             val color = TextSecondary.copy(alpha = alpha)
-            fun line(a: androidx.compose.ui.geometry.Offset, b: androidx.compose.ui.geometry.Offset) =
-                drawLine(color, a, b, strokeWidth = stroke)
-            fun ring(radius: Float, point: androidx.compose.ui.geometry.Offset = center) =
-                drawCircle(color, radius = radius, center = point, style = androidx.compose.ui.graphics.drawscope.Stroke(width = stroke))
+            fun line(a: androidx.compose.ui.geometry.Offset, b: androidx.compose.ui.geometry.Offset) = drawLine(color, a, b, strokeWidth = stroke)
+            fun ring(radius: Float, point: androidx.compose.ui.geometry.Offset = center) = drawCircle(color, radius = radius, center = point, style = androidx.compose.ui.graphics.drawscope.Stroke(width = stroke))
             when (h % 12) {
-                0 -> { // coordinate axes
-                    line(center.copy(x = center.x - s), center.copy(x = center.x + s))
-                    line(center.copy(y = center.y + s), center.copy(y = center.y - s))
-                    drawCircle(color, s * 0.16f, center.copy(x = center.x + s * 0.55f, y = center.y - s * 0.42f))
-                }
-                1 -> { // triangle + altitude
-                    val a = center.copy(x = center.x - s * .8f, y = center.y + s * .55f)
-                    val b = center.copy(x = center.x + s * .85f, y = center.y + s * .55f)
-                    val d = center.copy(x = center.x + s * .1f, y = center.y - s * .85f)
-                    line(a, b); line(b, d); line(d, a); line(d, center.copy(x = d.x, y = a.y))
-                }
-                2 -> { // wave
-                    var last = center.copy(x = center.x - s)
-                    for (i in 1..10) {
-                        val next = center.copy(x = center.x - s + i * (s * .2f), y = center.y + kotlin.math.sin(i * .8f) * s * .45f)
-                        line(last, next); last = next
-                    }
-                }
-                3 -> { // molecule
-                    val a = center.copy(x = center.x - s * .72f, y = center.y)
-                    val b = center.copy(x = center.x + s * .7f, y = center.y - s * .25f)
-                    val d = center.copy(x = center.x, y = center.y + s * .75f)
-                    line(a, b); line(a, d); line(b, d)
-                    drawCircle(color, s * .18f, a); drawCircle(color, s * .15f, b); drawCircle(color, s * .17f, d)
-                }
-                4 -> { // atom/orbit
-                    ring(s * .62f); ring(s * .35f)
-                    drawCircle(color, s * .09f, center)
-                    line(center.copy(x = center.x - s), center.copy(x = center.x + s))
-                }
-                5 -> { // hexagon
-                    val pts = (0 until 6).map { i ->
-                        val angle = Math.toRadians((60 * i - 30).toDouble())
-                        center.copy(
-                            x = center.x + kotlin.math.cos(angle).toFloat() * s * .72f,
-                            y = center.y + kotlin.math.sin(angle).toFloat() * s * .72f
-                        )
-                    }
-                    pts.forEachIndexed { i, p -> line(p, pts[(i + 1) % pts.size]) }
-                    ring(s * .22f)
-                }
-                6 -> { // vector
-                    val start = center.copy(x = center.x - s, y = center.y + s * .45f)
-                    val tip = center.copy(x = center.x + s, y = center.y - s * .35f)
-                    line(start, tip)
-                    line(tip, tip.copy(x = tip.x - s * .38f))
-                    line(tip, tip.copy(x = tip.x - s * .12f, y = tip.y + s * .28f))
-                }
-                7 -> { // graph
-                    val axisX = center.x - s * .8f
-                    val axisY = center.y + s * .65f
-                    line(center.copy(x = axisX, y = center.y - s), center.copy(x = axisX, y = axisY))
-                    line(center.copy(x = axisX, y = axisY), center.copy(x = center.x + s, y = axisY))
-                    var last = center.copy(x = axisX, y = center.y + s * .15f)
-                    for (i in 1..7) {
-                        val next = center.copy(
-                            x = axisX + i * (s * .25f),
-                            y = center.y + kotlin.math.cos(i * .55f) * s * .42f
-                        )
-                        line(last, next); last = next
-                    }
-                }
-                8 -> { // circuit/formula abstraction
-                    val left = center.copy(x = center.x - s)
-                    val right = center.copy(x = center.x + s)
-                    line(left, center.copy(x = center.x - s * .35f))
-                    line(center.copy(x = center.x + s * .35f), right)
-                    line(center.copy(x = center.x - s * .35f, y = center.y - s * .3f), center.copy(x = center.x + s * .35f, y = center.y - s * .3f))
-                    line(center.copy(x = center.x, y = center.y - s * .3f), center.copy(x = center.x, y = center.y + s * .3f))
-                }
-                9 -> { // concentric geometry
-                    ring(s * .72f); ring(s * .36f)
-                    line(center.copy(x = center.x - s), center.copy(x = center.x + s))
-                    line(center.copy(y = center.y - s), center.copy(y = center.y + s))
-                }
-                10 -> { // double arrow / force
-                    val a = center.copy(x = center.x - s, y = center.y - s * .2f)
-                    val b = center.copy(x = center.x + s, y = center.y - s * .2f)
-                    line(a, b)
-                    line(a, a.copy(x = a.x + s * .32f, y = a.y - s * .28f))
-                    line(a, a.copy(x = a.x + s * .32f, y = a.y + s * .28f))
-                    line(b, b.copy(x = b.x - s * .32f, y = b.y - s * .28f))
-                    line(b, b.copy(x = b.x - s * .32f, y = b.y + s * .28f))
-                }
-                else -> { // small geometry/formula tile
-                    val tl = center.copy(x = center.x - s * .7f, y = center.y - s * .45f)
-                    val tr = center.copy(x = center.x + s * .7f, y = center.y - s * .45f)
-                    val br = center.copy(x = center.x + s * .7f, y = center.y + s * .45f)
-                    val bl = center.copy(x = center.x - s * .7f, y = center.y + s * .45f)
-                    line(tl, tr); line(tr, br); line(br, bl); line(bl, tl)
-                    drawCircle(color, s * .12f, center)
-                }
+                0 -> { line(center.copy(x = center.x - s), center.copy(x = center.x + s)); line(center.copy(y = center.y + s), center.copy(y = center.y - s)); drawCircle(color, s * 0.16f, center.copy(x = center.x + s * 0.55f, y = center.y - s * 0.42f)) }
+                1 -> { val a = center.copy(x = center.x - s * .8f, y = center.y + s * .55f); val b = center.copy(x = center.x + s * .85f, y = center.y + s * .55f); val d = center.copy(x = center.x + s * .1f, y = center.y - s * .85f); line(a, b); line(b, d); line(d, a); line(d, center.copy(x = d.x, y = a.y)) }
+                2 -> { var last = center.copy(x = center.x - s); for (i in 1..10) { val next = center.copy(x = center.x - s + i * (s * .2f), y = center.y + kotlin.math.sin(i * .8f) * s * .45f); line(last, next); last = next } }
+                3 -> { val a = center.copy(x = center.x - s * .72f, y = center.y); val b = center.copy(x = center.x + s * .7f, y = center.y - s * .25f); val d = center.copy(x = center.x, y = center.y + s * .75f); line(a, b); line(a, d); line(b, d); drawCircle(color, s * .18f, a); drawCircle(color, s * .15f, b); drawCircle(color, s * .17f, d) }
+                4 -> { ring(s * .62f); ring(s * .35f); drawCircle(color, s * .09f, center); line(center.copy(x = center.x - s), center.copy(x = center.x + s)) }
+                5 -> { val pts = (0 until 6).map { i -> val angle = Math.toRadians((60 * i - 30).toDouble()); center.copy(x = center.x + kotlin.math.cos(angle).toFloat() * s * .72f, y = center.y + kotlin.math.sin(angle).toFloat() * s * .72f) }; pts.forEachIndexed { i, p -> line(p, pts[(i + 1) % pts.size]) }; ring(s * .22f) }
+                6 -> { val start = center.copy(x = center.x - s, y = center.y + s * .45f); val tip = center.copy(x = center.x + s, y = center.y - s * .35f); line(start, tip); line(tip, tip.copy(x = tip.x - s * .38f)); line(tip, tip.copy(x = tip.x - s * .12f, y = tip.y + s * .28f)) }
+                7 -> { val axisX = center.x - s * .8f; val axisY = center.y + s * .65f; line(center.copy(x = axisX, y = center.y - s), center.copy(x = axisX, y = axisY)); line(center.copy(x = axisX, y = axisY), center.copy(x = center.x + s, y = axisY)); var last = center.copy(x = axisX, y = center.y + s * .15f); for (i in 1..7) { val next = center.copy(x = axisX + i * (s * .25f), y = center.y + kotlin.math.cos(i * .55f) * s * .42f); line(last, next); last = next } }
+                8 -> { val left = center.copy(x = center.x - s); val right = center.copy(x = center.x + s); line(left, center.copy(x = center.x - s * .35f)); line(center.copy(x = center.x + s * .35f), right); line(center.copy(x = center.x - s * .35f, y = center.y - s * .3f), center.copy(x = center.x + s * .35f, y = center.y - s * .3f)); line(center.copy(x = center.x, y = center.y - s * .3f), center.copy(x = center.x, y = center.y + s * .3f)) }
+                9 -> { ring(s * .72f); ring(s * .36f); line(center.copy(x = center.x - s), center.copy(x = center.x + s)); line(center.copy(y = center.y - s), center.copy(y = center.y + s)) }
+                10 -> { val a = center.copy(x = center.x - s, y = center.y - s * .2f); val b = center.copy(x = center.x + s, y = center.y - s * .2f); line(a, b); line(a, a.copy(x = a.x + s * .32f, y = a.y - s * .28f)); line(a, a.copy(x = a.x + s * .32f, y = a.y + s * .28f)); line(b, b.copy(x = b.x - s * .32f, y = b.y - s * .28f)); line(b, b.copy(x = b.x - s * .32f, y = b.y + s * .28f)) }
+                else -> { val tl = center.copy(x = center.x - s * .7f, y = center.y - s * .45f); val tr = center.copy(x = center.x + s * .7f, y = center.y - s * .45f); val br = center.copy(x = center.x + s * .7f, y = center.y + s * .45f); val bl = center.copy(x = center.x - s * .7f, y = center.y + s * .45f); line(tl, tr); line(tr, br); line(br, bl); line(bl, tl); drawCircle(color, s * .12f, center) }
             }
         }
     }
 }
-
 
 enum class AppTab { HOME, SYLLABUS, TASKS, STATS }
 
@@ -223,7 +140,7 @@ fun BottomNavBar(selected: AppTab, onTabSelected: (AppTab) -> Unit, onAiClick: (
         AppTab.TASKS to (Icons.Filled.CheckCircle to "Tasks"),
         AppTab.STATS to (Icons.Filled.Timer to "Timer")
     )
-    Box(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal=16.dp,bottom=17.dp),contentAlignment=Alignment.Center){
+    Box(Modifier.fillMaxWidth().navigationBarsPadding().padding(start=16.dp,end=16.dp,bottom=17.dp),contentAlignment=Alignment.Center){
         Box(Modifier.fillMaxWidth().height(66.dp).clip(RoundedCornerShape(33.dp)).background(BgCard).border(1.dp,BgCardBorder.copy(alpha=.88f),RoundedCornerShape(22.dp))){
             val targetPos=positions[selected]?:0.dp
             val targetWidth=widths[selected]?:0.dp
@@ -243,21 +160,9 @@ fun BottomNavBar(selected: AppTab, onTabSelected: (AppTab) -> Unit, onAiClick: (
 
 @Composable
 private fun RowScope.NavDestination(icon:androidx.compose.ui.graphics.vector.ImageVector,label:String,selected:Boolean,modifier:Modifier,onClick:()->Unit){
-    val color by animateColorAsState(
-        if (selected) AccentBlueLight else TextSecondary,
-        animationSpec = spring(stiffness = Spring.StiffnessMedium),
-        label = "color"
-    )
-    val scale by animateFloatAsState(
-        if (selected) 1.08f else 1f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow),
-        label = "scale"
-    )
-    val pad by animateDpAsState(
-        if (selected) 11.dp else 12.dp,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow),
-        label = "pad"
-    )
+    val color by animateColorAsState(if (selected) AccentBlueLight else TextSecondary, animationSpec = spring(stiffness = Spring.StiffnessMedium), label = "color")
+    val scale by animateFloatAsState(if (selected) 1.08f else 1f, animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow), label = "scale")
+    val pad by animateDpAsState(if (selected) 11.dp else 12.dp, animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow), label = "pad")
     val interaction=remember{androidx.compose.foundation.interaction.MutableInteractionSource()}
     val pressed by interaction.collectIsPressedAsState()
     val pressScale by animateFloatAsState(if(pressed).94f else 1f,animationSpec=spring(dampingRatio=Spring.DampingRatioMediumBouncy,stiffness=Spring.StiffnessMedium),label="nav-press")
@@ -275,4 +180,3 @@ private fun AiDestination(modifier:Modifier,view:android.view.View,onClick:()->U
         Icon(Icons.Filled.AutoAwesome,"AI",tint=TextSecondary,modifier=Modifier.size(22.dp))
     }
 }
-
