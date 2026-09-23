@@ -53,7 +53,7 @@ fun CloudAccountScreen(
             connected = true
             if (syncAfterLogin) {
                 val result = syncCoordinator.sync()
-                message = "Synced: ↑ ${result.chaptersUploaded} chapters, ${result.topicsUploaded} topics, ${result.attemptsUploaded} attempts · ↓ ${result.chaptersRestored} chapters, ${result.topicsRestored} topics, ${result.attemptsRestored} attempts restored."
+                message = "Synced: ↑ ${result.chaptersUploaded} chapters, ${result.topicsUploaded} topics, ${result.attemptsUploaded} attempts, ${result.preferenceDataUploaded} other records · ↓ ${result.chaptersRestored} chapters, ${result.topicsRestored} topics, ${result.attemptsRestored} attempts, ${result.preferenceDataRestored} other records restored."
             }
         }.onFailure {
             connected = false
@@ -98,7 +98,7 @@ fun CloudAccountScreen(
 
             if (connected) {
                 Text(
-                    "Your local progress stays available offline. Sync uploads your progress and question attempts; the shared syllabus and question catalog remain read-only.",
+                    "Your local progress stays available offline. Sync covers chapter/topic progress, question attempts, study sessions, tasks, revisions, mistakes, assessment history, AI chat history, and other persistent user data.",
                     color = TextMuted,
                     fontSize = 11.sp
                 )
