@@ -51,8 +51,6 @@ class JeeRepository(context: Context) {
         val version = prefs.getInt(DATA_VERSION_KEY, 0)
         if (version < 1) prefs.edit().putInt(DATA_VERSION_KEY, 1).apply()
         if (version < 2) {
-            // Existing JSON remains readable because all new fields are optional.
-            // This marks the start of explicit schema-versioned storage.
             prefs.edit().putInt(DATA_VERSION_KEY, CURRENT_SCHEMA_VERSION).apply()
         }
     }
@@ -71,11 +69,9 @@ class JeeRepository(context: Context) {
                     dueDay = obj.getString("dueDay"),
                     done = obj.optBoolean("done"),
                     subjectId = obj.optString("subjectId").ifBlank { null },
-                    chapterId = obj.optString("chapterId").ifBlank { null },
+                    chapterId = obj.optString("chapterId").ifBlank { null }?.let(JeeCatalog::normalizeChapterId),
                     activityType = runCatching {
-                        ActivityType.valueOf(
-                            obj.optString("activityType", ActivityType.OTHER.name)
-                        )
+                        ActivityType.valueOf(obj.optString("activityType", ActivityType.OTHER.name))
                     }.getOrDefault(ActivityType.OTHER)
                 )
             }.sortedBy { it.id }
@@ -111,7 +107,7 @@ class JeeRepository(context: Context) {
                     "Mathematics" -> "mathematics"
                     else -> null
                 },
-                chapterId = chapterId,
+                chapterId = chapterId?.let(JeeCatalog::normalizeChapterId),
                 activityType = activityType
             )
         )
@@ -120,9 +116,7 @@ class JeeRepository(context: Context) {
     }
 
     fun toggleTask(id: Long) {
-        saveTasks(getTasks().map { task ->
-            if (task.id == id) task.copy(done = !task.done) else task
-        })
+        saveTasks(getTasks().map { task -> if (task.id == id) task.copy(done = !task.done) else task })
     }
 
     fun deleteTask(id: Long) {
@@ -132,19 +126,17 @@ class JeeRepository(context: Context) {
     private fun saveTasks(tasks: List<AppTask>) {
         val array = JSONArray()
         tasks.forEach { task ->
-            array.put(
-                JSONObject().apply {
-                    put("id", task.id)
-                    put("title", task.title)
-                    put("subject", task.subject)
-                    put("duration", task.durationMin)
-                    put("dueDay", task.dueDay)
-                    put("done", task.done)
-                    put("subjectId", task.subjectId ?: "")
-                    put("chapterId", task.chapterId ?: "")
-                    put("activityType", task.activityType.name)
-                }
-            )
+            array.put(JSONObject().apply {
+                put("id", task.id)
+                put("title", task.title)
+                put("subject", task.subject)
+                put("duration", task.durationMin)
+                put("dueDay", task.dueDay)
+                put("done", task.done)
+                put("subjectId", task.subjectId ?: "")
+                put("chapterId", task.chapterId?.let(JeeCatalog::normalizeChapterId) ?: "")
+                put("activityType", task.activityType.name)
+            })
         }
         prefs.edit().putString("tasks", array.toString()).apply()
     }
@@ -163,11 +155,9 @@ class JeeRepository(context: Context) {
                     chapter = obj.getString("chapter"),
                     startedAt = obj.optLong("startedAt", obj.getLong("id")),
                     subjectId = obj.optString("subjectId").ifBlank { null },
-                    chapterId = obj.optString("chapterId").ifBlank { null },
+                    chapterId = obj.optString("chapterId").ifBlank { null }?.let(JeeCatalog::normalizeChapterId),
                     activityType = runCatching {
-                        ActivityType.valueOf(
-                            obj.optString("activityType", ActivityType.LEARNING.name)
-                        )
+                        ActivityType.valueOf(obj.optString("activityType", ActivityType.LEARNING.name))
                     }.getOrDefault(ActivityType.LEARNING)
                 )
             }.sortedByDescending { it.startedAt }
@@ -184,11 +174,10 @@ class JeeRepository(context: Context) {
         activityType: ActivityType = ActivityType.LEARNING
     ) {
         if (minutes <= 0) return
-
+        val canonicalChapterId = chapterId?.let(JeeCatalog::normalizeChapterId)
         val sessions = getSessions().toMutableList()
         var id = startedAt
         while (sessions.any { it.id == id }) id++
-
         sessions.add(
             StudySession(
                 id = id,
@@ -200,152 +189,98 @@ class JeeRepository(context: Context) {
                 subjectId = subjectId ?: subject.lowercase().takeIf {
                     it == "physics" || it == "chemistry" || it == "mathematics"
                 },
-                chapterId = chapterId,
+                chapterId = canonicalChapterId,
                 activityType = activityType
             )
         )
-
         val array = JSONArray()
         sessions.sortedByDescending { it.startedAt }.take(500).forEach { session ->
-            array.put(
-                JSONObject().apply {
-                    put("id", session.id)
-                    put("date", session.date)
-                    put("minutes", session.minutes)
-                    put("subject", session.subject)
-                    put("chapter", session.chapter)
-                    put("startedAt", session.startedAt)
-                    put("subjectId", session.subjectId ?: "")
-                    put("chapterId", session.chapterId ?: "")
-                    put("activityType", session.activityType.name)
-                }
-            )
+            array.put(JSONObject().apply {
+                put("id", session.id)
+                put("date", session.date)
+                put("minutes", session.minutes)
+                put("subject", session.subject)
+                put("chapter", session.chapter)
+                put("startedAt", session.startedAt)
+                put("subjectId", session.subjectId ?: "")
+                put("chapterId", session.chapterId ?: "")
+                put("activityType", session.activityType.name)
+            })
         }
         prefs.edit().putString("sessions", array.toString()).apply()
     }
 
-    fun getTodayMinutes(): Int =
-        getSessions()
-            .filter { it.date == LocalDate.now().toString() }
-            .sumOf { it.minutes }
+    fun getTodayMinutes(): Int = getSessions().filter { it.date == LocalDate.now().toString() }.sumOf { it.minutes }
 
     fun getDailyGoalMinutes(): Int = prefs.getInt("daily_goal", 360)
 
-    fun setDailyGoalMinutes(value: Int) =
-        prefs.edit().putInt("daily_goal", value.coerceIn(15, 1440)).apply()
+    fun setDailyGoalMinutes(value: Int) = prefs.edit().putInt("daily_goal", value.coerceIn(15, 1440)).apply()
 
-    fun getChapterProgress(subject: String, number: Int): Float =
-        prefs.getFloat("chapter_" + subject + "_" + number, 0f)
+    fun getChapterProgress(subject: String, number: Int): Float = prefs.getFloat("chapter_" + subject + "_" + number, 0f)
 
     fun setChapterProgress(subject: String, number: Int, progress: Float) {
         val chapter = JeeCatalog.forSubject(subject).firstOrNull { it.number == number } ?: return
         val current = getChapterState(chapter.id)
         setChapterState(chapter.id, progress, current.confidence)
-        prefs.edit()
-            .putFloat(
-                "chapter_" + subject + "_" + number,
-                progress.coerceIn(0f, 1f)
-            )
-            .apply()
+        prefs.edit().putFloat("chapter_" + subject + "_" + number, progress.coerceIn(0f, 1f)).apply()
         if (progress > 0f) ensureRevisionItem(chapter.id)
     }
 
-    fun chapters(subject: String): List<ChapterProgress> =
-        JeeCatalog.forSubject(subject).map { chapter ->
-            val state = getChapterState(chapter.id)
-            ChapterProgress(
-                subject = chapter.subject,
-                number = chapter.number,
-                name = chapter.name,
-                progress = state.progress,
-                confidence = state.confidence,
-                difficulty = chapter.difficulty,
-                estimatedMinutes = chapter.estimatedMinutes
-            )
-        }
+    fun chapters(subject: String): List<ChapterProgress> = JeeCatalog.forSubject(subject).map { chapter ->
+        val state = getChapterState(chapter.id)
+        ChapterProgress(chapter.subject, chapter.number, chapter.name, state.progress, state.confidence, chapter.difficulty, chapter.estimatedMinutes)
+    }
 
     fun getChapterState(chapterId: String): ChapterState {
-        val raw = prefs.getString("chapter_state_" + chapterId, null)
+        val canonicalId = JeeCatalog.normalizeChapterId(chapterId)
+        val raw = prefs.getString("chapter_state_" + canonicalId, null)
         if (raw.isNullOrBlank()) {
-            val chapter = JeeCatalog.find(chapterId)
-            return ChapterState(
-                chapterId = chapterId,
-                progress = chapter?.let { getChapterProgress(it.subject, it.number) } ?: 0f
-            )
+            val chapter = JeeCatalog.find(canonicalId)
+            return ChapterState(canonicalId, chapter?.let { getChapterProgress(it.subject, it.number) } ?: 0f)
         }
         return runCatching {
             val obj = JSONObject(raw)
-            ChapterState(
-                chapterId = chapterId,
-                progress = obj.optDouble("progress", 0.0).toFloat().coerceIn(0f, 1f),
-                confidence = obj.optInt("confidence", 0).coerceIn(0, 5),
-                lastStudiedAt = obj.optLong("lastStudiedAt", 0L)
-            )
-        }.getOrDefault(ChapterState(chapterId, 0f))
+            ChapterState(canonicalId, obj.optDouble("progress", 0.0).toFloat().coerceIn(0f, 1f), obj.optInt("confidence", 0).coerceIn(0, 5), obj.optLong("lastStudiedAt", 0L))
+        }.getOrDefault(ChapterState(canonicalId, 0f))
     }
 
-    fun setChapterState(
-        chapterId: String,
-        progress: Float,
-        confidence: Int,
-        studiedAt: Long = System.currentTimeMillis()
-    ) {
-        val safeProgress = progress.coerceIn(0f, 1f)
-        val safeConfidence = confidence.coerceIn(0, 5)
-        prefs.edit()
-            .putString(
-                "chapter_state_" + chapterId,
-                JSONObject().apply {
-                    put("progress", safeProgress)
-                    put("confidence", safeConfidence)
-                    put("lastStudiedAt", studiedAt)
-                }.toString()
-            )
-            .apply()
+    fun setChapterState(chapterId: String, progress: Float, confidence: Int, studiedAt: Long = System.currentTimeMillis()) {
+        val canonicalId = JeeCatalog.normalizeChapterId(chapterId)
+        prefs.edit().putString("chapter_state_" + canonicalId, JSONObject().apply {
+            put("progress", progress.coerceIn(0f, 1f))
+            put("confidence", confidence.coerceIn(0, 5))
+            put("lastStudiedAt", studiedAt)
+        }.toString()).apply()
     }
 
     fun flagChapterWeak(chapterId: String) {
-        val chapter = JeeCatalog.find(chapterId) ?: return
-        val state = getChapterState(chapter.id)
-        setChapterState(chapter.id, state.progress, minOf(1, state.confidence))
+        val canonicalId = JeeCatalog.normalizeChapterId(chapterId)
+        val chapter = JeeCatalog.find(canonicalId) ?: return
+        val state = getChapterState(canonicalId)
+        setChapterState(canonicalId, state.progress, minOf(1, state.confidence))
         val items = getRevisionItems()
-        val existing = items.firstOrNull { it.chapterId == chapter.id }
-        val updated = existing?.copy(
-            dueDate = LocalDate.now().toString(),
-            lapses = existing.lapses + 1,
-            lastResult = RevisionRating.AGAIN
-        ) ?: RevisionItem(
-            id = "rev_" + chapter.id,
-            chapterId = chapter.id,
-            dueDate = LocalDate.now().toString(),
-            lapses = 1
-        )
+        val existing = items.firstOrNull { it.chapterId == canonicalId }
+        val updated = existing?.copy(dueDate = LocalDate.now().toString(), lapses = existing.lapses + 1, lastResult = RevisionRating.AGAIN)
+            ?: RevisionItem("rev_" + canonicalId, canonicalId, LocalDate.now().toString(), lapses = 1)
         saveRevisionItems(items.filterNot { it.id == updated.id } + updated)
     }
 
     fun getRevisionQueue(): List<RevisionQueueItem> {
         val today = LocalDate.now()
-        return getRevisionItems()
-            .mapNotNull { revision ->
-                val chapter = JeeCatalog.find(revision.chapterId)
-                    ?: return@mapNotNull null
-                val state = getChapterState(chapter.id)
-                val due = runCatching { LocalDate.parse(revision.dueDate) }.getOrNull()
-                    ?: today
-                if (due.isAfter(today)) return@mapNotNull null
-                RevisionQueueItem(chapter, revision, state.progress, state.confidence)
-            }
-            .sortedWith(
-                compareByDescending<RevisionQueueItem> {
-                    ChronoUnit.DAYS.between(LocalDate.parse(it.revision.dueDate), today)
-                }.thenByDescending { it.chapter.difficulty }
-            )
+        return getRevisionItems().mapNotNull { revision ->
+            val chapter = JeeCatalog.find(revision.chapterId) ?: return@mapNotNull null
+            val state = getChapterState(chapter.id)
+            val due = runCatching { LocalDate.parse(revision.dueDate) }.getOrNull() ?: today
+            if (due.isAfter(today)) return@mapNotNull null
+            RevisionQueueItem(chapter, revision, state.progress, state.confidence)
+        }.sortedWith(compareByDescending<RevisionQueueItem> {
+            ChronoUnit.DAYS.between(LocalDate.parse(it.revision.dueDate), today)
+        }.thenByDescending { it.chapter.difficulty })
     }
 
     fun reviewChapter(chapterId: String, rating: RevisionRating) {
-        val current = getRevisionItems().firstOrNull { it.chapterId == chapterId }
-            ?: ensureRevisionItem(chapterId)
-
+        val canonicalId = JeeCatalog.normalizeChapterId(chapterId)
+        val current = getRevisionItems().firstOrNull { it.chapterId == canonicalId } ?: ensureRevisionItem(canonicalId)
         val nextInterval = when (rating) {
             RevisionRating.AGAIN -> 1
             RevisionRating.HARD -> maxOf(2, (current.intervalDays * 1.5f).roundToInt())
@@ -365,10 +300,10 @@ class JeeRepository(context: Context) {
             RevisionRating.EASY -> 5
         }
         val now = System.currentTimeMillis()
-        val state = getChapterState(chapterId)
-        setChapterState(chapterId, state.progress, confidence, now)
-
+        val state = getChapterState(canonicalId)
+        setChapterState(canonicalId, state.progress, confidence, now)
         val updated = current.copy(
+            chapterId = canonicalId,
             dueDate = LocalDate.now().plusDays(nextInterval.toLong()).toString(),
             intervalDays = nextInterval,
             ease = nextEase,
@@ -377,39 +312,27 @@ class JeeRepository(context: Context) {
             lastReviewedAt = now,
             lastResult = rating
         )
-        saveRevisionItems(
-            getRevisionItems().map { if (it.id == current.id) updated else it }
-        )
-        appendRevisionRecord(
-            RevisionRecord(
-                id = "rr_" + chapterId + "_" + now,
-                chapterId = chapterId,
-                reviewedAt = now,
-                durationMin = 0,
-                confidence = confidence,
-                result = rating,
-                nextReviewAt = now + nextInterval * 86_400_000L
-            )
-        )
+        saveRevisionItems(getRevisionItems().map { if (it.id == current.id) updated else it })
+        appendRevisionRecord(RevisionRecord("rr_" + canonicalId + "_" + now, canonicalId, now, 0, confidence, rating, now + nextInterval * 86_400_000L))
     }
 
     fun getRevisionHistory(chapterId: String? = null): List<RevisionRecord> {
         val raw = prefs.getString("revision_history", null) ?: return emptyList()
+        val canonicalFilter = chapterId?.let(JeeCatalog::normalizeChapterId)
         return runCatching {
             val array = JSONArray(raw)
             List(array.length()) { index ->
                 val obj = array.getJSONObject(index)
                 RevisionRecord(
                     id = obj.getString("id"),
-                    chapterId = obj.getString("chapterId"),
+                    chapterId = JeeCatalog.normalizeChapterId(obj.getString("chapterId")),
                     reviewedAt = obj.getLong("reviewedAt"),
                     durationMin = obj.optInt("durationMin", 0),
                     confidence = obj.optInt("confidence", 0).coerceIn(0, 5),
                     result = RevisionRating.valueOf(obj.getString("result")),
                     nextReviewAt = obj.optLong("nextReviewAt", 0L)
                 )
-            }.filter { chapterId == null || it.chapterId == chapterId }
-                .sortedByDescending { it.reviewedAt }
+            }.filter { canonicalFilter == null || it.chapterId == canonicalFilter }.sortedByDescending { it.reviewedAt }
         }.getOrDefault(emptyList())
     }
 
@@ -420,7 +343,7 @@ class JeeRepository(context: Context) {
         records.sortedByDescending { it.reviewedAt }.take(500).forEach { item ->
             array.put(JSONObject().apply {
                 put("id", item.id)
-                put("chapterId", item.chapterId)
+                put("chapterId", JeeCatalog.normalizeChapterId(item.chapterId))
                 put("reviewedAt", item.reviewedAt)
                 put("durationMin", item.durationMin)
                 put("confidence", item.confidence)
@@ -431,11 +354,9 @@ class JeeRepository(context: Context) {
         prefs.edit().putString("revision_history", array.toString()).apply()
     }
 
-    fun getMasteredChapterCount(): Int =
-        JeeCatalog.chapters.count { getChapterState(it.id).mastered }
+    fun getMasteredChapterCount(): Int = JeeCatalog.chapters.count { getChapterState(it.id).mastered }
 
-    fun getActiveRevisionCount(): Int =
-        getRevisionItems().count { getChapterState(it.chapterId).progress > 0f }
+    fun getActiveRevisionCount(): Int = getRevisionItems().count { getChapterState(it.chapterId).progress > 0f }
 
     fun getOrCreateDailyPlan(learning: LearningRepository? = null): DailyPlan {
         val today = LocalDate.now().toString()
@@ -445,66 +366,34 @@ class JeeRepository(context: Context) {
 
     fun regenerateDailyPlan(learning: LearningRepository? = null): DailyPlan {
         val today = LocalDate.now().toString()
+        val previous = getDailyPlan()?.takeIf { it.date == today }
         val goal = getDailyGoalMinutes()
         val selected = mutableListOf<PlannerItem>()
         var remaining = goal
 
-        getTasks()
-            .asSequence()
-            .filter { !it.done && it.dueDay == "Today" }
-            .sortedByDescending { it.durationMin }
-            .take(3)
-            .forEach { task ->
-                if (remaining <= 0) return@forEach
-                val duration = minOf(task.durationMin, remaining)
-                if (duration < 15) return@forEach
-                selected += PlannerItem(
-                    id = "task_" + task.id,
-                    date = today,
-                    type = PlannerItemType.PRACTICE,
-                    title = task.title,
-                    subject = task.subject,
-                    durationMin = duration,
-                    priority = 100
-                )
-                remaining -= duration
-            }
+        getTasks().asSequence().filter { !it.done && it.dueDay == "Today" }.sortedByDescending { it.durationMin }.take(3).forEach { task ->
+            if (remaining <= 0) return@forEach
+            val duration = minOf(task.durationMin, remaining)
+            if (duration < 15) return@forEach
+            selected += PlannerItem("task_" + task.id, today, PlannerItemType.PRACTICE, task.title, task.subject, task.chapterId, duration, 100)
+            remaining -= duration
+        }
 
-        getRevisionQueue()
-            .take(3)
-            .forEach { due ->
-                if (remaining <= 0) return@forEach
-                val duration = minOf(30, remaining)
-                if (duration < 15) return@forEach
-                selected += PlannerItem(
-                    id = "revplan_" + due.chapter.id,
-                    date = today,
-                    type = PlannerItemType.REVISION,
-                    title = "Revise " + due.chapter.name,
-                    subject = due.chapter.subject,
-                    chapterId = due.chapter.id,
-                    durationMin = duration,
-                    priority = 90
-                )
-                remaining -= duration
-            }
+        getRevisionQueue().take(3).forEach { due ->
+            if (remaining <= 0) return@forEach
+            val duration = minOf(30, remaining)
+            if (duration < 15) return@forEach
+            selected += PlannerItem("revplan_" + due.chapter.id, today, PlannerItemType.REVISION, "Revise " + due.chapter.name, due.chapter.subject, due.chapter.id, duration, 90)
+            remaining -= duration
+        }
 
-        val candidates = JeeCatalog.chapters
-            .map { chapter ->
-                val state = getChapterState(chapter.id)
-                val daysSinceStudy = if (state.lastStudiedAt == 0L) 999
-                else ((System.currentTimeMillis() - state.lastStudiedAt) / 86_400_000L).toInt()
-                val repeatedMistakes = learning?.getMistakes()
-                    ?.count { it.chapterId == chapter.id && !it.resolved } ?: 0
-                val score =
-                    (1f - state.progress) * 100f +
-                        (5 - state.confidence) * 9f +
-                        chapter.difficulty * 5f +
-                        minOf(daysSinceStudy, 30) * 0.5f +
-                        repeatedMistakes * 18f
-                chapter to score
-            }
-            .sortedByDescending { it.second }
+        val candidates = JeeCatalog.chapters.map { chapter ->
+            val state = getChapterState(chapter.id)
+            val daysSinceStudy = if (state.lastStudiedAt == 0L) 999 else ((System.currentTimeMillis() - state.lastStudiedAt) / 86_400_000L).toInt()
+            val repeatedMistakes = learning?.getMistakes()?.count { it.chapterId == chapter.id && !it.resolved } ?: 0
+            val score = (1f - state.progress) * 100f + (5 - state.confidence) * 9f + chapter.difficulty * 5f + minOf(daysSinceStudy, 30) * 0.5f + repeatedMistakes * 18f
+            chapter to score
+        }.sortedByDescending { it.second }
 
         val subjectCount = mutableMapOf<String, Int>()
         for ((chapter, _) in candidates) {
@@ -512,31 +401,19 @@ class JeeRepository(context: Context) {
             if (selected.any { it.chapterId == chapter.id }) continue
             val count = subjectCount[chapter.subject] ?: 0
             if (count >= 2 && subjectCount.size < 3) continue
-
             val state = getChapterState(chapter.id)
-            val duration = minOf(
-                remaining,
-                when {
-                    state.progress == 0f -> 50
-                    state.progress < 1f -> 40
-                    else -> 25
-                }
-            )
+            val duration = minOf(remaining, when {
+                state.progress == 0f -> 50
+                state.progress < 1f -> 40
+                else -> 25
+            })
             if (duration < 15) break
-
-            val type = if (state.progress >= 0.5f)
-                PlannerItemType.PRACTICE
-            else
-                PlannerItemType.STUDY
-
+            val type = if (state.progress >= 0.5f) PlannerItemType.PRACTICE else PlannerItemType.STUDY
             selected += PlannerItem(
                 id = "plan_" + chapter.id,
                 date = today,
                 type = type,
-                title = if (type == PlannerItemType.STUDY)
-                    "Study " + chapter.name
-                else
-                    "Practice " + chapter.name,
+                title = if (type == PlannerItemType.STUDY) "Study " + chapter.name else "Practice " + chapter.name,
                 subject = chapter.subject,
                 chapterId = chapter.id,
                 durationMin = duration,
@@ -546,12 +423,15 @@ class JeeRepository(context: Context) {
             remaining -= duration
         }
 
-        val plan = DailyPlan(today, goal, selected)
+        val previousCompleted = previous?.items?.filter { it.completed }?.associateBy { it.id }.orEmpty()
+        val plan = DailyPlan(today, goal, selected.map { item ->
+            if (previousCompleted.containsKey(item.id)) item.copy(completed = true) else item
+        })
         saveDailyPlan(plan)
         return plan
     }
 
-    fun completePlannerItem(id: String) {
+    fun completePlannerItem(id: String, revisionRating: RevisionRating? = null) {
         val plan = getDailyPlan() ?: return
         val item = plan.items.firstOrNull { it.id == id } ?: return
         if (item.completed) return
@@ -562,22 +442,15 @@ class JeeRepository(context: Context) {
                 if (task != null && !task.done) toggleTask(taskId)
             }
         } else if (item.type == PlannerItemType.REVISION && item.chapterId != null) {
-            reviewChapter(item.chapterId, RevisionRating.GOOD)
+            if (revisionRating == null) return
+            reviewChapter(item.chapterId, revisionRating)
         } else if (item.chapterId != null) {
             val state = getChapterState(item.chapterId)
             val increment = if (item.type == PlannerItemType.STUDY) 0.20f else 0.10f
-            setChapterState(
-                item.chapterId,
-                (state.progress + increment).coerceAtMost(1f),
-                state.confidence.coerceAtLeast(1)
-            )
+            setChapterState(item.chapterId, (state.progress + increment).coerceAtMost(1f), state.confidence.coerceAtLeast(1))
         }
 
-        saveDailyPlan(
-            plan.copy(
-                items = plan.items.map { if (it.id == id) it.copy(completed = true) else it }
-            )
-        )
+        saveDailyPlan(plan.copy(items = plan.items.map { if (it.id == id) it.copy(completed = true) else it }))
     }
 
     private fun getRevisionItems(): List<RevisionItem> {
@@ -588,16 +461,14 @@ class JeeRepository(context: Context) {
                 val obj = array.getJSONObject(index)
                 RevisionItem(
                     id = obj.getString("id"),
-                    chapterId = obj.getString("chapterId"),
+                    chapterId = JeeCatalog.normalizeChapterId(obj.getString("chapterId")),
                     dueDate = obj.getString("dueDate"),
                     intervalDays = obj.optInt("intervalDays", 1),
                     ease = obj.optDouble("ease", 2.5).toFloat(),
                     repetitions = obj.optInt("repetitions", 0),
                     lapses = obj.optInt("lapses", 0),
                     lastReviewedAt = obj.optLong("lastReviewedAt", 0L),
-                    lastResult = obj.optString("lastResult").takeIf { it.isNotBlank() }?.let {
-                        runCatching { RevisionRating.valueOf(it) }.getOrNull()
-                    }
+                    lastResult = obj.optString("lastResult").takeIf { it.isNotBlank() }?.let { runCatching { RevisionRating.valueOf(it) }.getOrNull() }
                 )
             }
         }.getOrDefault(emptyList())
@@ -606,30 +477,25 @@ class JeeRepository(context: Context) {
     private fun saveRevisionItems(items: List<RevisionItem>) {
         val array = JSONArray()
         items.distinctBy { it.id }.take(500).forEach { item ->
-            array.put(
-                JSONObject().apply {
-                    put("id", item.id)
-                    put("chapterId", item.chapterId)
-                    put("dueDate", item.dueDate)
-                    put("intervalDays", item.intervalDays)
-                    put("ease", item.ease)
-                    put("repetitions", item.repetitions)
-                    put("lapses", item.lapses)
-                    put("lastReviewedAt", item.lastReviewedAt)
-                    put("lastResult", item.lastResult?.name ?: "")
-                }
-            )
+            array.put(JSONObject().apply {
+                put("id", item.id)
+                put("chapterId", JeeCatalog.normalizeChapterId(item.chapterId))
+                put("dueDate", item.dueDate)
+                put("intervalDays", item.intervalDays)
+                put("ease", item.ease)
+                put("repetitions", item.repetitions)
+                put("lapses", item.lapses)
+                put("lastReviewedAt", item.lastReviewedAt)
+                put("lastResult", item.lastResult?.name ?: "")
+            })
         }
         prefs.edit().putString("revision_items", array.toString()).apply()
     }
 
     private fun ensureRevisionItem(chapterId: String): RevisionItem {
-        getRevisionItems().firstOrNull { it.chapterId == chapterId }?.let { return it }
-        val item = RevisionItem(
-            id = "rev_" + chapterId,
-            chapterId = chapterId,
-            dueDate = LocalDate.now().plusDays(1).toString()
-        )
+        val canonicalId = JeeCatalog.normalizeChapterId(chapterId)
+        getRevisionItems().firstOrNull { it.chapterId == canonicalId }?.let { return it }
+        val item = RevisionItem("rev_" + canonicalId, canonicalId, LocalDate.now().plusDays(1).toString())
         saveRevisionItems(getRevisionItems() + item)
         return item
     }
@@ -647,130 +513,83 @@ class JeeRepository(context: Context) {
                     type = PlannerItemType.valueOf(item.getString("type")),
                     title = item.getString("title"),
                     subject = item.getString("subject"),
-                    chapterId = item.optString("chapterId").ifBlank { null },
+                    chapterId = item.optString("chapterId").ifBlank { null }?.let(JeeCatalog::normalizeChapterId),
                     durationMin = item.getInt("durationMin"),
                     priority = item.optInt("priority", 0),
                     completed = item.optBoolean("completed")
                 )
             }
-            DailyPlan(
-                date = obj.getString("date"),
-                goalMinutes = obj.getInt("goalMinutes"),
-                items = items
-            )
+            DailyPlan(obj.getString("date"), obj.getInt("goalMinutes"), items)
         }.getOrNull()
     }
 
     private fun saveDailyPlan(plan: DailyPlan) {
         val array = JSONArray()
         plan.items.forEach { item ->
-            array.put(
-                JSONObject().apply {
-                    put("id", item.id)
-                    put("type", item.type.name)
-                    put("title", item.title)
-                    put("subject", item.subject)
-                    put("chapterId", item.chapterId ?: "")
-                    put("durationMin", item.durationMin)
-                    put("priority", item.priority)
-                    put("completed", item.completed)
-                }
-            )
+            array.put(JSONObject().apply {
+                put("id", item.id)
+                put("type", item.type.name)
+                put("title", item.title)
+                put("subject", item.subject)
+                put("chapterId", item.chapterId?.let(JeeCatalog::normalizeChapterId) ?: "")
+                put("durationMin", item.durationMin)
+                put("priority", item.priority)
+                put("completed", item.completed)
+            })
         }
-        prefs.edit()
-            .putString(
-                "daily_plan",
-                JSONObject().apply {
-                    put("date", plan.date)
-                    put("goalMinutes", plan.goalMinutes)
-                    put("items", array)
-                }.toString()
-            )
-            .apply()
+        prefs.edit().putString("daily_plan", JSONObject().apply {
+            put("date", plan.date)
+            put("goalMinutes", plan.goalMinutes)
+            put("items", array)
+        }.toString()).apply()
     }
 
     fun restoreTimerState(): TimerState {
-        val total = prefs.getInt("timer_total_seconds", DEFAULT_TIMER_SECONDS)
-            .coerceIn(MIN_TIMER_SECONDS, MAX_TIMER_SECONDS)
+        val total = prefs.getInt("timer_total_seconds", DEFAULT_TIMER_SECONDS).coerceIn(MIN_TIMER_SECONDS, MAX_TIMER_SECONDS)
         val running = prefs.getBoolean("timer_running", false)
         val endAt = prefs.getLong("timer_end_at", 0L)
-        val storedRemaining = prefs.getInt("timer_remaining_seconds", total)
-            .coerceIn(0, total)
-
-        if (!running || endAt <= 0L) {
-            return TimerState(total, storedRemaining, false, 0L)
-        }
-
-        val remaining = ceil(
-            (endAt - System.currentTimeMillis()).coerceAtLeast(0L) / 1000.0
-        ).toInt().coerceIn(0, total)
-
+        val storedRemaining = prefs.getInt("timer_remaining_seconds", total).coerceIn(0, total)
+        if (!running || endAt <= 0L) return TimerState(total, storedRemaining, false, 0L)
+        val remaining = ceil((endAt - System.currentTimeMillis()).coerceAtLeast(0L) / 1000.0).toInt().coerceIn(0, total)
         if (remaining == 0) {
             completeTimer(total)
             return TimerState(total, 0, false, 0L)
         }
-
         prefs.edit().putInt("timer_remaining_seconds", remaining).apply()
         return TimerState(total, remaining, true, endAt)
     }
 
     fun resetTimer(totalSeconds: Int) {
         val safeTotal = totalSeconds.coerceIn(MIN_TIMER_SECONDS, MAX_TIMER_SECONDS)
-        prefs.edit()
-            .putInt("timer_total_seconds", safeTotal)
-            .putInt("timer_remaining_seconds", safeTotal)
-            .putBoolean("timer_running", false)
-            .remove("timer_end_at")
-            .apply()
+        prefs.edit().putInt("timer_total_seconds", safeTotal).putInt("timer_remaining_seconds", safeTotal).putBoolean("timer_running", false).remove("timer_end_at").apply()
     }
 
     fun startTimer(totalSeconds: Int, remainingSeconds: Int) {
         val safeTotal = totalSeconds.coerceIn(MIN_TIMER_SECONDS, MAX_TIMER_SECONDS)
         val safeRemaining = remainingSeconds.coerceIn(1, safeTotal)
-        prefs.edit()
-            .putInt("timer_total_seconds", safeTotal)
-            .putInt("timer_remaining_seconds", safeRemaining)
-            .putBoolean("timer_running", true)
-            .putLong("timer_end_at", System.currentTimeMillis() + safeRemaining * 1000L)
-            .apply()
+        prefs.edit().putInt("timer_total_seconds", safeTotal).putInt("timer_remaining_seconds", safeRemaining).putBoolean("timer_running", true).putLong("timer_end_at", System.currentTimeMillis() + safeRemaining * 1000L).apply()
     }
 
     fun pauseTimer(totalSeconds: Int, remainingSeconds: Int) {
         val safeTotal = totalSeconds.coerceIn(MIN_TIMER_SECONDS, MAX_TIMER_SECONDS)
         val safeRemaining = remainingSeconds.coerceIn(0, safeTotal)
-        prefs.edit()
-            .putInt("timer_total_seconds", safeTotal)
-            .putInt("timer_remaining_seconds", safeRemaining)
-            .putBoolean("timer_running", false)
-            .remove("timer_end_at")
-            .apply()
+        prefs.edit().putInt("timer_total_seconds", safeTotal).putInt("timer_remaining_seconds", safeRemaining).putBoolean("timer_running", false).remove("timer_end_at").apply()
     }
 
-    fun completeTimer(
-        totalSeconds: Int,
-        subject: String = "General",
-        chapterId: String? = null,
-        activityType: ActivityType = ActivityType.LEARNING
-    ) {
+    fun completeTimer(totalSeconds: Int, subject: String = "General", chapterId: String? = null, activityType: ActivityType = ActivityType.LEARNING) {
+        val canonicalChapterId = chapterId?.let(JeeCatalog::normalizeChapterId)
         if (totalSeconds >= 60) {
-            val chapterName = chapterId?.let { JeeCatalog.find(it)?.name } ?: "Self study"
+            val chapterName = canonicalChapterId?.let { JeeCatalog.find(it)?.name } ?: "Self study"
             addSession(
                 minutes = totalSeconds / 60,
                 subject = subject,
                 chapter = chapterName,
-                subjectId = subject.lowercase().takeIf {
-                    it == "physics" || it == "chemistry" || it == "mathematics"
-                },
-                chapterId = chapterId,
+                subjectId = subject.lowercase().takeIf { it == "physics" || it == "chemistry" || it == "mathematics" },
+                chapterId = canonicalChapterId,
                 activityType = activityType
             )
         }
-        prefs.edit()
-            .remove("timer_total_seconds")
-            .remove("timer_remaining_seconds")
-            .remove("timer_running")
-            .remove("timer_end_at")
-            .apply()
+        prefs.edit().remove("timer_total_seconds").remove("timer_remaining_seconds").remove("timer_running").remove("timer_end_at").apply()
     }
 
     companion object {
@@ -778,13 +597,10 @@ class JeeRepository(context: Context) {
         private const val DATA_VERSION_KEY = "data_schema_version"
 
         val syllabus: Map<String, List<String>>
-            get() = JeeCatalog.chapters
-                .groupBy { it.subject }
-                .mapValues { entry -> entry.value.sortedBy { it.number }.map { it.name } }
+            get() = JeeCatalog.chapters.groupBy { it.subject }.mapValues { entry -> entry.value.sortedBy { it.number }.map { it.name } }
 
         private const val DEFAULT_TIMER_SECONDS = 25 * 60
         private const val MIN_TIMER_SECONDS = 60
         private const val MAX_TIMER_SECONDS = 24 * 60 * 60
-
     }
 }
