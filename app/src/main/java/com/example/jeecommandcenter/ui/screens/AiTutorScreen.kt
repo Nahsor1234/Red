@@ -77,71 +77,30 @@ fun AiTutorScreen(
     }
 
     fun exitConversation() {
-        activeRequestJob?.cancel()
-        activeRequestJob = null
-        activeId = null
-        messages = emptyList()
-        streamingText = ""
-        streamingMessageId = null
-        busy = false
-        history.setActiveConversationId(null)
-        onConversationCleared()
+        activeRequestJob?.cancel(); activeRequestJob = null; activeId = null; messages = emptyList(); streamingText = ""; streamingMessageId = null; busy = false; history.setActiveConversationId(null); onConversationCleared()
     }
 
-    fun handleBack() {
-        if (activeId != null || messages.isNotEmpty()) exitConversation() else onBack()
-    }
+    fun handleBack() { if (activeId != null || messages.isNotEmpty()) exitConversation() else onBack() }
 
     fun send(prompt: String, title: String = "Study coach", block: (suspend () -> AiResult)? = null) {
         if (prompt.isBlank() || busy) return
-        if (!settings.hasApiKey()) {
-            onOpenSettings()
-            return
-        }
-
+        if (!settings.hasApiKey()) { onOpenSettings(); return }
         val id = ensureConversation(title)
         history.appendMessage(id, "USER", prompt.trim())
         val placeholderId = -System.currentTimeMillis()
-        messages = history.getConversation(id)?.messages.orEmpty() +
-            AiChatMessage(
-                id = placeholderId,
-                role = "COACH",
-                text = "",
-                createdAt = System.currentTimeMillis()
-            )
-        streamingMessageId = placeholderId
-        input = ""
-        streamingText = ""
-        busy = true
-
+        messages = history.getConversation(id)?.messages.orEmpty() + AiChatMessage(id = placeholderId, role = "COACH", text = "", createdAt = System.currentTimeMillis())
+        streamingMessageId = placeholderId; input = ""; streamingText = ""; busy = true
         activeRequestJob = scope.launch {
             val result = try {
                 block?.invoke() ?: run {
-                    val turns = history.getConversation(id)?.messages.orEmpty()
-                        .takeLast(24)
-                        .map { message ->
-                            AiPromptMessage(
-                                role = if (message.role == "COACH") "assistant" else "user",
-                                content = message.text
-                            )
-                        }
-
+                    val turns = history.getConversation(id)?.messages.orEmpty().takeLast(24).map { message -> AiPromptMessage(role = if (message.role == "COACH") "assistant" else "user", content = message.text) }
                     AiEngine(settings).streamConversation(
                         messages = turns,
-                        systemInstruction = JeeAiPrompt.taskInstruction(
-                            "multi-turn JEE study coaching"
-                        ) + "\n\nCurrent student context:\n" +
-                            contextSummary(analytics, topMistakes),
+                        systemInstruction = JeeAiPrompt.taskInstruction("multi-turn JEE study coaching") + "\n\nCurrent student context:\n" + contextSummary(analytics, topMistakes),
                         onChunk = { chunk ->
                             withContext(Dispatchers.Main.immediate) {
                                 streamingText += chunk
-                                messages = messages.map { message ->
-                                    if (message.id == placeholderId) {
-                                        message.copy(text = streamingText)
-                                    } else {
-                                        message
-                                    }
-                                }
+                                messages = messages.map { message -> if (message.id == placeholderId) message.copy(text = streamingText) else message }
                             }
                         }
                     )
@@ -150,33 +109,17 @@ fun AiTutorScreen(
                 if (error is CancellationException) throw error
                 AiResult(false, error = error.message ?: "AI request failed.")
             }
-
             activeRequestJob = null
-            val coachText = if (result.success && result.text.isNotBlank()) {
-                result.text
-            } else {
-                result.error ?: "The coach returned no response. Try again."
-            }
-
+            val coachText = if (result.success && result.text.isNotBlank()) result.text else result.error ?: "The coach returned no response. Try again."
             withContext(Dispatchers.Main.immediate) {
-                if (result.success && result.text.isNotBlank()) {
-                    history.appendMessage(id, "COACH", coachText)
-                } else {
-                    history.appendMessage(id, "COACH", coachText)
-                }
-                messages = history.getConversation(id)?.messages.orEmpty()
-                streamingText = ""
-                streamingMessageId = null
-                busy = false
+                history.appendMessage(id, "COACH", coachText)
+                messages = history.getConversation(id)?.messages.orEmpty(); streamingText = ""; streamingMessageId = null; busy = false
             }
         }
     }
 
     val inChat = activeId != null || messages.isNotEmpty()
-
-    BackHandler(enabled = true) {
-        handleBack()
-    }
+    BackHandler(enabled = true) { handleBack() }
     Scaffold(containerColor = BgApp, topBar = {
         JeeTopBar(title = "AI Study Coach", onBack = ::handleBack, trailing = {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -200,57 +143,28 @@ fun AiTutorScreen(
             }
         }
     }) { padding ->
-        LaunchedEffect(messages.lastOrNull()?.text, streamingText) {
-            if (messages.isNotEmpty()) {
-                chatListState.animateScrollToItem(messages.lastIndex)
-            }
-        }
-        LazyColumn(state = chatListState, Modifier.fillMaxSize().padding(padding).padding(horizontal = 18.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(9.dp), contentPadding = PaddingValues(top = 18.dp, bottom = 18.dp)) {
-            if (!inChat) item {
-                Spacer(Modifier.height(90.dp)); Icon(Icons.Filled.AutoAwesome, null, tint = PrimaryLight, modifier = Modifier.size(48.dp)); Spacer(Modifier.height(14.dp))
-                Text("How can I help with your JEE prep?", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold); Spacer(Modifier.height(6.dp))
-                Text("Your study data is available to the coach. Ask anything, or use a quick action below.", color = TextSecondary, fontSize = 12.sp); Spacer(Modifier.height(12.dp)); Text("Current signal · $coachingHeadline", color = TextMuted, fontSize = 10.sp)
+        LaunchedEffect(messages.lastOrNull()?.text, streamingText) { if (messages.isNotEmpty()) chatListState.animateScrollToItem(messages.lastIndex) }
+        LazyColumn(state = chatListState, modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 18.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(9.dp), contentPadding = PaddingValues(top = 18.dp, bottom = 18.dp)) {
+            if (!inChat) {
+                item {
+                    Spacer(Modifier.height(90.dp)); Icon(Icons.Filled.AutoAwesome, null, tint = PrimaryLight, modifier = Modifier.size(48.dp)); Spacer(Modifier.height(14.dp))
+                    Text("How can I help with your JEE prep?", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold); Spacer(Modifier.height(6.dp))
+                    Text("Your study data is available to the coach. Ask anything, or use a quick action below.", color = TextSecondary, fontSize = 12.sp); Spacer(Modifier.height(12.dp)); Text("Current signal · $coachingHeadline", color = TextMuted, fontSize = 10.sp)
+                }
             } else {
                 items(messages, key = { it.id }) { message ->
                     val isUser = message.role == "USER"
                     val isStreamingMessage = message.id == streamingMessageId
-                    Surface(
-                        Modifier.fillMaxWidth(),
-                        color = if (isUser) BgCardAlt else BgCard,
-                        shape = RoundedCornerShape(18.dp),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, BgCardBorder.copy(alpha = .75f))
-                    ) {
+                    Surface(Modifier.fillMaxWidth(), color = if (isUser) BgCardAlt else BgCard, shape = RoundedCornerShape(18.dp), border = androidx.compose.foundation.BorderStroke(1.dp, BgCardBorder.copy(alpha = .75f))) {
                         Column(Modifier.padding(15.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    if (isUser) "YOU" else "COACH",
-                                    color = PrimaryLight,
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    letterSpacing = .9.sp
-                                )
-                                if (isStreamingMessage && busy && message.text.isBlank()) {
-                                    Spacer(Modifier.width(9.dp))
-                                    CircularProgressIndicator(
-                                        Modifier.size(13.dp),
-                                        strokeWidth = 2.dp,
-                                        color = Primary
-                                    )
-                                }
+                                Text(if (isUser) "YOU" else "COACH", color = PrimaryLight, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = .9.sp)
+                                if (isStreamingMessage && busy && message.text.isBlank()) { Spacer(Modifier.width(9.dp)); CircularProgressIndicator(Modifier.size(13.dp), strokeWidth = 2.dp, color = Primary) }
                             }
                             Spacer(Modifier.height(7.dp))
                             when {
-                                isUser -> Text(
-                                    message.text,
-                                    color = TextPrimary,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Medium
-                                )
-                                isStreamingMessage && busy && message.text.isBlank() -> Text(
-                                    "Coach is thinking…",
-                                    color = TextSecondary,
-                                    fontSize = 12.sp
-                                )
+                                isUser -> Text(message.text, color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                                isStreamingMessage && busy && message.text.isBlank() -> Text("Coach is thinking…", color = TextSecondary, fontSize = 12.sp)
                                 else -> MarkdownText(message.text)
                             }
                         }
