@@ -4,23 +4,24 @@ import android.content.Context
 
 /**
  * Offline-first synchronization coordinator.
- * Cloud catalog is read-only; authenticated student progress/attempts are merged both ways.
+ * Cloud catalog is read-only; authenticated student progress and persistent user data are merged both ways.
  */
 class CloudSyncCoordinator(
     private val context: Context,
     private val cloud: CloudJeeRepository = CloudJeeRepository()
 ) {
     private val syncPrefs = context.getSharedPreferences("sigma_cloud_sync", Context.MODE_PRIVATE)
+    private val preferenceSync = CloudPreferenceSync(context)
 
     suspend fun sync(): SyncResult {
         val user = cloud.ensureSession()
 
-        // Pull first so a fresh install can recover the account's existing cloud state.
-        // The restore is monotonic: progress/confidence use the stronger value, completed
-        // topics stay completed, and attempts are unioned by their cloud UUID.
+        // Pull typed learning state first so a fresh install can recover the account's
+        // existing chapter/topic/question state before any local upload occurs.
         val restore = CloudSyncRestore(context, cloud).restore(user.id)
 
-        // Move any local state into this account after cloud state has been merged.
+        // Move any legacy local chapter/topic state into this account after cloud state
+        // has been merged. This is intentionally separate from the broader preference sync.
         cloud.migrateLocalProgress(context)
 
         val local = JeeRepository(context)
@@ -70,6 +71,12 @@ class CloudSyncCoordinator(
             attemptCount++
         }
 
+        // Sync all other persistent SharedPreferences-backed user data, including
+        // study sessions, tasks, revisions, mistakes, assessment history, AI chat
+        // history, and future preference-backed user data. Typed tables above remain
+        // authoritative for chapter/topic/question state and are excluded by the helper.
+        val preferenceResult = preferenceSync.sync(user.id)
+
         syncPrefs.edit()
             .putStringSet(attemptKey, syncedIds)
             .putLong(lastSyncKey, System.currentTimeMillis())
@@ -81,7 +88,9 @@ class CloudSyncCoordinator(
             attemptsUploaded = attemptCount,
             chaptersRestored = restore.chaptersRestored,
             topicsRestored = restore.topicsRestored,
-            attemptsRestored = restore.attemptsRestored
+            attemptsRestored = restore.attemptsRestored,
+            preferenceDataUploaded = preferenceResult.uploaded,
+            preferenceDataRestored = preferenceResult.restored
         )
     }
 
@@ -99,5 +108,7 @@ data class SyncResult(
     val attemptsUploaded: Int,
     val chaptersRestored: Int = 0,
     val topicsRestored: Int = 0,
-    val attemptsRestored: Int = 0
+    val attemptsRestored: Int = 0,
+    val preferenceDataUploaded: Int = 0,
+    val preferenceDataRestored: Int = 0
 )
