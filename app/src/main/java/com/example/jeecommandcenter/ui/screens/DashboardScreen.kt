@@ -25,53 +25,170 @@ import java.time.LocalTime
 import java.time.temporal.ChronoUnit
 
 @Composable
-fun DashboardScreen(repo: JeeRepository, selectedTab: AppTab, onTabSelected: (AppTab) -> Unit, onAiClick: () -> Unit = {}, onOpenPlanner: () -> Unit = {}, onOpenRevision: () -> Unit = {}, onOpenSettings: () -> Unit = {}, onOpenAssessment: () -> Unit = {}, onOpenMistakes: () -> Unit = {}) {
+fun DashboardScreen(
+    repo: JeeRepository,
+    selectedTab: AppTab,
+    onTabSelected: (AppTab) -> Unit,
+    onAiClick: () -> Unit = {},
+    onOpenPlanner: () -> Unit = {},
+    onOpenRevision: () -> Unit = {},
+    onOpenSettings: () -> Unit = {},
+    onOpenAssessment: () -> Unit = {},
+    onOpenMistakes: () -> Unit = {},
+    onOpenStudyTimer: () -> Unit = {}
+) {
     var refresh by remember { mutableIntStateOf(0) }
     val context = androidx.compose.ui.platform.LocalContext.current.applicationContext
     val learning = remember { LearningRepository(context) }
     val intelligence = remember { JeeIntelligence(repo, learning) }
     val tasks = remember(refresh) { repo.getTasks() }
-    val today = remember(refresh) { repo.getTodayMinutes() }
-    val goal = remember(refresh) { repo.getDailyGoalMinutes() }
-    val total = JeeRepository.syllabus.values.sumOf { it.size }
-    val done = remember(refresh) { JeeRepository.syllabus.keys.sumOf { subject -> repo.chapters(subject).count { it.progress >= 1f } } }
-    val prep = if (total == 0) 0f else done.toFloat() / total
-    val due = remember(refresh) { repo.getRevisionQueue().size }
+    val todayMinutes = remember(refresh) { repo.getTodayMinutes() }
+    val goalMinutes = remember(refresh) { repo.getDailyGoalMinutes() }
+    val totalChapters = JeeRepository.syllabus.values.sumOf { it.size }
+    val completedChapters = remember(refresh) {
+        JeeRepository.syllabus.keys.sumOf { subject -> repo.chapters(subject).count { it.progress >= 1f } }
+    }
+    val coverage = if (totalChapters == 0) 0f else completedChapters.toFloat() / totalChapters
+    val revisionDue = remember(refresh) { repo.getRevisionQueue().size }
     val priorities = remember(refresh) { intelligence.dailyPriorities(3) }
+    val weak = remember(refresh) { intelligence.weakChapters(1).firstOrNull() }
     val todayTasks = tasks.filter { it.dueDay == "Today" }
-    val next = todayTasks.firstOrNull { !it.done } ?: tasks.firstOrNull { !it.done }
-    val days = ChronoUnit.DAYS.between(LocalDate.now(), LocalDate.of(2027, 1, 1)).coerceAtLeast(0)
-    val greeting = when (LocalTime.now().hour) { in 5..11 -> "Good morning"; in 12..16 -> "Good afternoon"; else -> "Good evening" }
+    val nextTask = todayTasks.firstOrNull { !it.done } ?: tasks.firstOrNull { !it.done }
+    val focus = priorities.firstOrNull()
+    val greeting = when (java.time.LocalTime.now().hour) {
+        in 5..11 -> "Good morning"
+        in 12..16 -> "Good afternoon"
+        else -> "Good evening"
+    }
 
     Box(Modifier.fillMaxSize()) {
-        JeeBackground()
-        Scaffold(containerColor = BgApp.copy(alpha = 0f), bottomBar = { BottomNavBar(selectedTab, onTabSelected, onAiClick) }) { padding ->
-            Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 18.dp).verticalScroll(rememberScrollState())) {
-                Spacer(Modifier.height(10.dp))
-                Row(Modifier.fillMaxWidth().padding(bottom = 20.dp), Arrangement.SpaceBetween, Alignment.CenterVertically) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = onOpenSettings, modifier = Modifier.size(42.dp)) { Box(Modifier.size(42.dp).clip(CircleShape).background(AccentBlueSoft), Alignment.Center) { Icon(Icons.Filled.Person, null, tint = AccentBlueLight, modifier = Modifier.size(19.dp)) } }
-                        Spacer(Modifier.width(10.dp)); Column { Text(greeting, style = MaterialTheme.typography.titleMedium); Text("Let's make today count", color = TextSecondary, fontSize = 12.sp) }
+        Scaffold(
+            containerColor = BgApp,
+            bottomBar = { BottomNavBar(selectedTab, onTabSelected, onAiClick) }
+        ) { padding ->
+            Column(
+                Modifier.fillMaxSize().padding(padding).padding(horizontal = 18.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                Spacer(Modifier.height(12.dp))
+                Row(
+                    Modifier.fillMaxWidth().padding(bottom = 18.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(greeting, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
+                        Text("JEE 2027 · focused preparation", color = TextSecondary, fontSize = 12.sp)
                     }
-                    Icon(Icons.Filled.Refresh, "Refresh", tint = TextSecondary, modifier = Modifier.premiumClick { refresh++ })
+                    IconButton(onClick = onOpenSettings) {
+                        Icon(Icons.Filled.Settings, "Settings", tint = TextPrimary, modifier = Modifier.size(24.dp))
+                    }
                 }
+
                 JeeCard(featured = true) {
-                    Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.Top) { Column { Text("⚡  JEE 2027", color = AccentBlueLight, fontSize = 14.sp, fontWeight = FontWeight.Medium); Spacer(Modifier.height(8.dp)); Row(verticalAlignment = Alignment.Bottom) { Text(days.toString(), style = MaterialTheme.typography.displaySmall); Spacer(Modifier.width(6.dp)); Text("days to 2027", color = TextSecondary, fontSize = 13.sp) } }; Text("Live from your study\ndata", color = TextSecondary, fontSize = 12.sp, lineHeight = 17.sp) }
-                    Spacer(Modifier.height(16.dp)); LinearStatBar(prep, height = 6.dp)
+                    Text("YOUR FOCUS", color = PrimaryLight, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
+                    Spacer(Modifier.height(8.dp))
+                    when {
+                        focus != null -> {
+                            Text(focus.title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
+                            Spacer(Modifier.height(5.dp))
+                            Text(focus.reason, color = TextSecondary, fontSize = 12.sp, lineHeight = 17.sp)
+                            Spacer(Modifier.height(12.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Surface(shape = JeeShapes.pill, color = PrimarySoft, border = BorderStroke(1.dp, BgCardBorder.copy(alpha = .8f))) {
+                                    Row(Modifier.padding(horizontal = 9.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(Icons.Filled.Schedule, null, tint = PrimaryLight, modifier = Modifier.size(14.dp))
+                                        Spacer(Modifier.width(5.dp))
+                                        Text(focus.durationMin.toString() + " min", color = PrimaryLight, fontSize = 11.sp)
+                                    }
+                                }
+                                Spacer(Modifier.width(9.dp))
+                                Text(focus.subject, color = TextMuted, fontSize = 11.sp)
+                            }
+                        }
+                        nextTask != null -> {
+                            Text(nextTask.title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
+                            Spacer(Modifier.height(5.dp))
+                            Text("A task is waiting today. Start a focused study block and keep the next action simple.", color = TextSecondary, fontSize = 12.sp, lineHeight = 17.sp)
+                            Spacer(Modifier.height(12.dp))
+                            Text(nextTask.subject + " · " + nextTask.durationMin + " min", color = TextMuted, fontSize = 11.sp)
+                        }
+                        else -> {
+                            Text("Build your first study signal", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
+                            Spacer(Modifier.height(5.dp))
+                            Text("Study, revise, or answer a few questions so the command center can generate a data-driven focus.", color = TextSecondary, fontSize = 12.sp, lineHeight = 17.sp)
+                        }
+                    }
+                    Spacer(Modifier.height(15.dp))
+                    Button(onClick = onOpenStudyTimer, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp)) {
+                        Icon(Icons.Filled.PlayArrow, null, Modifier.size(18.dp))
+                        Spacer(Modifier.width(7.dp))
+                        Text("Start focused session")
+                    }
                 }
-                Spacer(Modifier.height(24.dp)); SectionHeader("Preparation", "Overall")
-                Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.Bottom) { Text("${(prep * 100).toInt()}%", style = MaterialTheme.typography.displaySmall); Text("$done chapters complete · ${todayTasks.count { it.done }} tasks today", color = TextSecondary, fontSize = 12.sp) }
-                Spacer(Modifier.height(9.dp)); LinearStatBar(prep, height = 7.dp)
-                Spacer(Modifier.height(24.dp)); SectionHeader("Today", LocalDate.now().dayOfWeek.name.lowercase().replaceFirstChar { it.uppercase() })
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    JeeCard { Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) { Column { Text("Study goal", color = TextSecondary, fontSize = 13.sp); Spacer(Modifier.height(4.dp)); Text("${today / 60}h ${today % 60}m", style = MaterialTheme.typography.titleLarge); Text("/ ${goal / 60}h", color = TextMuted, fontSize = 12.sp) }; Box(Modifier.size(54.dp).clip(CircleShape).background(BgCardAlt), Alignment.Center) { Text("${if (goal == 0) 0 else (today * 100 / goal).coerceIn(0, 100)}%", color = AccentGreen, fontSize = 13.sp) } } }
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) { HomeActionCard("Plan", "Open planner", "Auto-built from study state", Modifier.weight(1f), onOpenPlanner); HomeActionCard("Revision", "$due due", "Spaced review queue", Modifier.weight(1f), onOpenRevision) }
+
+                Spacer(Modifier.height(18.dp))
+                SectionHeader("Quick actions")
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    QuickAction("Practice", Icons.Filled.Quiz, Modifier.weight(1f), true, onOpenAssessment)
+                    QuickAction("Revision", Icons.Filled.Replay, Modifier.weight(1f), false, onOpenRevision)
                 }
-                Spacer(Modifier.height(10.dp)); JeeCard(featured = true) { Text("Today's priorities", style = MaterialTheme.typography.titleLarge); Text("What matters most right now, based on your data.", color = TextMuted, fontSize = 12.sp); Spacer(Modifier.height(8.dp)); if (priorities.isEmpty()) Text("No priority generated yet.", color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(vertical = 10.dp)) else priorities.forEachIndexed { index, priority -> Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) { Text("${index + 1}", color = AccentBlue, fontSize = 13.sp, modifier = Modifier.width(18.dp)); Column(Modifier.weight(1f)) { Text(priority.title, fontSize = 14.sp); Text(priority.reason, color = TextMuted, fontSize = 11.sp) }; Text("${priority.durationMin}m", color = TextSecondary, fontSize = 12.sp) } } }
-                if (next != null) { Spacer(Modifier.height(10.dp)); JeeCard(featured = true) { Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) { Text("⚡  DO THIS NOW", color = AccentBlueLight, fontSize = 13.sp, fontWeight = FontWeight.Bold); Text("Next task", color = AccentPink, fontSize = 12.sp) }; Spacer(Modifier.height(8.dp)); Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) { Column(Modifier.weight(1f)) { Text(next.title, style = MaterialTheme.typography.titleMedium); Text("${next.subject} · ${next.durationMin} min", color = TextSecondary, fontSize = 12.sp) }; Box(Modifier.size(42.dp).clip(CircleShape).background(AccentBlue).premiumClick { onTabSelected(AppTab.TASKS) }, Alignment.Center) { Icon(Icons.Filled.ArrowForward, null, tint = Color(0xFF17120A), modifier = Modifier.size(19.dp)) } } } }
-                Spacer(Modifier.height(24.dp)); SectionHeader("Practice & mistakes"); Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) { HomeActionCard("Questions practice", "Practice by subject", "Build question volume", Modifier.weight(1f), onOpenAssessment); HomeActionCard("Mistake bank", "Review weak patterns", "Recurring errors", Modifier.weight(1f), onOpenMistakes) }
-                Spacer(Modifier.height(24.dp)); SectionHeader("Today's tasks", "See all") { onTabSelected(AppTab.TASKS) }
-                if (todayTasks.isEmpty()) Text("No tasks scheduled for today.", color = TextMuted, fontSize = 13.sp, modifier = Modifier.padding(vertical = 8.dp)) else todayTasks.take(4).forEachIndexed { index, task -> TaskRow(TaskItem(task.id.toString(), task.title, task.subject, "${task.durationMin}m", task.done), onToggle = { id -> repo.toggleTask(id.toLong()); refresh++ }, onClick = { onTabSelected(AppTab.TASKS) }); if (index < minOf(todayTasks.size, 4) - 1) HorizontalDivider(color = BgDivider, thickness = .5.dp) }
+                Spacer(Modifier.height(10.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    QuickAction("Mistakes", Icons.Filled.ErrorOutline, Modifier.weight(1f), false, onOpenMistakes)
+                    QuickAction("Study", Icons.Filled.Timer, Modifier.weight(1f), false, onOpenStudyTimer)
+                }
+
+                Spacer(Modifier.height(18.dp))
+                SectionHeader("Today at a glance")
+                JeeCard {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        HomeMetric(todayMinutes.toString().let { (todayMinutes / 60).toString() + "h " + (todayMinutes % 60).toString() + "m" }, "Study", Modifier.weight(1f))
+                        HomeMetric(todayTasks.count { it.done }.toString() + "/" + todayTasks.size, "Tasks", Modifier.weight(1f))
+                        HomeMetric(revisionDue.toString(), "Due", Modifier.weight(1f))
+                        HomeMetric((coverage * 100).toInt().toString() + "%", "Coverage", Modifier.weight(1f))
+                    }
+                    Spacer(Modifier.height(12.dp))
+                    LinearStatBar(if (goalMinutes == 0) 0f else (todayMinutes.toFloat() / goalMinutes).coerceIn(0f, 1f), height = 6.dp, fillColor = Primary)
+                    Spacer(Modifier.height(5.dp))
+                    Text(
+                        if (goalMinutes == 0) "Daily goal not set" else todayMinutes.coerceAtMost(goalMinutes).toString() + " / " + goalMinutes + " min daily goal",
+                        color = TextMuted, fontSize = 10.sp
+                    )
+                }
+
+                Spacer(Modifier.height(18.dp))
+                SectionHeader("Today's tasks", "See all") { onTabSelected(AppTab.TASKS) }
+                JeeCard {
+                    if (todayTasks.isEmpty()) {
+                        Text("No tasks scheduled for today.", color = TextMuted, fontSize = 13.sp, modifier = Modifier.padding(vertical = 6.dp))
+                    } else {
+                        todayTasks.take(4).forEachIndexed { index, task ->
+                            TaskRow(
+                                TaskItem(task.id.toString(), task.title, task.subject + " · " + task.durationMin + "m", "", task.done),
+                                onToggle = { id -> repo.toggleTask(id.toLong()); refresh++ },
+                                onClick = { onTabSelected(AppTab.TASKS) }
+                            )
+                            if (index < minOf(todayTasks.size, 4) - 1) {
+                                HorizontalDivider(color = BgDivider.copy(alpha = .45f), thickness = .5.dp)
+                            }
+                        }
+                    }
+                }
+
+                weak?.let {
+                    Spacer(Modifier.height(18.dp))
+                    SectionHeader("Needs attention")
+                    JeeCard {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text(it.chapter.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium)
+                                Text(it.signals.take(2).joinToString(" · "), color = TextSecondary, fontSize = 11.sp, lineHeight = 16.sp)
+                            }
+                            Icon(Icons.Filled.ChevronRight, "Review chapter", tint = PrimaryLight)
+                        }
+                    }
+                }
                 Spacer(Modifier.height(24.dp))
             }
         }

@@ -52,32 +52,104 @@ fun AiTutorScreen(context: android.content.Context, jee: JeeRepository, learning
         }
     }
 
-    Scaffold(containerColor = BgApp, topBar = { JeeTopBar(title = "AI Tutor", onBack = onBack) }) { padding ->
-        LazyColumn(Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            item { Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                AssistChip(onClick = { action { orchestrator.analyzePerformance() } }, label = { Text("Analyze me") })
-                AssistChip(onClick = { action { orchestrator.buildDailyStudyPlan() } }, label = { Text("Plan my day") })
-            } }
-            item { AssistChip(onClick = { action { orchestrator.explainMistakes() } }, label = { Text("Analyze mistakes") }) }
-            if (response.isNotBlank()) item {
-                Column(Modifier.fillMaxWidth().clip(JeeShapes.large).background(BgCard).border(JeeSurfaceTokens.borderWidth,BgCardBorder.copy(alpha=JeeSurfaceTokens.cardBorderAlpha),JeeShapes.medium).padding(16.dp)) {
-                    Text("AI", color = AccentBlueLight, fontSize = 11.sp)
+    Scaffold(
+        containerColor = BgApp,
+        topBar = {
+            JeeTopBar(
+                title = "AI Study Coach",
+                onBack = onBack,
+                trailing = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.size(8.dp).clip(CircleShape).background(if (settings.hasApiKey()) Primary else TextMuted))
+                        Spacer(Modifier.width(6.dp))
+                        Text(if (settings.hasApiKey()) "Ready" else "Setup", color = TextSecondary, fontSize = 10.sp)
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        LazyColumn(
+            Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            item {
+                JeeCard(featured = true) {
+                    Text("WHAT'S IMPORTANT TODAY?", color = PrimaryLight, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.05.sp)
                     Spacer(Modifier.height(8.dp))
-                    MarkdownText(response)
-                    if (busy) { Spacer(Modifier.height(8.dp)); LinearProgressIndicator(Modifier.fillMaxWidth(), color = AccentBlue) }
+                    Text(coachingHeadline, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.height(6.dp))
+                    Text(coachingReason, color = TextSecondary, fontSize = 12.sp, lineHeight = 17.sp)
+                    Spacer(Modifier.height(14.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                        CoachMetric(analytics.studyMinutes7d.toString() + "m", "7d study", Modifier.weight(1f))
+                        CoachMetric((analytics.accuracy * 100).toInt().toString() + "%", "accuracy", Modifier.weight(1f))
+                        CoachMetric(jee.getRevisionQueue().size.toString(), "revision due", Modifier.weight(1f))
+                        CoachMetric(analytics.unresolvedMistakes.toString(), "mistakes", Modifier.weight(1f))
+                    }
                 }
             }
-            item { OutlinedTextField(value = input, onValueChange = { input = it }, modifier = Modifier.fillMaxWidth(), minLines = 4, label = { Text("Ask your JEE tutor") }, placeholder = { Text("e.g. Teach me electrostatics from first principles") }) }
-            item { Button(onClick = { stream(input) }, enabled = input.isNotBlank() && !busy && settings.hasApiKey(), modifier = Modifier.fillMaxWidth()) {
-                if (busy) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp) else Icon(Icons.Filled.Send, null, Modifier.size(17.dp))
-                Spacer(Modifier.width(7.dp)); Text(if (busy) "Thinking..." else "Ask AI")
-            } }
-            item { Text(if (!settings.hasApiKey()) "Configure an AI provider in Settings → AI Hub." else "Responses stream as they arrive. Markdown headings, lists and emphasis are rendered.", color = TextMuted, fontSize = 10.sp) }
-            if (!settings.hasApiKey()) item { OutlinedButton(onClick = onOpenSettings, modifier = Modifier.fillMaxWidth()) { Text("Open AI configuration") } }
+            item {
+                SectionHeader("Next actions")
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        CoachAction("Analyze preparation", Icons.Filled.Insights, Modifier.weight(1f)) { action { orchestrator.analyzePerformance() } }
+                        CoachAction("Plan my day", Icons.Filled.Today, Modifier.weight(1f)) { action { orchestrator.buildDailyStudyPlan() } }
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        CoachAction("Analyze mistakes", Icons.Filled.ErrorOutline, Modifier.weight(1f)) { action { orchestrator.explainMistakes() } }
+                        CoachAction("Learn a topic", Icons.Filled.School, Modifier.weight(1f)) {
+                            stream("Help me choose and learn the most useful JEE topic for my current preparation. Start with one topic and teach it from first principles.")
+                        }
+                    }
+                }
+            }
+            if (response.isNotBlank()) {
+                item {
+                    JeeCard {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Text("LATEST COACHING INSIGHT", color = PrimaryLight, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = .9.sp)
+                            if (busy) CircularProgressIndicator(Modifier.size(15.dp), strokeWidth = 2.dp, color = Primary)
+                        }
+                        Spacer(Modifier.height(8.dp))
+                        MarkdownText(response)
+                    }
+                }
+            }
+            item {
+                SectionHeader("Ask your coach")
+                OutlinedTextField(
+                    value = input,
+                    onValueChange = { input = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 3,
+                    label = { Text("Ask anything about your JEE preparation") },
+                    placeholder = { Text("e.g. How should I recover my Physics accuracy this week?") }
+                )
+                Spacer(Modifier.height(8.dp))
+                Button(
+                    onClick = { stream(input) },
+                    enabled = input.isNotBlank() && !busy && settings.hasApiKey(),
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp)
+                ) {
+                    if (busy) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+                    else Icon(Icons.Filled.Send, null, Modifier.size(17.dp))
+                    Spacer(Modifier.width(7.dp))
+                    Text(if (busy) "Thinking..." else "Ask coach")
+                }
+            }
+            if (!settings.hasApiKey()) {
+                item {
+                    JeeCard {
+                        Text("AI is optional", style = MaterialTheme.typography.titleMedium)
+                        Spacer(Modifier.height(5.dp))
+                        Text("The local focus, revision and analytics systems continue working without AI.", color = TextSecondary, fontSize = 11.sp)
+                    }
+                }
+            }
             item { Spacer(Modifier.height(24.dp)) }
         }
     }
-}
 
 @Composable
 private fun MarkdownText(markdown: String) {

@@ -3,30 +3,30 @@ package com.example.jeecommandcenter.ui.theme
 import androidx.compose.ui.graphics.Color
 
 // Warm Graphite palette
-val BgAppBase = Color(0xFF0C0C0D)
+val BgAppBase = Color(0xFF151916)
 // Screen scaffolds are transparent so the global academic wallpaper can sit behind them.
 val BgApp = Color.Transparent
-val BgCard = Color(0xFF18181B)
-val BgCardAlt = Color(0xFF1E1E21)
-val BgCardBorder = Color(0xFF3F3F42)
-val BgDivider = Color(0xFF3F3F42)
-val BgPriority = Color(0xFF1E1E21)
-val BorderPriority = Color(0xFF3F3F42)
-val BgPriorityBadge = Color(0xFF1E1E21)
+val BgCard = Color(0xFF20251F)
+val BgCardAlt = Color(0xFF2B312A)
+val BgCardBorder = Color(0xFF444D43)
+val BgDivider = Color(0xFF444D43)
+val BgPriority = Color(0xFF2B312A)
+val BorderPriority = Color(0xFF444D43)
+val BgPriorityBadge = Color(0xFF2B312A)
 
-val TextPriorityBadge = Color(0xFFEF4444)
-val TextAmber = Color(0xFFFCD34D)
-val TextPrimary = Color(0xFFFAFAFA)
-val TextSecondary = Color(0xFFA1A1A8)
-val TextMuted = Color(0xFF6B6B70)
-val TextOnCard = Color(0xFFFAFAFA)
+val TextPriorityBadge = Color(0xFFC0E98B)
+val TextAmber = Color(0xFFC0E98B)
+val TextPrimary = Color(0xFFF2F6EF)
+val TextSecondary = Color(0xFFAEB7A7)
+val TextMuted = Color(0xFF7F8979)
+val TextOnCard = Color(0xFFF2F6EF)
 
 // Semantic accent tokens. Prefer these names in new code.
-val Primary = Color(0xFFF59E0B)
-val PrimaryLight = Color(0xFFFCD34D)
-val PrimarySoft = Color(0xFF1E1E21)
+val Primary = Color(0xFF9CCB65)
+val PrimaryLight = Color(0xFFC0E98B)
+val PrimarySoft = Color(0xFF2B312A)
 val Success = Color(0xFF4ADE80)
-val SuccessDark = Color(0xFF18181B)
+val SuccessDark = Color(0xFF151916)
 val Warning = Color(0xFFFACC15)
 val Danger = Color(0xFFEF4444)
 val ChipSelectedBg = Primary

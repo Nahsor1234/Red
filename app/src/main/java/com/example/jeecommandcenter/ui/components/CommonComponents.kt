@@ -69,7 +69,7 @@ fun JeeBackground(modifier: Modifier = Modifier) {
             val center = androidx.compose.ui.geometry.Offset(col * step + ox, row * step + oy)
             val s = scale * 11.dp.toPx()
             val stroke = (0.8f + (h2 % 40) / 100f).dp.toPx()
-            val color = Color.White.copy(alpha = alpha)
+            val color = TextSecondary.copy(alpha = alpha)
             fun line(a: androidx.compose.ui.geometry.Offset, b: androidx.compose.ui.geometry.Offset) =
                 drawLine(color, a, b, strokeWidth = stroke)
             fun ring(radius: Float, point: androidx.compose.ui.geometry.Offset = center) =
@@ -223,14 +223,14 @@ fun BottomNavBar(selected: AppTab, onTabSelected: (AppTab) -> Unit, onAiClick: (
         AppTab.TASKS to (Icons.Filled.CheckCircle to "Tasks"),
         AppTab.STATS to (Icons.Filled.Timer to "Timer")
     )
-    Box(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal=12.dp,vertical=8.dp),contentAlignment=Alignment.Center){
-        Box(Modifier.wrapContentWidth().height(56.dp).clip(RoundedCornerShape(22.dp)).background(BgCard).border(1.dp,BgCardBorder.copy(alpha=.88f),RoundedCornerShape(22.dp))){
+    Box(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal=16.dp,bottom=17.dp),contentAlignment=Alignment.Center){
+        Box(Modifier.fillMaxWidth().height(66.dp).clip(RoundedCornerShape(33.dp)).background(BgCard).border(1.dp,BgCardBorder.copy(alpha=.88f),RoundedCornerShape(22.dp))){
             val targetPos=positions[selected]?:0.dp
             val targetWidth=widths[selected]?:0.dp
             val pillX by animateDpAsState(targetPos,animationSpec=spring(dampingRatio=Spring.DampingRatioNoBouncy,stiffness=Spring.StiffnessMediumLow),label="nav-pill-x")
             val pillW by animateDpAsState(targetWidth,animationSpec=spring(dampingRatio=Spring.DampingRatioNoBouncy,stiffness=Spring.StiffnessMediumLow),label="nav-pill-w")
-            Box(Modifier.matchParentSize().padding(4.dp)){if(targetWidth>0.dp)Box(Modifier.offset(x=pillX).width(pillW).fillMaxHeight().clip(RoundedCornerShape(18.dp)).background(BgCardAlt).border(1.dp,BgCardBorder.copy(alpha=.82f),RoundedCornerShape(18.dp)))}
-            Row(Modifier.padding(4.dp),verticalAlignment=Alignment.CenterVertically){
+            Box(Modifier.matchParentSize().padding(6.dp)){if(targetWidth>0.dp)Box(Modifier.offset(x=pillX).width(pillW).height(52.dp).align(Alignment.Center).clip(RoundedCornerShape(18.dp)).background(BgCardAlt).border(1.dp,BgCardBorder.copy(alpha=.82f),RoundedCornerShape(18.dp)))}
+            Row(Modifier.fillMaxSize().padding(6.dp),verticalAlignment=Alignment.CenterVertically){
                 NavDestination(items[0].second.first,items[0].second.second,selected==items[0].first,Modifier.onGloballyPositioned{co->positions[items[0].first]=with(density){co.positionInParent().x.toDp()};widths[items[0].first]=with(density){co.size.width.toDp()}}){if(selected!=items[0].first)view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK);onTabSelected(items[0].first)}
                 NavDestination(items[1].second.first,items[1].second.second,selected==items[1].first,Modifier.onGloballyPositioned{co->positions[items[1].first]=with(density){co.positionInParent().x.toDp()};widths[items[1].first]=with(density){co.size.width.toDp()}}){if(selected!=items[1].first)view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK);onTabSelected(items[1].first)}
                 AiDestination(Modifier.widthIn(min=48.dp),view,onAiClick)
