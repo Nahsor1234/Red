@@ -22,6 +22,7 @@ import com.example.jeecommandcenter.ui.components.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.UUID
+import kotlin.math.roundToInt
 
 private enum class AssessmentState { SETUP, RUNNING, RESULT }
 
@@ -54,9 +55,17 @@ fun AssessmentScreen(learning: LearningRepository, jee: JeeRepository, onBack: (
     fun finish() {
         val duration = ((System.currentTimeMillis() - startedAt) / 1000L).toInt()
         val attempts = learning.getQuestionAttempts().filter { it.testId == testId }
-        val marks = attempts.fold(0) { total, attempt -> total + if (attempt.correct) 4 else -1 }
-        val totalMarks = attempts.size * 4
-        val breakdown = attempts.groupBy { it.subject }.mapValues { (_, list) -> list.count { it.correct } to list.size }
+        val questionById = questions.associateBy { it.id }
+        val marks = attempts.sumOf { attempt ->
+            val question = questionById[attempt.questionId]
+            when {
+                attempt.correct -> question?.marks ?: 4
+                attempt.selectedIndex >= 0 -> -(question?.negativeMarks ?: 1f).roundToInt()
+                else -> 0
+            }
+        }
+        val totalMarks = attempts.sumOf { questionById[it.questionId]?.marks ?: 4 }
+        val breakdown = attempts.groupBy { it.subject }.mapValues { (_, list) -> list.count { it.correct } to list.count { it.selectedIndex >= 0 } }
         learning.saveTestAttempt(TestAttemptRecord(testId, mode, startedAt, System.currentTimeMillis(), attempts.size, attempts.count { it.correct }, marks, totalMarks, duration, breakdown))
         state = AssessmentState.RESULT
     }
@@ -81,9 +90,9 @@ fun AssessmentScreen(learning: LearningRepository, jee: JeeRepository, onBack: (
         AlertDialog(onDismissRequest = { if (!aiBusy) showAiDialog = false }, title = { Text("Create quiz with AI") }, text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text("Difficulty", color = TextSecondary, fontSize = 12.sp)
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { listOf("Easy", "Medium", "Hard", "Mixed").forEach { FilterChip(selected = aiDifficulty == it, onClick = { aiDifficulty = it }, label = { Text(it) }) } }
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { listOf("Easy", "Medium", "Hard", "Mixed").forEach { JeeFilterChip(it, aiDifficulty == it) { aiDifficulty = it } } }
                 Text("Questions", color = TextSecondary, fontSize = 12.sp)
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { listOf(5, 10, 15, 20).forEach { FilterChip(selected = aiCount == it, onClick = { aiCount = it }, label = { Text(it.toString()) }) } }
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { listOf(5, 10, 15, 20).forEach { JeeFilterChip(it.toString(), aiCount == it) { aiCount = it } } }
                 Text("Context: $subject${if (mode == TestMode.PRACTICE) "" else " · mixed subjects"}", color = TextMuted, fontSize = 11.sp)
                 if (aiBusy) LinearProgressIndicator(Modifier.fillMaxWidth(), color = AccentBlue)
             }
@@ -95,8 +104,8 @@ fun AssessmentScreen(learning: LearningRepository, jee: JeeRepository, onBack: (
 private fun SetupContent(mode: TestMode, subject: String, onMode: (TestMode) -> Unit, onSubject: (String) -> Unit, onStart: () -> Unit, onOpenMistakes: () -> Unit, modifier: Modifier, aiAvailable: Boolean, onCreateAi: () -> Unit) {
     LazyColumn(modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item { Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(BgCardAlt).padding(16.dp)) { Text("Assessment engine", style = MaterialTheme.typography.titleLarge); Spacer(Modifier.height(6.dp)); Text("Practice tests and AI-generated quizzes create real question attempts, mistakes and analytics.", color = TextMuted, fontSize = 11.sp) } }
-        item { Text("Mode", color = TextSecondary, fontSize = 12.sp); Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { FilterChip(mode == TestMode.PRACTICE, { onMode(TestMode.PRACTICE) }, label = { Text("Practice") }); FilterChip(mode == TestMode.MOCK, { onMode(TestMode.MOCK) }, label = { Text("Starter mock") }) } }
-        if (mode == TestMode.PRACTICE) item { Text("Subject", color = TextSecondary, fontSize = 12.sp); Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { listOf("Physics", "Chemistry", "Mathematics").forEach { FilterChip(subject == it, { onSubject(it) }, label = { Text(it) }) } } }
+        item { Text("Mode", color = TextSecondary, fontSize = 12.sp); Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { JeeFilterChip("Practice", mode == TestMode.PRACTICE) { onMode(TestMode.PRACTICE) }; JeeFilterChip("Starter mock", mode == TestMode.MOCK) { onMode(TestMode.MOCK) } } }
+        if (mode == TestMode.PRACTICE) item { Text("Subject", color = TextSecondary, fontSize = 12.sp); Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { listOf("Physics", "Chemistry", "Mathematics").forEach { JeeFilterChip(it, subject == it) { onSubject(it) } } } }
         item { Button(onClick = onStart, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = AccentBlue)) { Icon(Icons.Filled.PlayArrow, null); Spacer(Modifier.width(7.dp)); Text(if (mode == TestMode.MOCK) "Start 10-question mock" else "Start 5-question practice") } }
         item { OutlinedButton(onClick = onCreateAi, enabled = aiAvailable, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Filled.AutoAwesome, null); Spacer(Modifier.width(7.dp)); Text(if (aiAvailable) "Create quiz with AI" else "Configure AI to create quiz") } }
         item { OutlinedButton(onClick = onOpenMistakes, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Filled.ErrorOutline, null); Spacer(Modifier.width(7.dp)); Text("Open mistake bank") } }
