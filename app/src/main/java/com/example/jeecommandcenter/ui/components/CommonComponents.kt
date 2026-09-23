@@ -8,7 +8,6 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.core.updateTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.expandHorizontally
@@ -72,18 +71,18 @@ fun JeeBackground(modifier: Modifier = Modifier) {
             val st = (.75f+(h2%40)/100f).dp.toPx()
             val color = Color.White.copy(alpha=alpha)
             when(h%12){
-                0->{ drawLine(color,o,o.copy(x=o.x+s*1.5f),strokeWidth=st); drawLine(color,o,o.copy(y=o.y-s*1.25f),strokeWidth=st); drawCircle(color,s*.18f,o.copy(x=o.x+s*.9f,y=o.y-s*.55f)) }
-                1->{ val a=o.copy(x=o.x-s*.8f,y=o.y+s*.55f); val b=o.copy(x=o.x+s*.9f,y=o.y+s*.55f); val d=o.copy(x=o.x+s*.15f,y=o.y-s*.9f); drawLine(color,a,b,strokeWidth=st); drawLine(color,b,d,strokeWidth=st); drawLine(color,d,a,strokeWidth=st); drawCircle(color,s*.12f,a) }
-                2->{ drawArc(color,210f,140f,false,o.copy(x=o.x-s,y=o.y-s*.2f),androidx.compose.ui.geometry.Size(s*1.9f,s*1.4f),strokeWidth=st); drawLine(color,o.copy(x=o.x-s*.15f),o.copy(x=o.x-s*.55f,y=o.y-s*.8f),strokeWidth=st) }
-                3->{ var last=o.copy(x=o.x-s); for(i in 1..8){val next=o.copy(x=o.x-s+i*(s*.25f),y=o.y+kotlin.math.sin(i*.75f)*s*.42f); drawLine(color,last,next,strokeWidth=st); last=next} }
-                4->{ val a=o.copy(x=o.x-s*.65f); val b=o.copy(x=o.x+s*.65f,y=o.y-s*.3f); val d=o.copy(y=o.y+s*.7f); drawLine(color,a,b,strokeWidth=st); drawLine(color,a,d,strokeWidth=st); drawLine(color,b,d,strokeWidth=st); drawCircle(color,s*.2f,a); drawCircle(color,s*.16f,b); drawCircle(color,s*.18f,d) }
-                5->{ drawCircle(color,s*.55f,o,androidx.compose.ui.graphics.drawscope.Stroke(st)); drawCircle(color,s*.28f,o,androidx.compose.ui.graphics.drawscope.Stroke(st)); drawCircle(color,s*.08f,o); drawLine(color,o.copy(x=o.x-s*.85f),o.copy(x=o.x+s*.85f),strokeWidth=st) }
-                6->{ val pts=(0 until 6).map{i->val a=Math.toRadians((60*i-30).toDouble()); o.copy(x=o.x+kotlin.math.cos(a).toFloat()*s*.75f,y=o.y+kotlin.math.sin(a).toFloat()*s*.75f)}; pts.forEachIndexed{i,p0->drawLine(color,p0,pts[(i+1)%pts.size],strokeWidth=st)}; drawCircle(color,s*.28f,o,androidx.compose.ui.graphics.drawscope.Stroke(st)) }
-                7->{ val a=o.copy(x=o.x-s,y=o.y+s*.45f); val b=o.copy(x=o.x+s*.95f,y=o.y-s*.35f); drawLine(color,a,b,strokeWidth=st); drawLine(color,b,b.copy(x=b.x-s*.4f),strokeWidth=st); drawLine(color,b,b.copy(x=b.x-s*.12f,y=b.y+s*.28f),strokeWidth=st) }
-                8->{ val a=o.copy(x=o.x-s); val b=o.copy(x=o.x-s*.35f); val d=o.copy(x=o.x+s*.35f); val q=o.copy(x=o.x+s); drawLine(color,a,b,strokeWidth=st); drawLine(color,d,q,strokeWidth=st); drawRoundRect(color,b.copy(y=b.y-s*.28f),androidx.compose.ui.geometry.Size(s*.7f,s*.56f),androidx.compose.ui.geometry.CornerRadius(s*.08f),style=androidx.compose.ui.graphics.drawscope.Stroke(st)) }
-                9->{ drawLine(color,o.copy(x=o.x-s,y=o.y+s*.75f),o.copy(x=o.x+s,y=o.y+s*.75f),strokeWidth=st); drawLine(color,o.copy(x=o.x-s,y=o.y+s*.75f),o.copy(x=o.x-s,y=o.y-s),strokeWidth=st); var last=o.copy(x=o.x-s,y=o.y+s*.35f); for(i in 1..8){val next=o.copy(x=o.x-s+i*(s*.25f),y=o.y+kotlin.math.cos(i*.6f)*s*.45f); drawLine(color,last,next,strokeWidth=st); last=next} }
-                10->{ drawArc(color,195f,150f,false,o.copy(x=o.x-s,y=o.y-s*.35f),androidx.compose.ui.geometry.Size(s*2f,s*1.3f),strokeWidth=st); drawArc(color,195f,150f,false,o.copy(x=o.x-s*.7f,y=o.y-s*.15f),androidx.compose.ui.geometry.Size(s*1.4f,s*.9f),strokeWidth=st) }
-                else->{ drawLine(color,o.copy(x=o.x-s),o.copy(x=o.x+s),strokeWidth=st); drawLine(color,o.copy(x=o.x-s*.35f,y=o.y-s*.55f),o.copy(x=o.x+s*.35f,y=o.y-s*.55f),strokeWidth=st); drawCircle(color,s*.22f,o.copy(y=o.y+s*.55f),androidx.compose.ui.graphics.drawscope.Stroke(st)) }
+                0->{ drawLine(color,o,o.copy(x=o.x+s*1.5f),style=androidx.compose.ui.graphics.drawscope.Stroke(st)); drawLine(color,o,o.copy(y=o.y-s*1.25f),style=androidx.compose.ui.graphics.drawscope.Stroke(st)); drawCircle(color,s*.18f,o.copy(x=o.x+s*.9f,y=o.y-s*.55f)) }
+                1->{ val a=o.copy(x=o.x-s*.8f,y=o.y+s*.55f); val b=o.copy(x=o.x+s*.9f,y=o.y+s*.55f); val d=o.copy(x=o.x+s*.15f,y=o.y-s*.9f); drawLine(color,a,b,style=androidx.compose.ui.graphics.drawscope.Stroke(st)); drawLine(color,b,d,style=androidx.compose.ui.graphics.drawscope.Stroke(st)); drawLine(color,d,a,style=androidx.compose.ui.graphics.drawscope.Stroke(st)); drawCircle(color,s*.12f,a) }
+                2->{ drawArc(color,210f,140f,false,o.copy(x=o.x-s,y=o.y-s*.2f),androidx.compose.ui.geometry.Size(s*1.9f,s*1.4f),style=androidx.compose.ui.graphics.drawscope.Stroke(st)); drawLine(color,o.copy(x=o.x-s*.15f),o.copy(x=o.x-s*.55f,y=o.y-s*.8f),style=androidx.compose.ui.graphics.drawscope.Stroke(st)) }
+                3->{ var last=o.copy(x=o.x-s); for(i in 1..8){val next=o.copy(x=o.x-s+i*(s*.25f),y=o.y+kotlin.math.sin(i*.75f)*s*.42f); drawLine(color,last,next,style=androidx.compose.ui.graphics.drawscope.Stroke(st)); last=next} }
+                4->{ val a=o.copy(x=o.x-s*.65f); val b=o.copy(x=o.x+s*.65f,y=o.y-s*.3f); val d=o.copy(y=o.y+s*.7f); drawLine(color,a,b,style=androidx.compose.ui.graphics.drawscope.Stroke(st)); drawLine(color,a,d,style=androidx.compose.ui.graphics.drawscope.Stroke(st)); drawLine(color,b,d,style=androidx.compose.ui.graphics.drawscope.Stroke(st)); drawCircle(color,s*.2f,a); drawCircle(color,s*.16f,b); drawCircle(color,s*.18f,d) }
+                5->{ drawCircle(color,s*.55f,o,androidx.compose.ui.graphics.drawscope.Stroke(st)); drawCircle(color,s*.28f,o,androidx.compose.ui.graphics.drawscope.Stroke(st)); drawCircle(color,s*.08f,o); drawLine(color,o.copy(x=o.x-s*.85f),o.copy(x=o.x+s*.85f),style=androidx.compose.ui.graphics.drawscope.Stroke(st)) }
+                6->{ val pts=(0 until 6).map{i->val a=Math.toRadians((60*i-30).toDouble()); o.copy(x=o.x+kotlin.math.cos(a).toFloat()*s*.75f,y=o.y+kotlin.math.sin(a).toFloat()*s*.75f)}; pts.forEachIndexed{i,p0->drawLine(color,p0,pts[(i+1)%pts.size],style=androidx.compose.ui.graphics.drawscope.Stroke(st))}; drawCircle(color,s*.28f,o,androidx.compose.ui.graphics.drawscope.Stroke(st)) }
+                7->{ val a=o.copy(x=o.x-s,y=o.y+s*.45f); val b=o.copy(x=o.x+s*.95f,y=o.y-s*.35f); drawLine(color,a,b,style=androidx.compose.ui.graphics.drawscope.Stroke(st)); drawLine(color,b,b.copy(x=b.x-s*.4f),style=androidx.compose.ui.graphics.drawscope.Stroke(st)); drawLine(color,b,b.copy(x=b.x-s*.12f,y=b.y+s*.28f),style=androidx.compose.ui.graphics.drawscope.Stroke(st)) }
+                8->{ val a=o.copy(x=o.x-s); val b=o.copy(x=o.x-s*.35f); val d=o.copy(x=o.x+s*.35f); val q=o.copy(x=o.x+s); drawLine(color,a,b,style=androidx.compose.ui.graphics.drawscope.Stroke(st)); drawLine(color,d,q,style=androidx.compose.ui.graphics.drawscope.Stroke(st)); drawRoundRect(color,b.copy(y=b.y-s*.28f),androidx.compose.ui.geometry.Size(s*.7f,s*.56f),androidx.compose.ui.geometry.CornerRadius(s*.08f),style=androidx.compose.ui.graphics.drawscope.Stroke(st)) }
+                9->{ drawLine(color,o.copy(x=o.x-s,y=o.y+s*.75f),o.copy(x=o.x+s,y=o.y+s*.75f),style=androidx.compose.ui.graphics.drawscope.Stroke(st)); drawLine(color,o.copy(x=o.x-s,y=o.y+s*.75f),o.copy(x=o.x-s,y=o.y-s),style=androidx.compose.ui.graphics.drawscope.Stroke(st)); var last=o.copy(x=o.x-s,y=o.y+s*.35f); for(i in 1..8){val next=o.copy(x=o.x-s+i*(s*.25f),y=o.y+kotlin.math.cos(i*.6f)*s*.45f); drawLine(color,last,next,style=androidx.compose.ui.graphics.drawscope.Stroke(st)); last=next} }
+                10->{ drawArc(color,195f,150f,false,o.copy(x=o.x-s,y=o.y-s*.35f),androidx.compose.ui.geometry.Size(s*2f,s*1.3f),style=androidx.compose.ui.graphics.drawscope.Stroke(st)); drawArc(color,195f,150f,false,o.copy(x=o.x-s*.7f,y=o.y-s*.15f),androidx.compose.ui.geometry.Size(s*1.4f,s*.9f),style=androidx.compose.ui.graphics.drawscope.Stroke(st)) }
+                else->{ drawLine(color,o.copy(x=o.x-s),o.copy(x=o.x+s),style=androidx.compose.ui.graphics.drawscope.Stroke(st)); drawLine(color,o.copy(x=o.x-s*.35f,y=o.y-s*.55f),o.copy(x=o.x+s*.35f,y=o.y-s*.55f),style=androidx.compose.ui.graphics.drawscope.Stroke(st)); drawCircle(color,s*.22f,o.copy(y=o.y+s*.55f),androidx.compose.ui.graphics.drawscope.Stroke(st)) }
             }
         }
     }
@@ -160,10 +159,21 @@ fun BottomNavBar(selected: AppTab, onTabSelected: (AppTab) -> Unit, onAiClick: (
 
 @Composable
 private fun RowScope.NavDestination(icon:androidx.compose.ui.graphics.vector.ImageVector,label:String,selected:Boolean,modifier:Modifier,onClick:()->Unit){
-    val transition=updateTransition(selected,label="nav-$label")
-    val color by transition.animateColor({spring(stiffness=Spring.StiffnessMedium)},"color"){if(it)AccentBlueLight else TextSecondary}
-    val scale by transition.animateFloat({spring(dampingRatio=Spring.DampingRatioMediumBouncy,stiffness=Spring.StiffnessMediumLow)},"scale"){if(it)1.08f else 1f}
-    val pad by transition.animateDp({spring(dampingRatio=Spring.DampingRatioNoBouncy,stiffness=Spring.StiffnessMediumLow)},"pad"){if(it)11.dp else 12.dp}
+    val color by animateColorAsState(
+        if (selected) AccentBlueLight else TextSecondary,
+        animationSpec = spring(stiffness = Spring.StiffnessMedium),
+        label = "color"
+    )
+    val scale by animateFloatAsState(
+        if (selected) 1.08f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow),
+        label = "scale"
+    )
+    val pad by animateDpAsState(
+        if (selected) 11.dp else 12.dp,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow),
+        label = "pad"
+    )
     val interaction=remember{androidx.compose.foundation.interaction.MutableInteractionSource()}
     val pressed by interaction.collectIsPressedAsState()
     val pressScale by animateFloatAsState(if(pressed).94f else 1f,animationSpec=spring(dampingRatio=Spring.DampingRatioMediumBouncy,stiffness=Spring.StiffnessMedium),label="nav-press")
