@@ -60,29 +60,113 @@ fun JeeBackground(modifier: Modifier = Modifier) {
         val rows = (size.height / step).toInt() + 3
         val cols = (size.width / step).toInt() + 3
         for (row in 0 until rows) for (col in 0 until cols) {
-            val h = mixHash(row,col,17)
-            val h2 = mixHash(row,col,43)
-            val scale = .72f + (h % 36) / 100f
-            val alpha = .028f + (h2 % 24) / 1000f
-            val ox = ((mixHash(row,col,71)%35)-17).dp.toPx()
-            val oy = ((mixHash(row,col,97)%31)-15).dp.toPx()
-            val o = androidx.compose.ui.geometry.Offset(col*step+ox,row*step+oy)
-            val s = scale*11.dp.toPx()
-            val st = (.75f+(h2%40)/100f).dp.toPx()
-            val color = Color.White.copy(alpha=alpha)
-            when(h%12){
-                0->{ drawLine(color,o,o.copy(x=o.x+s*1.5f),style=androidx.compose.ui.graphics.drawscope.Stroke(st)); drawLine(color,o,o.copy(y=o.y-s*1.25f),style=androidx.compose.ui.graphics.drawscope.Stroke(st)); drawCircle(color,s*.18f,o.copy(x=o.x+s*.9f,y=o.y-s*.55f)) }
-                1->{ val a=o.copy(x=o.x-s*.8f,y=o.y+s*.55f); val b=o.copy(x=o.x+s*.9f,y=o.y+s*.55f); val d=o.copy(x=o.x+s*.15f,y=o.y-s*.9f); drawLine(color,a,b,style=androidx.compose.ui.graphics.drawscope.Stroke(st)); drawLine(color,b,d,style=androidx.compose.ui.graphics.drawscope.Stroke(st)); drawLine(color,d,a,style=androidx.compose.ui.graphics.drawscope.Stroke(st)); drawCircle(color,s*.12f,a) }
-                2->{ drawArc(color,210f,140f,false,o.copy(x=o.x-s,y=o.y-s*.2f),androidx.compose.ui.geometry.Size(s*1.9f,s*1.4f),style=androidx.compose.ui.graphics.drawscope.Stroke(st)); drawLine(color,o.copy(x=o.x-s*.15f),o.copy(x=o.x-s*.55f,y=o.y-s*.8f),style=androidx.compose.ui.graphics.drawscope.Stroke(st)) }
-                3->{ var last=o.copy(x=o.x-s); for(i in 1..8){val next=o.copy(x=o.x-s+i*(s*.25f),y=o.y+kotlin.math.sin(i*.75f)*s*.42f); drawLine(color,last,next,style=androidx.compose.ui.graphics.drawscope.Stroke(st)); last=next} }
-                4->{ val a=o.copy(x=o.x-s*.65f); val b=o.copy(x=o.x+s*.65f,y=o.y-s*.3f); val d=o.copy(y=o.y+s*.7f); drawLine(color,a,b,style=androidx.compose.ui.graphics.drawscope.Stroke(st)); drawLine(color,a,d,style=androidx.compose.ui.graphics.drawscope.Stroke(st)); drawLine(color,b,d,style=androidx.compose.ui.graphics.drawscope.Stroke(st)); drawCircle(color,s*.2f,a); drawCircle(color,s*.16f,b); drawCircle(color,s*.18f,d) }
-                5->{ drawCircle(color,s*.55f,o,androidx.compose.ui.graphics.drawscope.Stroke(st)); drawCircle(color,s*.28f,o,androidx.compose.ui.graphics.drawscope.Stroke(st)); drawCircle(color,s*.08f,o); drawLine(color,o.copy(x=o.x-s*.85f),o.copy(x=o.x+s*.85f),style=androidx.compose.ui.graphics.drawscope.Stroke(st)) }
-                6->{ val pts=(0 until 6).map{i->val a=Math.toRadians((60*i-30).toDouble()); o.copy(x=o.x+kotlin.math.cos(a).toFloat()*s*.75f,y=o.y+kotlin.math.sin(a).toFloat()*s*.75f)}; pts.forEachIndexed{i,p0->drawLine(color,p0,pts[(i+1)%pts.size],style=androidx.compose.ui.graphics.drawscope.Stroke(st))}; drawCircle(color,s*.28f,o,androidx.compose.ui.graphics.drawscope.Stroke(st)) }
-                7->{ val a=o.copy(x=o.x-s,y=o.y+s*.45f); val b=o.copy(x=o.x+s*.95f,y=o.y-s*.35f); drawLine(color,a,b,style=androidx.compose.ui.graphics.drawscope.Stroke(st)); drawLine(color,b,b.copy(x=b.x-s*.4f),style=androidx.compose.ui.graphics.drawscope.Stroke(st)); drawLine(color,b,b.copy(x=b.x-s*.12f,y=b.y+s*.28f),style=androidx.compose.ui.graphics.drawscope.Stroke(st)) }
-                8->{ val a=o.copy(x=o.x-s); val b=o.copy(x=o.x-s*.35f); val d=o.copy(x=o.x+s*.35f); val q=o.copy(x=o.x+s); drawLine(color,a,b,style=androidx.compose.ui.graphics.drawscope.Stroke(st)); drawLine(color,d,q,style=androidx.compose.ui.graphics.drawscope.Stroke(st)); drawRoundRect(color,b.copy(y=b.y-s*.28f),androidx.compose.ui.geometry.Size(s*.7f,s*.56f),androidx.compose.ui.geometry.CornerRadius(s*.08f),style=androidx.compose.ui.graphics.drawscope.Stroke(st)) }
-                9->{ drawLine(color,o.copy(x=o.x-s,y=o.y+s*.75f),o.copy(x=o.x+s,y=o.y+s*.75f),style=androidx.compose.ui.graphics.drawscope.Stroke(st)); drawLine(color,o.copy(x=o.x-s,y=o.y+s*.75f),o.copy(x=o.x-s,y=o.y-s),style=androidx.compose.ui.graphics.drawscope.Stroke(st)); var last=o.copy(x=o.x-s,y=o.y+s*.35f); for(i in 1..8){val next=o.copy(x=o.x-s+i*(s*.25f),y=o.y+kotlin.math.cos(i*.6f)*s*.45f); drawLine(color,last,next,style=androidx.compose.ui.graphics.drawscope.Stroke(st)); last=next} }
-                10->{ drawArc(color,195f,150f,false,o.copy(x=o.x-s,y=o.y-s*.35f),androidx.compose.ui.geometry.Size(s*2f,s*1.3f),style=androidx.compose.ui.graphics.drawscope.Stroke(st)); drawArc(color,195f,150f,false,o.copy(x=o.x-s*.7f,y=o.y-s*.15f),androidx.compose.ui.geometry.Size(s*1.4f,s*.9f),style=androidx.compose.ui.graphics.drawscope.Stroke(st)) }
-                else->{ drawLine(color,o.copy(x=o.x-s),o.copy(x=o.x+s),style=androidx.compose.ui.graphics.drawscope.Stroke(st)); drawLine(color,o.copy(x=o.x-s*.35f,y=o.y-s*.55f),o.copy(x=o.x+s*.35f,y=o.y-s*.55f),style=androidx.compose.ui.graphics.drawscope.Stroke(st)); drawCircle(color,s*.22f,o.copy(y=o.y+s*.55f),androidx.compose.ui.graphics.drawscope.Stroke(st)) }
+            val h = mixHash(row, col, 17)
+            val h2 = mixHash(row, col, 43)
+            val scale = 0.7f + (h % 40) / 100f
+            val alpha = 0.028f + (h2 % 26) / 1000f
+            val ox = ((mixHash(row, col, 71) % 35) - 17).dp.toPx()
+            val oy = ((mixHash(row, col, 97) % 31) - 15).dp.toPx()
+            val center = androidx.compose.ui.geometry.Offset(col * step + ox, row * step + oy)
+            val s = scale * 11.dp.toPx()
+            val stroke = (0.8f + (h2 % 40) / 100f).dp.toPx()
+            val color = Color.White.copy(alpha = alpha)
+            fun line(a: androidx.compose.ui.geometry.Offset, b: androidx.compose.ui.geometry.Offset) =
+                drawLine(color, a, b, strokeWidth = stroke)
+            fun ring(radius: Float, point: androidx.compose.ui.geometry.Offset = center) =
+                drawCircle(color, radius = radius, center = point, style = androidx.compose.ui.graphics.drawscope.Stroke(width = stroke))
+            when (h % 12) {
+                0 -> { // coordinate axes
+                    line(center.copy(x = center.x - s), center.copy(x = center.x + s))
+                    line(center.copy(y = center.y + s), center.copy(y = center.y - s))
+                    drawCircle(color, s * 0.16f, center.copy(x = center.x + s * 0.55f, y = center.y - s * 0.42f))
+                }
+                1 -> { // triangle + altitude
+                    val a = center.copy(x = center.x - s * .8f, y = center.y + s * .55f)
+                    val b = center.copy(x = center.x + s * .85f, y = center.y + s * .55f)
+                    val d = center.copy(x = center.x + s * .1f, y = center.y - s * .85f)
+                    line(a, b); line(b, d); line(d, a); line(d, center.copy(x = d.x, y = a.y))
+                }
+                2 -> { // wave
+                    var last = center.copy(x = center.x - s)
+                    for (i in 1..10) {
+                        val next = center.copy(x = center.x - s + i * (s * .2f), y = center.y + kotlin.math.sin(i * .8f) * s * .45f)
+                        line(last, next); last = next
+                    }
+                }
+                3 -> { // molecule
+                    val a = center.copy(x = center.x - s * .72f, y = center.y)
+                    val b = center.copy(x = center.x + s * .7f, y = center.y - s * .25f)
+                    val d = center.copy(x = center.x, y = center.y + s * .75f)
+                    line(a, b); line(a, d); line(b, d)
+                    drawCircle(color, s * .18f, a); drawCircle(color, s * .15f, b); drawCircle(color, s * .17f, d)
+                }
+                4 -> { // atom/orbit
+                    ring(s * .62f); ring(s * .35f)
+                    drawCircle(color, s * .09f, center)
+                    line(center.copy(x = center.x - s), center.copy(x = center.x + s))
+                }
+                5 -> { // hexagon
+                    val pts = (0 until 6).map { i ->
+                        val angle = Math.toRadians((60 * i - 30).toDouble())
+                        center.copy(
+                            x = center.x + kotlin.math.cos(angle).toFloat() * s * .72f,
+                            y = center.y + kotlin.math.sin(angle).toFloat() * s * .72f
+                        )
+                    }
+                    pts.forEachIndexed { i, p -> line(p, pts[(i + 1) % pts.size]) }
+                    ring(s * .22f)
+                }
+                6 -> { // vector
+                    val start = center.copy(x = center.x - s, y = center.y + s * .45f)
+                    val tip = center.copy(x = center.x + s, y = center.y - s * .35f)
+                    line(start, tip)
+                    line(tip, tip.copy(x = tip.x - s * .38f))
+                    line(tip, tip.copy(x = tip.x - s * .12f, y = tip.y + s * .28f))
+                }
+                7 -> { // graph
+                    val axisX = center.x - s * .8f
+                    val axisY = center.y + s * .65f
+                    line(center.copy(x = axisX, y = center.y - s), center.copy(x = axisX, y = axisY))
+                    line(center.copy(x = axisX, y = axisY), center.copy(x = center.x + s, y = axisY))
+                    var last = center.copy(x = axisX, y = center.y + s * .15f)
+                    for (i in 1..7) {
+                        val next = center.copy(
+                            x = axisX + i * (s * .25f),
+                            y = center.y + kotlin.math.cos(i * .55f) * s * .42f
+                        )
+                        line(last, next); last = next
+                    }
+                }
+                8 -> { // circuit/formula abstraction
+                    val left = center.copy(x = center.x - s)
+                    val right = center.copy(x = center.x + s)
+                    line(left, center.copy(x = center.x - s * .35f))
+                    line(center.copy(x = center.x + s * .35f), right)
+                    line(center.copy(x = center.x - s * .35f, y = center.y - s * .3f), center.copy(x = center.x + s * .35f, y = center.y - s * .3f))
+                    line(center.copy(x = center.x, y = center.y - s * .3f), center.copy(x = center.x, y = center.y + s * .3f))
+                }
+                9 -> { // concentric geometry
+                    ring(s * .72f); ring(s * .36f)
+                    line(center.copy(x = center.x - s), center.copy(x = center.x + s))
+                    line(center.copy(y = center.y - s), center.copy(y = center.y + s))
+                }
+                10 -> { // double arrow / force
+                    val a = center.copy(x = center.x - s, y = center.y - s * .2f)
+                    val b = center.copy(x = center.x + s, y = center.y - s * .2f)
+                    line(a, b)
+                    line(a, a.copy(x = a.x + s * .32f, y = a.y - s * .28f))
+                    line(a, a.copy(x = a.x + s * .32f, y = a.y + s * .28f))
+                    line(b, b.copy(x = b.x - s * .32f, y = b.y - s * .28f))
+                    line(b, b.copy(x = b.x - s * .32f, y = b.y + s * .28f))
+                }
+                else -> { // small geometry/formula tile
+                    val tl = center.copy(x = center.x - s * .7f, y = center.y - s * .45f)
+                    val tr = center.copy(x = center.x + s * .7f, y = center.y - s * .45f)
+                    val br = center.copy(x = center.x + s * .7f, y = center.y + s * .45f)
+                    val bl = center.copy(x = center.x - s * .7f, y = center.y + s * .45f)
+                    line(tl, tr); line(tr, br); line(br, bl); line(bl, tl)
+                    drawCircle(color, s * .12f, center)
+                }
             }
         }
     }
