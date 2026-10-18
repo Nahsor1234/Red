@@ -105,7 +105,7 @@ fun StudyTimerScreen(repo: JeeRepository, selectedTab: AppTab, onTabSelected: (A
         view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
     }
 
-    Scaffold(containerColor = BgApp, bottomBar = { BottomNavBar(selectedTab, onTabSelected) }) { padding ->
+    Scaffold(containerColor = BgApp, bottomBar = { AnimatedBottomNavBar(selectedTab, onTabSelected, visible = selectedTab != AppTab.AI) }) { padding ->
         LazyColumn(
             Modifier.fillMaxSize().padding(padding).padding(horizontal = 18.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
