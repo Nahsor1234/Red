@@ -68,15 +68,9 @@ fun DailyLogScreen(onBack: () -> Unit) {
         }
     }
     val selectedIsToday = selectedDate == today
-    val recordLabel = when {
-        selectedIsToday -> "TODAY · EDITABLE"
-        selectedDate.isAfter(today) -> "FUTURE DATE · READ ONLY"
-        else -> "PAST RECORD · READ ONLY"
-    }
-
     Scaffold(
         containerColor = BgApp,
-        topBar = { JeeTopBar(title = "Daily Log", onBack = onBack) }
+        topBar = { JeeTopBar(title = "Daily Progress", onBack = onBack) }
     ) { padding ->
         Column(
             Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp),
@@ -151,29 +145,29 @@ fun DailyLogScreen(onBack: () -> Unit) {
                                 ) {
                                     Text(date.dayOfMonth.toString(), color = if (isSelected) PrimaryLight else TextPrimary, fontSize = 13.sp, fontWeight = if (isToday || isSelected) FontWeight.Bold else FontWeight.Medium)
                                     Spacer(Modifier.height(2.dp))
-                                    Box(Modifier.size(5.dp).clip(RoundedCornerShape(50)).background(
-                                        when {
-                                            dateEntry.completed -> PrimaryLight
-                                            date == today -> Primary
-                                            date.isAfter(today) -> Color.Transparent
-                                            dateEntry.notes.isNotBlank() -> AccentBlueLight
-                                            else -> Color.Transparent
-                                        }
-                                    ))
+                                    if (dateEntry.completed) {
+                                        Icon(
+                                            imageVector = Icons.Filled.Check,
+                                            contentDescription = "Completed",
+                                            tint = PrimaryLight,
+                                            modifier = Modifier.size(13.dp)
+                                        )
+                                    } else {
+                                        Spacer(Modifier.size(13.dp))
+                                    }
                                 }
                             }
                         }
                     }
                 }
                 Spacer(Modifier.height(7.dp))
-                Text("Green dot = completed · blue dot = notes saved · outlined date = today", color = TextMuted, fontSize = 10.sp)
+                Text("Check = completed · outlined date = today", color = TextMuted, fontSize = 10.sp)
             }
 
             JeeCard(modifier = Modifier.weight(1f, fill = false)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text(selectedDate.format(DateTimeFormatter.ofPattern("EEE, d MMM yyyy", Locale.getDefault())), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                        Text(recordLabel, color = if (selectedIsToday) PrimaryLight else TextMuted, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = .55.sp)
                     }
                     if (!selectedIsToday) {
                         Surface(shape = RoundedCornerShape(8.dp), color = BgCardAlt) {
