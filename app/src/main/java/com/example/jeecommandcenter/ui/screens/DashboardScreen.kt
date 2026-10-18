@@ -167,14 +167,14 @@ fun DashboardScreen(
                 JeeCard(modifier = Modifier.premiumClick(onClick = onOpenDailyLog)) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Surface(shape = RoundedCornerShape(12.dp), color = PrimarySoft) {
-                            Icon(Icons.Filled.CalendarMonth, "Daily Log", tint = PrimaryLight, modifier = Modifier.padding(10.dp).size(21.dp))
+                            Icon(Icons.Filled.CalendarMonth, "Daily Progress", tint = PrimaryLight, modifier = Modifier.padding(10.dp).size(21.dp))
                         }
                         Spacer(Modifier.width(11.dp))
                         Column(Modifier.weight(1f)) {
-                            Text("Daily Log", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                            Text("Daily Progress", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                             Text("${currentMonth.month.getDisplayName(TextStyle.SHORT, Locale.getDefault())} · $dailyLogCompleted/${currentMonth.lengthOfMonth()} days completed", color = TextSecondary, fontSize = 11.sp)
                         }
-                        Icon(Icons.Filled.ChevronRight, "Open Daily Log", tint = PrimaryLight)
+                        Icon(Icons.Filled.ChevronRight, "Open Daily Progress", tint = PrimaryLight)
                     }
                     Spacer(Modifier.height(10.dp))
                     LinearStatBar(dailyLogCompleted.toFloat() / currentMonth.lengthOfMonth().coerceAtLeast(1), height = 5.dp, fillColor = Primary)
