@@ -122,13 +122,14 @@ fun BottomNavBar(selected: AppTab, onTabSelected: (AppTab) -> Unit) {
             val indicatorX by animateDpAsState(
                 targetValue = horizontalInset + slotWidth * activeIndex +
                     ((slotWidth - indicatorSize).coerceAtLeast(0.dp) / 2f),
-                animationSpec = spring(dampingRatio = .86f, stiffness = 460f),
+                // Slower travel makes the selected halo clearly follow the user's tap.
+                animationSpec = tween(durationMillis = 520, easing = FastOutSlowInEasing),
                 label = "nav-selected-circle"
             )
             if (slotWidth > 0.dp) {
                 Box(
                     Modifier
-                        .offset(x = indicatorX, y = 2.dp)
+                        .offset(x = indicatorX, y = 4.dp)
                         .size(indicatorSize)
                         .clip(RoundedCornerShape(50))
                         .background(Primary.copy(alpha = .20f))
@@ -168,8 +169,8 @@ fun BottomNavBar(selected: AppTab, onTabSelected: (AppTab) -> Unit) {
 fun AnimatedBottomNavBar(selected: AppTab, onTabSelected: (AppTab) -> Unit, visible: Boolean) {
     AnimatedVisibility(
         visible = visible,
-        enter = slideInVertically(animationSpec = tween(220, easing = FastOutSlowInEasing)) { it } + fadeIn(tween(180)),
-        exit = slideOutVertically(animationSpec = tween(170, easing = FastOutSlowInEasing)) { it } + fadeOut(tween(120))
+        enter = slideInVertically(animationSpec = tween(460, easing = FastOutSlowInEasing)) { it } + fadeIn(tween(360)),
+        exit = slideOutVertically(animationSpec = tween(440, easing = FastOutSlowInEasing)) { it } + fadeOut(tween(300))
     ) {
         BottomNavBar(selected, onTabSelected)
     }
@@ -225,7 +226,7 @@ private fun RowScope.NavIconSlot(
                 role = Role.Tab,
                 onClick = onClick
             )
-            .padding(top = 2.dp, bottom = 2.dp),
+            .padding(top = 7.dp, bottom = 0.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
