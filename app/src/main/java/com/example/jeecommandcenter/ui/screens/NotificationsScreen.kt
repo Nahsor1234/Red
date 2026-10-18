@@ -251,7 +251,17 @@ private fun NotificationManagementScreen(onBack: () -> Unit) {
 
     val customReminders = remember(refresh) { customRepository.all() }
     val masterEnabled = remember(refresh) { settings.isMasterEnabled() }
-    val timelineItems = remember(customReminders) { buildTimelineItems(customReminders) }
+    val study = remember(refresh) { settings.getRule(ReminderSettingsRepository.TYPE_DAILY_STUDY) }
+    val dailyLog = remember(refresh) { settings.getRule(ReminderSettingsRepository.TYPE_DAILY_LOG) }
+    val timelineItems = remember(refresh) {
+        buildTimelineItems(
+            study = study,
+            dailyLog = dailyLog,
+            customReminders = customReminders,
+            lastStudyTriggered = settings.getLastTriggered(ReminderSettingsRepository.TYPE_DAILY_STUDY),
+            lastLogTriggered = settings.getLastTriggered(ReminderSettingsRepository.TYPE_DAILY_LOG)
+        )
+    }
     val nextUpcoming = if (masterEnabled) {
         timelineItems.filter { it.enabled && it.at.isAfter(LocalDateTime.now()) }.minByOrNull { it.at }
     } else null
@@ -259,10 +269,50 @@ private fun NotificationManagementScreen(onBack: () -> Unit) {
         ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
     val appNotificationsEnabled = NotificationManagerCompat.from(context).areNotificationsEnabled()
 
+    var pendingSystemType by remember { mutableStateOf<String?>(null) }
+    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        val type = pendingSystemType
+        pendingSystemType = null
+        if (granted && type != null) {
+            val current = settings.getRule(type)
+            settings.setRule(type, current.copy(enabled = true))
+            ReminderScheduler(context).schedule(type)
+            refresh++
+        }
+    }
+
     fun toggleCustomReminder(reminder: CustomReminder, enabled: Boolean) {
         customRepository.setEnabled(reminder.id, enabled)
         ReminderScheduler(context).scheduleCustom(reminder.id)
         refresh++
+    }
+
+    fun toggleSystemReminder(type: String, enabled: Boolean) {
+        if (!enabled) {
+            settings.setRule(type, settings.getRule(type).copy(enabled = false))
+            ReminderScheduler(context).schedule(type)
+            refresh++
+            return
+        }
+        if (Build.VERSION.SDK_INT >= 33 &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            pendingSystemType = type
+            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            settings.setRule(type, settings.getRule(type).copy(enabled = true))
+            ReminderScheduler(context).schedule(type)
+            refresh++
+        }
+    }
+
+    fun changeSystemReminderTime(type: String) {
+        val current = settings.getRule(type)
+        showTimePicker(context, current.hour, current.minute) { hour, minute ->
+            settings.setRule(type, current.copy(hour = hour, minute = minute))
+            ReminderScheduler(context).schedule(type)
+            refresh++
+        }
     }
 
     fun editReminder(reminder: CustomReminder) {
@@ -364,7 +414,7 @@ private fun NotificationManagementScreen(onBack: () -> Unit) {
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text("Timeline", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
                     Text(
-                        customReminders.size.toString() + if (customReminders.size == 1) " reminder" else " reminders",
+                        timelineItems.size.toString() + if (timelineItems.size == 1) " reminder" else " reminders",
                         color = TextMuted,
                         fontSize = 11.sp
                     )
@@ -387,7 +437,9 @@ private fun NotificationManagementScreen(onBack: () -> Unit) {
                 masterEnabled = masterEnabled,
                 onCustomToggle = ::toggleCustomReminder,
                 onCustomEdit = ::editReminder,
-                onCustomDelete = { confirmDeleteReminder = it }
+                onCustomDelete = { confirmDeleteReminder = it },
+                onSystemToggle = ::toggleSystemReminder,
+                onSystemTimeClick = ::changeSystemReminderTime
             )
 
             if (!notificationsAllowed || !appNotificationsEnabled) {
@@ -524,6 +576,33 @@ private fun CustomReminderActions(
 }
 
 @Composable
+private fun SystemReminderActions(
+    title: String,
+    enabled: Boolean,
+    onToggle: (Boolean) -> Unit,
+    onChangeTime: () -> Unit
+) {
+    var expanded by remember(title) { mutableStateOf(false) }
+    Box {
+        IconButton(onClick = { expanded = true }, modifier = Modifier.size(30.dp)) {
+            Icon(Icons.Filled.MoreVert, contentDescription = "$title options", tint = TextSecondary, modifier = Modifier.size(19.dp))
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            DropdownMenuItem(
+                text = { Text("Change time") },
+                leadingIcon = { Icon(Icons.Filled.Alarm, null) },
+                onClick = { expanded = false; onChangeTime() }
+            )
+            DropdownMenuItem(
+                text = { Text(if (enabled) "Turn off" else "Turn on") },
+                leadingIcon = { Icon(Icons.Filled.Notifications, null) },
+                onClick = { expanded = false; onToggle(!enabled) }
+            )
+        }
+    }
+}
+
+@Composable
 private fun DailyReminderTile(
     modifier: Modifier = Modifier,
     title: String,
@@ -568,6 +647,7 @@ private data class ReminderScheduleItem(
     val at: LocalDateTime,
     val enabled: Boolean,
     val customReminder: CustomReminder? = null,
+    val systemType: String? = null,
     val repeatLabel: String = "Daily"
 )
 
@@ -594,9 +674,43 @@ private fun nextScheduledDateTime(
     return null
 }
 
-private fun buildTimelineItems(customReminders: List<CustomReminder>): List<ReminderScheduleItem> {
+private fun buildTimelineItems(
+    study: ReminderRule,
+    dailyLog: ReminderRule,
+    customReminders: List<CustomReminder>,
+    lastStudyTriggered: Long,
+    lastLogTriggered: Long
+): List<ReminderScheduleItem> {
     val now = LocalDateTime.now()
     return buildList {
+        if (study.enabled || lastStudyTriggered > 0L) {
+            nextScheduledDateTime(now, study.hour, study.minute, CustomReminder.REPEAT_DAILY)?.let {
+                add(
+                    ReminderScheduleItem(
+                        title = "Daily study",
+                        message = "Start a focused JEE study block.",
+                        at = it,
+                        enabled = study.enabled,
+                        systemType = ReminderSettingsRepository.TYPE_DAILY_STUDY,
+                        repeatLabel = CustomReminder.REPEAT_DAILY
+                    )
+                )
+            }
+        }
+        if (dailyLog.enabled || lastLogTriggered > 0L) {
+            nextScheduledDateTime(now, dailyLog.hour, dailyLog.minute, CustomReminder.REPEAT_DAILY)?.let {
+                add(
+                    ReminderScheduleItem(
+                        title = "Daily progress",
+                        message = "Record what you studied and close today's loop.",
+                        at = it,
+                        enabled = dailyLog.enabled,
+                        systemType = ReminderSettingsRepository.TYPE_DAILY_LOG,
+                        repeatLabel = CustomReminder.REPEAT_DAILY
+                    )
+                )
+            }
+        }
         customReminders.forEach { reminder ->
             nextScheduledDateTime(
                 now,
@@ -632,7 +746,9 @@ private fun ReminderTimeline(
     masterEnabled: Boolean,
     onCustomToggle: (CustomReminder, Boolean) -> Unit,
     onCustomEdit: (CustomReminder) -> Unit,
-    onCustomDelete: (CustomReminder) -> Unit
+    onCustomDelete: (CustomReminder) -> Unit,
+    onSystemToggle: (String, Boolean) -> Unit,
+    onSystemTimeClick: (String) -> Unit
 ) {
     if (items.isEmpty()) {
         JeeCard {
@@ -712,13 +828,24 @@ private fun ReminderTimeline(
                                         letterSpacing = .5.sp
                                     )
                                 }
-                                item.customReminder?.let { reminder ->
-                                    CustomReminderActions(
-                                        reminder = reminder,
-                                        onToggleEnabled = { onCustomToggle(reminder, it) },
-                                        onEdit = { onCustomEdit(reminder) },
-                                        onDelete = { onCustomDelete(reminder) }
-                                    )
+                                when {
+                                    item.customReminder != null -> {
+                                        val reminder = item.customReminder
+                                        CustomReminderActions(
+                                            reminder = reminder,
+                                            onToggleEnabled = { onCustomToggle(reminder, it) },
+                                            onEdit = { onCustomEdit(reminder) },
+                                            onDelete = { onCustomDelete(reminder) }
+                                        )
+                                    }
+                                    item.systemType != null -> {
+                                        SystemReminderActions(
+                                            title = item.title,
+                                            enabled = item.enabled,
+                                            onToggle = { onSystemToggle(item.systemType, it) },
+                                            onChangeTime = { onSystemTimeClick(item.systemType) }
+                                        )
+                                    }
                                 }
                             }
                         }
