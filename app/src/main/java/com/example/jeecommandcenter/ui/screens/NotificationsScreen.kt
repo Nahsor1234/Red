@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.core.app.NotificationManagerCompat
+import com.example.jeecommandcenter.data.QuietHours
 import com.example.jeecommandcenter.data.ReminderRule
 import com.example.jeecommandcenter.data.ReminderScheduler
 import com.example.jeecommandcenter.data.ReminderSettingsRepository
@@ -52,6 +53,7 @@ fun NotificationCenterScreen(onBack: () -> Unit, onOpenSettings: () -> Unit) {
     var refresh by remember { mutableIntStateOf(0) }
     val study = remember(refresh) { settings.getRule(ReminderSettingsRepository.TYPE_DAILY_STUDY) }
     val dailyLog = remember(refresh) { settings.getRule(ReminderSettingsRepository.TYPE_DAILY_LOG) }
+    val masterEnabled = remember(refresh) { settings.isMasterEnabled() }
     val recentStudy = remember(refresh) { settings.getLastTriggered(ReminderSettingsRepository.TYPE_DAILY_STUDY) }
     val recentLog = remember(refresh) { settings.getLastTriggered(ReminderSettingsRepository.TYPE_DAILY_LOG) }
     val notificationsAllowed = Build.VERSION.SDK_INT < 33 ||
@@ -88,6 +90,7 @@ fun NotificationCenterScreen(onBack: () -> Unit, onOpenSettings: () -> Unit) {
                 subtitle = "A nudge to begin a focused JEE session",
                 icon = Icons.Filled.Alarm,
                 rule = study,
+                masterEnabled = masterEnabled,
                 lastTriggered = recentStudy,
                 onRefresh = { refresh++ }
             )
@@ -96,6 +99,7 @@ fun NotificationCenterScreen(onBack: () -> Unit, onOpenSettings: () -> Unit) {
                 subtitle = "Remember to complete today's checklist and notes",
                 icon = Icons.Filled.Today,
                 rule = dailyLog,
+                masterEnabled = masterEnabled,
                 lastTriggered = recentLog,
                 onRefresh = { refresh++ }
             )
@@ -122,6 +126,7 @@ private fun ReminderSummaryCard(
     subtitle: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     rule: ReminderRule,
+    masterEnabled: Boolean,
     lastTriggered: Long,
     onRefresh: () -> Unit
 ) {
@@ -134,7 +139,16 @@ private fun ReminderSummaryCard(
             Column(Modifier.weight(1f)) {
                 Text(title, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
                 Text(subtitle, color = TextMuted, fontSize = 10.sp, lineHeight = 14.sp)
-                Text(if (rule.enabled) "ON · ${formatReminderTime(rule.hour, rule.minute)} daily" else "OFF · not scheduled", color = if (rule.enabled) PrimaryLight else TextMuted, fontSize = 10.sp, fontWeight = FontWeight.Medium)
+                Text(
+                    when {
+                        !rule.enabled -> "OFF · not scheduled"
+                        !masterEnabled -> "PAUSED · master switch is off"
+                        else -> "ON · ${formatReminderTime(rule.hour, rule.minute)} daily"
+                    },
+                    color = if (rule.enabled && masterEnabled) PrimaryLight else TextMuted,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Medium
+                )
             }
         }
         if (lastTriggered > 0L) {
@@ -165,6 +179,8 @@ fun NotificationSettingsScreen(onBack: () -> Unit) {
     var permissionMessage by remember { mutableStateOf<String?>(null) }
     val study = remember(refresh) { settings.getRule(ReminderSettingsRepository.TYPE_DAILY_STUDY) }
     val dailyLog = remember(refresh) { settings.getRule(ReminderSettingsRepository.TYPE_DAILY_LOG) }
+    val masterEnabled = remember(refresh) { settings.isMasterEnabled() }
+    val quietHours = remember(refresh) { settings.getQuietHours() }
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         val type = pendingType
         pendingType = null
@@ -208,6 +224,28 @@ fun NotificationSettingsScreen(onBack: () -> Unit) {
                 Spacer(Modifier.height(4.dp))
                 Text("Choose which reminders you receive and when. Times use your device's local time.", color = TextSecondary, fontSize = 11.sp, lineHeight = 16.sp)
             }
+            JeeCard {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("All reminders", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                        Text("Pause or resume every scheduled reminder.", color = TextSecondary, fontSize = 11.sp, lineHeight = 15.sp)
+                    }
+                    Switch(
+                        checked = masterEnabled,
+                        onCheckedChange = { enabled ->
+                            settings.setMasterEnabled(enabled)
+                            ReminderScheduler(context).scheduleAll()
+                            refresh++
+                            permissionMessage = null
+                        }
+                    )
+                }
+            }
+            QuietHoursCard(context, quietHours) { updated ->
+                settings.setQuietHours(updated)
+                ReminderScheduler(context).scheduleAll()
+                refresh++
+            }
             ReminderSettingCard(
                 title = "Daily study reminder",
                 subtitle = "Prompt yourself to begin a focused study session.",
@@ -243,6 +281,33 @@ fun NotificationSettingsScreen(onBack: () -> Unit) {
     }
 }
 
+@Composable
+private fun QuietHoursCard(context: Context, hours: QuietHours, onChange: (QuietHours) -> Unit) {
+    JeeCard {
+        Text("Quiet hours", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        Spacer(Modifier.height(3.dp))
+        Text("Reminders are suppressed during this window. A reminder that fires during quiet hours is skipped for that day.", color = TextSecondary, fontSize = 11.sp, lineHeight = 15.sp)
+        Spacer(Modifier.height(9.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+            Column(Modifier.weight(1f)) {
+                Text("Start", color = TextMuted, fontSize = 10.sp)
+                OutlinedButton(
+                    onClick = { showTimePicker(context, hours.startHour, hours.startMinute) { h, m -> onChange(hours.copy(startHour = h, startMinute = m)) } },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                ) { Text(formatReminderTime(hours.startHour, hours.startMinute), fontSize = 11.sp, maxLines = 1) }
+            }
+            Column(Modifier.weight(1f)) {
+                Text("End", color = TextMuted, fontSize = 10.sp)
+                OutlinedButton(
+                    onClick = { showTimePicker(context, hours.endHour, hours.endMinute) { h, m -> onChange(hours.copy(endHour = h, endMinute = m)) } },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                ) { Text(formatReminderTime(hours.endHour, hours.endMinute), fontSize = 11.sp, maxLines = 1) }
+            }
+        }
+    }
+}
 @Composable
 private fun ReminderSettingCard(
     title: String,
