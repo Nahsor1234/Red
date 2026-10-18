@@ -58,6 +58,7 @@ import java.util.Locale
 fun NotificationCenterScreen(onBack: () -> Unit, onOpenSettings: () -> Unit) {
     val context = LocalContext.current
     val settings = remember { ReminderSettingsRepository(context) }
+    val customRepository = remember { CustomReminderRepository(context) }
     val lifecycleOwner = LocalLifecycleOwner.current
     var refresh by remember { mutableIntStateOf(0) }
     DisposableEffect(lifecycleOwner) {
@@ -72,6 +73,7 @@ fun NotificationCenterScreen(onBack: () -> Unit, onOpenSettings: () -> Unit) {
     val masterEnabled = remember(refresh) { settings.isMasterEnabled() }
     val recentStudy = remember(refresh) { settings.getLastTriggered(ReminderSettingsRepository.TYPE_DAILY_STUDY) }
     val recentLog = remember(refresh) { settings.getLastTriggered(ReminderSettingsRepository.TYPE_DAILY_LOG) }
+    val customReminders = remember(refresh) { customRepository.all() }
     val notificationsAllowed = Build.VERSION.SDK_INT < 33 ||
         ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
     val appNotificationsEnabled = NotificationManagerCompat.from(context).areNotificationsEnabled()
@@ -122,11 +124,24 @@ fun NotificationCenterScreen(onBack: () -> Unit, onOpenSettings: () -> Unit) {
                 onRefresh = { refresh++ }
             )
 
+            Text("CUSTOM REMINDERS", color = TextMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+            if (customReminders.isEmpty()) {
+                Text("No custom reminders created yet.", color = TextMuted, fontSize = 11.sp)
+            } else {
+                customReminders.forEach { reminder ->
+                    CustomReminderSummaryCard(reminder)
+                }
+            }
+
             Text("RECENT ACTIVITY", color = TextMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
             JeeCard {
                 RecentReminderRow("Daily study reminder", recentStudy)
                 HorizontalDivider(color = BgDivider.copy(alpha = .6f))
                 RecentReminderRow("Daily Progress reminder", recentLog)
+                customReminders.filter { it.lastTriggered > 0L }.sortedByDescending { it.lastTriggered }.forEach { reminder ->
+                    HorizontalDivider(color = BgDivider.copy(alpha = .6f))
+                    RecentReminderRow(reminder.title, reminder.lastTriggered)
+                }
             }
             Button(onClick = onOpenSettings, modifier = Modifier.fillMaxWidth().height(50.dp), shape = RoundedCornerShape(15.dp)) {
                 Icon(Icons.Filled.Settings, null, modifier = Modifier.size(18.dp))
@@ -134,6 +149,33 @@ fun NotificationCenterScreen(onBack: () -> Unit, onOpenSettings: () -> Unit) {
                 Text("Manage reminder settings")
             }
             Text("Reminders run locally on this device. Notification text never reveals your private study notes.", color = TextMuted, fontSize = 10.sp, lineHeight = 15.sp)
+        }
+    }
+}
+
+@Composable
+private fun CustomReminderSummaryCard(reminder: CustomReminder) {
+    JeeCard {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Surface(shape = RoundedCornerShape(12.dp), color = PrimarySoft) {
+                Icon(Icons.Filled.Notifications, null, tint = PrimaryLight, modifier = Modifier.padding(10.dp).size(20.dp))
+            }
+            Spacer(Modifier.width(11.dp))
+            Column(Modifier.weight(1f)) {
+                Text(reminder.title, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                if (reminder.message.isNotBlank()) {
+                    Text(reminder.message, color = TextMuted, fontSize = 10.sp, lineHeight = 14.sp, maxLines = 2)
+                }
+                Text(
+                    when {
+                        !reminder.enabled -> "OFF · not scheduled"
+                        else -> "ON · ${formatReminderTime(reminder.hour, reminder.minute)} · ${reminder.repeat}"
+                    },
+                    color = if (reminder.enabled) PrimaryLight else TextMuted,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
         }
     }
 }
