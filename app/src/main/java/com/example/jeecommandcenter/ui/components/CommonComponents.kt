@@ -22,6 +22,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.AssignmentTurnedIn
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -86,20 +91,20 @@ fun BottomNavBar(selected: AppTab, onTabSelected: (AppTab) -> Unit, onAiClick: (
     val density = LocalDensity.current
     var navWidth by remember { mutableStateOf(0.dp) }
     val itemCount = 5
-    val contentWidth = (navWidth - 8.dp).coerceAtLeast(0.dp)
+    val horizontalInset = 4.dp
+    val contentWidth = (navWidth - horizontalInset * 2).coerceAtLeast(0.dp)
     val slotWidth = if (contentWidth > 0.dp) contentWidth / itemCount else 0.dp
-    val indicatorWidth = 52.dp
-    val indicatorHeight = 44.dp
     val activeIndex = when (selected) {
         AppTab.HOME -> 0
         AppTab.SYLLABUS -> 1
         AppTab.TASKS -> 3
         AppTab.STATS -> 4
     }
+    val indicatorSize = 48.dp
     val indicatorX by animateDpAsState(
-        targetValue = 4.dp + slotWidth * activeIndex + ((slotWidth - indicatorWidth).coerceAtLeast(0.dp) / 2f),
+        targetValue = horizontalInset + slotWidth * activeIndex + ((slotWidth - indicatorSize).coerceAtLeast(0.dp) / 2f),
         animationSpec = spring(dampingRatio = .82f, stiffness = 420f),
-        label = "nav-selected-pill"
+        label = "nav-selected-circle"
     )
 
     Box(
@@ -107,101 +112,131 @@ fun BottomNavBar(selected: AppTab, onTabSelected: (AppTab) -> Unit, onAiClick: (
             .fillMaxWidth()
             .navigationBarsPadding()
             .padding(horizontal = 28.dp)
-            .padding(bottom = 16.dp),
+            .padding(bottom = 12.dp),
         contentAlignment = Alignment.Center
     ) {
         Box(
             Modifier
                 .fillMaxWidth()
-                .height(58.dp)
+                .height(76.dp)
+                .shadow(20.dp, JeeShapes.pill, clip = false)
                 .clip(JeeShapes.pill)
-                .shadow(18.dp, JeeShapes.pill, clip = false)
-                .background(BgCard.copy(alpha = .985f))
+                .background(BgCard.copy(alpha = .94f))
                 .border(1.dp, BgCardBorder.copy(alpha = .95f), JeeShapes.pill)
                 .onGloballyPositioned { navWidth = with(density) { it.size.width.toDp() } }
         ) {
             if (slotWidth > 0.dp) {
                 Box(
                     Modifier
-                        .offset(x = indicatorX, y = 7.dp)
-                        .size(indicatorWidth, indicatorHeight)
-                        .clip(JeeShapes.pill)
-                        .background(BgAppBase.copy(alpha = .98f))
-                        .border(1.dp, Primary.copy(alpha = .62f), JeeShapes.pill)
+                        .offset(x = indicatorX, y = 5.dp)
+                        .size(indicatorSize)
+                        .clip(RoundedCornerShape(50))
+                        .background(Primary.copy(alpha = .20f))
+                        .border(1.dp, Primary.copy(alpha = .22f), RoundedCornerShape(50))
                 )
             }
-            Row(Modifier.fillMaxSize().padding(horizontal = 4.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
-                NavIconSlot(NavVisual.HOME, selected == AppTab.HOME, Modifier.weight(1f)) { view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK); onTabSelected(AppTab.HOME) }
-                NavIconSlot(NavVisual.SYLLABUS, selected == AppTab.SYLLABUS, Modifier.weight(1f)) { view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK); onTabSelected(AppTab.SYLLABUS) }
-                NavIconSlot(NavVisual.AI, false, Modifier.weight(1f), accent = true) { view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK); onAiClick() }
-                NavIconSlot(NavVisual.TASKS, selected == AppTab.TASKS, Modifier.weight(1f)) { view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK); onTabSelected(AppTab.TASKS) }
-                NavIconSlot(NavVisual.TIMER, selected == AppTab.STATS, Modifier.weight(1f)) { view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK); onTabSelected(AppTab.STATS) }
+            Row(
+                Modifier.fillMaxSize().padding(horizontal = horizontalInset, vertical = 5.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                NavIconSlot(NavVisual.HOME, selected == AppTab.HOME, Modifier.weight(1f)) {
+                    view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                    onTabSelected(AppTab.HOME)
+                }
+                NavIconSlot(NavVisual.SYLLABUS, selected == AppTab.SYLLABUS, Modifier.weight(1f)) {
+                    view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                    onTabSelected(AppTab.SYLLABUS)
+                }
+                NavIconSlot(NavVisual.AI, false, Modifier.weight(1f)) {
+                    view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                    onAiClick()
+                }
+                NavIconSlot(NavVisual.TASKS, selected == AppTab.TASKS, Modifier.weight(1f)) {
+                    view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                    onTabSelected(AppTab.TASKS)
+                }
+                NavIconSlot(NavVisual.TIMER, selected == AppTab.STATS, Modifier.weight(1f)) {
+                    view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                    onTabSelected(AppTab.STATS)
+                }
             }
         }
     }
 }
 
 @Composable
-private fun RowScope.NavIconSlot(visual: NavVisual, selected: Boolean, modifier: Modifier, accent: Boolean = false, onClick: () -> Unit) {
+private fun RowScope.NavIconSlot(
+    visual: NavVisual,
+    selected: Boolean,
+    modifier: Modifier,
+    onClick: () -> Unit
+) {
     val interaction = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val scale by animateFloatAsState(
-        targetValue = when { pressed -> .88f; selected -> 1.035f; else -> 1f },
-        animationSpec = spring(dampingRatio = .7f, stiffness = 520f),
-        label = "nav-icon-scale-$visual"
+        targetValue = when {
+            pressed -> .91f
+            selected -> 1.02f
+            else -> 1f
+        },
+        animationSpec = spring(dampingRatio = .72f, stiffness = 500f),
+        label = "nav-item-scale-$visual"
     )
-    val color by animateColorAsState(
-        targetValue = when { selected -> PrimaryLight; accent -> PrimaryLight; else -> TextSecondary },
-        animationSpec = tween(160), label = "nav-icon-color-$visual"
+    val contentColor by animateColorAsState(
+        targetValue = if (selected) PrimaryLight else TextSecondary,
+        animationSpec = tween(160),
+        label = "nav-item-color-$visual"
     )
-    Box(
-        modifier.fillMaxHeight().clip(JeeShapes.pill).graphicsLayer(scaleX = scale, scaleY = scale).clickable(
-            interactionSource = interaction, indication = LocalIndication.current, onClick = onClick
-        ), contentAlignment = Alignment.Center
-    ) {
-        NavIconVisual(visual, color)
+    val icon = when (visual) {
+        NavVisual.HOME -> Icons.Filled.Home
+        NavVisual.SYLLABUS -> Icons.Filled.MenuBook
+        NavVisual.AI -> Icons.Filled.AutoAwesome
+        NavVisual.TASKS -> Icons.Filled.AssignmentTurnedIn
+        NavVisual.TIMER -> Icons.Filled.Timer
     }
-}
+    val label = when (visual) {
+        NavVisual.HOME -> "Home"
+        NavVisual.SYLLABUS -> "Syllabus"
+        NavVisual.AI -> "AI"
+        NavVisual.TASKS -> "Tasks"
+        NavVisual.TIMER -> "Timer"
+    }
 
-@Composable
-private fun NavIconVisual(visual: NavVisual, color: Color) {
-    Canvas(Modifier.size(29.dp)) {
-        val s = size.minDimension
-        val depth = color.copy(alpha = .22f)
-        fun drawLayer(offset: Float, c: Color) {
-            when (visual) {
-                NavVisual.HOME -> {
-                    val p = Path().apply { moveTo(s*.12f, s*.46f+offset); lineTo(s*.50f, s*.12f+offset); lineTo(s*.88f, s*.46f+offset); lineTo(s*.78f, s*.46f+offset); lineTo(s*.78f, s*.86f+offset); lineTo(s*.58f, s*.86f+offset); lineTo(s*.58f, s*.62f+offset); lineTo(s*.42f, s*.62f+offset); lineTo(s*.42f, s*.86f+offset); lineTo(s*.22f, s*.86f+offset); lineTo(s*.22f, s*.46f+offset); close() }
-                    drawPath(p, c)
-                }
-                NavVisual.SYLLABUS -> {
-                    drawRoundRect(c, androidx.compose.ui.geometry.Offset(s*.08f, s*.14f+offset), androidx.compose.ui.geometry.Size(s*.40f, s*.72f), cornerRadius = androidx.compose.ui.geometry.CornerRadius(s*.06f))
-                    drawRoundRect(c.copy(alpha=.8f), androidx.compose.ui.geometry.Offset(s*.50f, s*.14f+offset), androidx.compose.ui.geometry.Size(s*.42f, s*.72f), cornerRadius = androidx.compose.ui.geometry.CornerRadius(s*.06f))
-                    drawLine(BgAppBase.copy(alpha=.55f), androidx.compose.ui.geometry.Offset(s*.50f, s*.19f+offset), androidx.compose.ui.geometry.Offset(s*.50f, s*.81f+offset), strokeWidth=s*.045f)
-                    drawLine(BgAppBase.copy(alpha=.45f), androidx.compose.ui.geometry.Offset(s*.60f, s*.36f+offset), androidx.compose.ui.geometry.Offset(s*.82f, s*.36f+offset), strokeWidth=s*.04f)
-                    drawLine(BgAppBase.copy(alpha=.45f), androidx.compose.ui.geometry.Offset(s*.60f, s*.48f+offset), androidx.compose.ui.geometry.Offset(s*.82f, s*.48f+offset), strokeWidth=s*.04f)
-                }
-                NavVisual.AI -> {
-                    val cx=s*.5f; val cy=s*.5f
-                    drawCircle(c, s*.18f, androidx.compose.ui.geometry.Offset(cx,cy+offset))
-                    drawLine(c, androidx.compose.ui.geometry.Offset(cx, s*.05f+offset), androidx.compose.ui.geometry.Offset(cx, s*.95f+offset), strokeWidth=s*.08f, cap=androidx.compose.ui.graphics.StrokeCap.Round)
-                    drawLine(c, androidx.compose.ui.geometry.Offset(s*.05f, cy+offset), androidx.compose.ui.geometry.Offset(s*.95f, cy+offset), strokeWidth=s*.08f, cap=androidx.compose.ui.graphics.StrokeCap.Round)
-                    drawCircle(c.copy(alpha=.8f), s*.07f, androidx.compose.ui.geometry.Offset(s*.77f,s*.23f+offset))
-                }
-                NavVisual.TASKS -> {
-                    drawCircle(c, s*.40f, androidx.compose.ui.geometry.Offset(s*.5f,s*.5f+offset), style=androidx.compose.ui.graphics.drawscope.Stroke(width=s*.11f))
-                    drawLine(c, androidx.compose.ui.geometry.Offset(s*.28f,s*.51f+offset), androidx.compose.ui.geometry.Offset(s*.44f,s*.66f+offset), strokeWidth=s*.11f, cap=androidx.compose.ui.graphics.StrokeCap.Round)
-                    drawLine(c, androidx.compose.ui.geometry.Offset(s*.44f,s*.66f+offset), androidx.compose.ui.geometry.Offset(s*.75f,s*.34f+offset), strokeWidth=s*.11f, cap=androidx.compose.ui.graphics.StrokeCap.Round)
-                }
-                NavVisual.TIMER -> {
-                    drawCircle(c, s*.38f, androidx.compose.ui.geometry.Offset(s*.5f,s*.54f+offset), style=androidx.compose.ui.graphics.drawscope.Stroke(width=s*.10f))
-                    drawLine(c, androidx.compose.ui.geometry.Offset(s*.5f,s*.54f+offset), androidx.compose.ui.geometry.Offset(s*.5f,s*.33f+offset), strokeWidth=s*.08f, cap=androidx.compose.ui.graphics.StrokeCap.Round)
-                    drawLine(c, androidx.compose.ui.geometry.Offset(s*.5f,s*.54f+offset), androidx.compose.ui.geometry.Offset(s*.65f,s*.63f+offset), strokeWidth=s*.08f, cap=androidx.compose.ui.graphics.StrokeCap.Round)
-                    drawLine(c, androidx.compose.ui.geometry.Offset(s*.40f,s*.09f+offset), androidx.compose.ui.geometry.Offset(s*.60f,s*.09f+offset), strokeWidth=s*.09f, cap=androidx.compose.ui.graphics.StrokeCap.Round)
-                }
-            }
-        }
-        drawLayer(s*.10f, depth)
-        drawLayer(0f, color)
+    Column(
+        modifier
+            .fillMaxHeight()
+            .clip(JeeShapes.pill)
+            .graphicsLayer(scaleX = scale, scaleY = scale)
+            .clickable(
+                interactionSource = interaction,
+                indication = null,
+                onClick = onClick
+            )
+            .padding(top = 7.dp, bottom = 5.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            tint = contentColor,
+            modifier = Modifier.size(24.dp)
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text = label,
+            color = contentColor,
+            fontSize = 10.sp,
+            lineHeight = 12.sp,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+            maxLines = 1
+        )
+        Spacer(Modifier.height(3.dp))
+        Box(
+            Modifier
+                .size(4.dp)
+                .clip(RoundedCornerShape(50))
+                .background(if (selected) PrimaryLight else Color.Transparent)
+        )
     }
 }
