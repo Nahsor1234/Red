@@ -3,6 +3,7 @@ package com.example.jeecommandcenter.data
 import android.content.Context
 import org.json.JSONArray
 import org.json.JSONObject
+import java.time.LocalDate
 import java.util.UUID
 
 data class CustomReminder(
@@ -13,7 +14,8 @@ data class CustomReminder(
     val minute: Int,
     val repeat: String = REPEAT_DAILY,
     val enabled: Boolean = true,
-    val lastTriggered: Long = 0L
+    val lastTriggered: Long = 0L,
+    val scheduledDate: String? = null
 ) {
     companion object {
         const val REPEAT_DAILY = "Daily"
@@ -43,7 +45,8 @@ class CustomReminderRepository(context: Context) {
                             minute = item.optInt("minute", 0).coerceIn(0, 59),
                             repeat = item.optString("repeat", CustomReminder.REPEAT_DAILY).takeIf { it in CustomReminder.repeatOptions } ?: CustomReminder.REPEAT_DAILY,
                             enabled = item.optBoolean("enabled", true),
-                            lastTriggered = item.optLong("lastTriggered", 0L)
+                            lastTriggered = item.optLong("lastTriggered", 0L),
+                            scheduledDate = item.optString("scheduledDate").takeIf { it.isNotBlank() }
                         )
                     )
                 }
@@ -59,7 +62,8 @@ class CustomReminderRepository(context: Context) {
             message = reminder.message.trim().take(MAX_MESSAGE_LENGTH),
             hour = reminder.hour.coerceIn(0, 23),
             minute = reminder.minute.coerceIn(0, 59),
-            repeat = reminder.repeat.takeIf { it in CustomReminder.repeatOptions } ?: CustomReminder.REPEAT_DAILY
+            repeat = reminder.repeat.takeIf { it in CustomReminder.repeatOptions } ?: CustomReminder.REPEAT_DAILY,
+            scheduledDate = reminder.scheduledDate?.takeIf { value -> runCatching { LocalDate.parse(value) }.isSuccess }
         )
         val updated = all().filterNot { it.id == sanitized.id } + sanitized
         persist(updated)
@@ -95,6 +99,7 @@ class CustomReminderRepository(context: Context) {
                     .put("repeat", reminder.repeat)
                     .put("enabled", reminder.enabled)
                     .put("lastTriggered", reminder.lastTriggered)
+                    .put("scheduledDate", reminder.scheduledDate ?: "")
             )
         }
         prefs.edit().putString(KEY_REMINDERS, json.toString()).apply()
