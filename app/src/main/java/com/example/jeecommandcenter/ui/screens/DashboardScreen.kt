@@ -119,7 +119,7 @@ fun DashboardScreen(
     }
 
     Box(Modifier.fillMaxSize()) {
-        Scaffold(containerColor = BgApp.copy(alpha = 0f), bottomBar = { BottomNavBar(selectedTab, onTabSelected) }) { padding ->
+        Scaffold(containerColor = BgApp.copy(alpha = 0f), bottomBar = { AnimatedBottomNavBar(selectedTab, onTabSelected, visible = selectedTab != AppTab.AI) }) { padding ->
             Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 18.dp).verticalScroll(rememberScrollState())) {
                 Spacer(Modifier.height(12.dp))
                 Row(Modifier.fillMaxWidth().padding(bottom = 14.dp), Arrangement.SpaceBetween, Alignment.CenterVertically) {
