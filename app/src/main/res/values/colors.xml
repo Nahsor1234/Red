@@ -5,12 +5,12 @@
     <color name="cc_surface_high">#2B312A</color>
     <color name="cc_surface_glass">#1AFFFFFF</color>
     <color name="cc_outline">#444D43</color>
-    <color name="cc_primary">#9CCB65</color>
+    <color name="cc_primary">#A4D56A</color>
     <color name="cc_primary_container">#2B312A</color>
-    <color name="cc_secondary">#C0E98B</color>
+    <color name="cc_secondary">#CAF592</color>
     <color name="cc_on_surface">#F2F6EF</color>
     <color name="cc_on_surface_variant">#AEB7A7</color>
-    <color name="cc_success">#4ADE80</color>
+    <color name="cc_success">#4EE986</color>
     <color name="cc_warning">#FACC15</color>
     <color name="cc_error">#EF4444</color>
 </resources>
