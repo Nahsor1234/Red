@@ -90,7 +90,8 @@ fun StudyTimerScreen(repo: JeeRepository, selectedTab: AppTab, onTabSelected: (A
                 view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
                 break
             }
-            delay(250)
+            // The display is second-based; avoid triggering four recompositions per second.
+            delay(1000)
         }
     }
 
