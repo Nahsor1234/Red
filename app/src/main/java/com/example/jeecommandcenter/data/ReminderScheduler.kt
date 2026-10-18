@@ -15,8 +15,12 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.example.jeecommandcenter.MainActivity
 import java.util.Calendar
+import java.time.LocalTime
 
 data class ReminderRule(val enabled: Boolean, val hour: Int, val minute: Int)
+
+data class QuietHours(val startHour: Int, val startMinute: Int, val endHour: Int, val endMinute: Int)
+
 
 class ReminderSettingsRepository(context: Context) {
     private val prefs = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -36,6 +40,40 @@ class ReminderSettingsRepository(context: Context) {
             .putInt("hour_$type", rule.hour.coerceIn(0, 23))
             .putInt("minute_$type", rule.minute.coerceIn(0, 59))
             .apply()
+    }
+
+    fun isMasterEnabled(): Boolean = prefs.getBoolean("master_enabled", true)
+
+    fun setMasterEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean("master_enabled", enabled).apply()
+    }
+
+    fun getQuietHours(): QuietHours = QuietHours(
+        startHour = prefs.getInt("quiet_start_hour", 22).coerceIn(0, 23),
+        startMinute = prefs.getInt("quiet_start_minute", 0).coerceIn(0, 59),
+        endHour = prefs.getInt("quiet_end_hour", 7).coerceIn(0, 23),
+        endMinute = prefs.getInt("quiet_end_minute", 0).coerceIn(0, 59)
+    )
+
+    fun setQuietHours(hours: QuietHours) {
+        prefs.edit()
+            .putInt("quiet_start_hour", hours.startHour.coerceIn(0, 23))
+            .putInt("quiet_start_minute", hours.startMinute.coerceIn(0, 59))
+            .putInt("quiet_end_hour", hours.endHour.coerceIn(0, 23))
+            .putInt("quiet_end_minute", hours.endMinute.coerceIn(0, 59))
+            .apply()
+    }
+
+    fun isQuietNow(now: LocalTime = LocalTime.now()): Boolean {
+        val hours = getQuietHours()
+        val start = LocalTime.of(hours.startHour, hours.startMinute)
+        val end = LocalTime.of(hours.endHour, hours.endMinute)
+        if (start == end) return false
+        return if (start.isBefore(end)) {
+            !now.isBefore(start) && now.isBefore(end)
+        } else {
+            !now.isBefore(start) || now.isBefore(end)
+        }
     }
 
     fun getLastTriggered(type: String): Long = prefs.getLong("last_$type", 0L)
@@ -67,7 +105,7 @@ class ReminderScheduler(context: Context) {
         val alarmManager = appContext.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val pendingIntent = reminderPendingIntent(type)
         val rule = settings.getRule(type)
-        if (!rule.enabled) {
+        if (!settings.isMasterEnabled() || !rule.enabled) {
             alarmManager.cancel(pendingIntent)
             return
         }
@@ -112,7 +150,11 @@ class DailyReminderReceiver : BroadcastReceiver() {
         ) return
 
         val settings = ReminderSettingsRepository(context)
-        if (!settings.getRule(type).enabled) return
+        if (!settings.isMasterEnabled() || !settings.getRule(type).enabled) return
+        if (settings.isQuietNow()) {
+            ReminderScheduler(context).schedule(type)
+            return
+        }
         settings.recordTriggered(type, System.currentTimeMillis())
         ReminderNotificationPublisher.show(context, type)
         ReminderScheduler(context).schedule(type)
