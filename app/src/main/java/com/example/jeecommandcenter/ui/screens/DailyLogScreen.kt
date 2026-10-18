@@ -6,6 +6,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
@@ -91,7 +93,7 @@ fun DailyLogScreen(onBack: () -> Unit) {
         topBar = { JeeTopBar(title = "Daily Progress", onBack = onBack) }
     ) { padding ->
         Column(
-            Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp),
+            Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp).verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             JeeCard {
@@ -118,7 +120,7 @@ fun DailyLogScreen(onBack: () -> Unit) {
                         Modifier.width(104.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Box(Modifier.size(86.dp), contentAlignment = Alignment.Center) {
+                        Box(Modifier.size(92.dp), contentAlignment = Alignment.Center) {
                             Canvas(Modifier.fillMaxSize()) {
                                 val stroke = Stroke(width = 7.dp.toPx(), cap = StrokeCap.Round)
                                 drawArc(
@@ -138,21 +140,23 @@ fun DailyLogScreen(onBack: () -> Unit) {
                                     )
                                 }
                             }
-                            Text(
-                                "$consistencyPercent%",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = TextPrimary
-                            )
+                            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(0.dp)) {
+                                Text(
+                                    "$consistencyPercent%",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextPrimary
+                                )
+                                Text(
+                                    "CONSISTENCY",
+                                    color = TextMuted,
+                                    fontSize = 7.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = .25.sp,
+                                    maxLines = 1
+                                )
+                            }
                         }
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            "CONSISTENCY",
-                            color = TextMuted,
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = .7.sp
-                        )
                     }
                     Spacer(Modifier.width(7.dp))
                     Row(
@@ -254,7 +258,7 @@ fun DailyLogScreen(onBack: () -> Unit) {
                 Text("Check = completed · outlined date = today", color = TextMuted, fontSize = 10.sp)
             }
 
-            JeeCard(modifier = Modifier.weight(1f, fill = false)) {
+            JeeCard {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text(selectedDate.format(DateTimeFormatter.ofPattern("EEE, d MMM yyyy", Locale.getDefault())), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
@@ -288,7 +292,9 @@ fun DailyLogScreen(onBack: () -> Unit) {
                 OutlinedTextField(
                     value = entry.notes,
                     onValueChange = { if (selectedIsToday) { repository.updateTodayNotes(it); refresh++ } },
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 88.dp, max = 150.dp),
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 128.dp, max = 220.dp),
+                    minLines = 4,
+                    maxLines = 8,
                     placeholder = { Text(if (selectedIsToday) "Subjects, chapters, questions, revision..." else "No study notes saved for this date.", color = TextMuted, fontSize = 12.sp) },
                     readOnly = !selectedIsToday,
                     enabled = true,
