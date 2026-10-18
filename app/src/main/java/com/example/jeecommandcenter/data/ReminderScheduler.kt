@@ -14,13 +14,12 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.example.jeecommandcenter.MainActivity
-import java.util.Calendar
+import com.example.jeecommandcenter.R
 import java.time.LocalTime
+import java.util.Calendar
 
 data class ReminderRule(val enabled: Boolean, val hour: Int, val minute: Int)
-
 data class QuietHours(val startHour: Int, val startMinute: Int, val endHour: Int, val endMinute: Int)
-
 
 class ReminderSettingsRepository(context: Context) {
     private val prefs = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -43,10 +42,7 @@ class ReminderSettingsRepository(context: Context) {
     }
 
     fun isMasterEnabled(): Boolean = prefs.getBoolean("master_enabled", true)
-
-    fun setMasterEnabled(enabled: Boolean) {
-        prefs.edit().putBoolean("master_enabled", enabled).apply()
-    }
+    fun setMasterEnabled(enabled: Boolean) { prefs.edit().putBoolean("master_enabled", enabled).apply() }
 
     fun getQuietHours(): QuietHours = QuietHours(
         startHour = prefs.getInt("quiet_start_hour", 22).coerceIn(0, 23),
@@ -71,18 +67,12 @@ class ReminderSettingsRepository(context: Context) {
         val start = LocalTime.of(hours.startHour, hours.startMinute)
         val end = LocalTime.of(hours.endHour, hours.endMinute)
         if (start == end) return false
-        return if (start.isBefore(end)) {
-            !time.isBefore(start) && time.isBefore(end)
-        } else {
-            !time.isBefore(start) || time.isBefore(end)
-        }
+        return if (start.isBefore(end)) !time.isBefore(start) && time.isBefore(end)
+        else !time.isBefore(start) || time.isBefore(end)
     }
 
     fun getLastTriggered(type: String): Long = prefs.getLong("last_$type", 0L)
-
-    fun recordTriggered(type: String, timeMillis: Long) {
-        prefs.edit().putLong("last_$type", timeMillis).apply()
-    }
+    fun recordTriggered(type: String, timeMillis: Long) { prefs.edit().putLong("last_$type", timeMillis).apply() }
 
     companion object {
         const val PREFS = "reminder_settings_v1"
@@ -94,10 +84,12 @@ class ReminderSettingsRepository(context: Context) {
 class ReminderScheduler(context: Context) {
     private val appContext = context.applicationContext
     private val settings = ReminderSettingsRepository(appContext)
+    private val customReminders = CustomReminderRepository(appContext)
 
     fun scheduleAll() {
         schedule(ReminderSettingsRepository.TYPE_DAILY_STUDY)
         schedule(ReminderSettingsRepository.TYPE_DAILY_LOG)
+        customReminders.all().forEach { scheduleCustom(it.id) }
     }
 
     fun schedule(type: String) {
@@ -111,26 +103,57 @@ class ReminderScheduler(context: Context) {
             alarmManager.cancel(pendingIntent)
             return
         }
-        val nowMillis = System.currentTimeMillis()
         val configuredTime = LocalTime.of(rule.hour, rule.minute)
         val trigger = Calendar.getInstance().apply {
-            val quietHours = settings.getQuietHours()
             if (settings.isQuietAt(configuredTime)) {
-                // Preserve the daily reminder by moving it to the quiet window end.
-                set(Calendar.HOUR_OF_DAY, quietHours.endHour)
-                set(Calendar.MINUTE, quietHours.endMinute)
+                val quiet = settings.getQuietHours()
+                set(Calendar.HOUR_OF_DAY, quiet.endHour)
+                set(Calendar.MINUTE, quiet.endMinute)
             } else {
                 set(Calendar.HOUR_OF_DAY, rule.hour)
                 set(Calendar.MINUTE, rule.minute)
             }
             set(Calendar.SECOND, 0)
             set(Calendar.MILLISECOND, 0)
-            if (timeInMillis <= nowMillis) add(Calendar.DAY_OF_YEAR, 1)
+            if (timeInMillis <= System.currentTimeMillis()) add(Calendar.DAY_OF_YEAR, 1)
         }.timeInMillis
-
-        // These are user reminders, not time-critical alarms. Inexact idle-safe scheduling avoids
-        // requesting Android's restricted exact-alarm permission.
         alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, trigger, pendingIntent)
+    }
+
+    fun scheduleCustom(id: String) {
+        val alarmManager = appContext.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        val pendingIntent = customPendingIntent(id)
+        val reminder = customReminders.find(id)
+        if (!settings.isMasterEnabled() || reminder == null || !reminder.enabled) {
+            alarmManager.cancel(pendingIntent)
+            return
+        }
+        val configuredTime = LocalTime.of(reminder.hour, reminder.minute)
+        val quiet = settings.getQuietHours()
+        val useQuietEnd = settings.isQuietAt(configuredTime)
+        val trigger = Calendar.getInstance().apply {
+            if (useQuietEnd) {
+                set(Calendar.HOUR_OF_DAY, quiet.endHour)
+                set(Calendar.MINUTE, quiet.endMinute)
+            } else {
+                set(Calendar.HOUR_OF_DAY, reminder.hour)
+                set(Calendar.MINUTE, reminder.minute)
+            }
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+            if (timeInMillis <= System.currentTimeMillis()) add(Calendar.DAY_OF_YEAR, 1)
+            if (reminder.repeat == CustomReminder.REPEAT_WEEKDAYS) {
+                while (get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY || get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY) {
+                    add(Calendar.DAY_OF_YEAR, 1)
+                }
+            }
+        }.timeInMillis
+        alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, trigger, pendingIntent)
+    }
+
+    fun cancelCustom(id: String) {
+        val alarmManager = appContext.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        alarmManager.cancel(customPendingIntent(id))
     }
 
     private fun reminderPendingIntent(type: String): PendingIntent {
@@ -138,30 +161,61 @@ class ReminderScheduler(context: Context) {
             .setAction(ACTION_REMINDER)
             .putExtra(EXTRA_REMINDER_TYPE, type)
         return PendingIntent.getBroadcast(
-            appContext,
-            requestCode(type),
-            intent,
+            appContext, requestCode(type), intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+    }
+
+    private fun customPendingIntent(id: String): PendingIntent {
+        val intent = Intent(appContext, DailyReminderReceiver::class.java)
+            .setAction(ACTION_CUSTOM_REMINDER)
+            .putExtra(EXTRA_CUSTOM_REMINDER_ID, id)
+        return PendingIntent.getBroadcast(
+            appContext, customRequestCode(id), intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
     }
 
     companion object {
         const val ACTION_REMINDER = "com.sigmaje.app.ACTION_DAILY_REMINDER"
+        const val ACTION_CUSTOM_REMINDER = "com.sigmaje.app.ACTION_CUSTOM_REMINDER"
         const val EXTRA_REMINDER_TYPE = "reminder_type"
-        fun requestCode(type: String): Int =
-            if (type == ReminderSettingsRepository.TYPE_DAILY_STUDY) 7411 else 7412
+        const val EXTRA_CUSTOM_REMINDER_ID = "custom_reminder_id"
+        fun requestCode(type: String): Int = if (type == ReminderSettingsRepository.TYPE_DAILY_STUDY) 7411 else 7412
+        fun customRequestCode(id: String): Int = 20000 + (id.hashCode() and 0x3fffffff)
     }
 }
 
 class DailyReminderReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent?) {
+        val settings = ReminderSettingsRepository(context)
+        if (!settings.isMasterEnabled()) return
+
+        val customId = intent?.getStringExtra(ReminderScheduler.EXTRA_CUSTOM_REMINDER_ID)
+        if (!customId.isNullOrBlank()) {
+            val repository = CustomReminderRepository(context)
+            val reminder = repository.find(customId) ?: return
+            if (!reminder.enabled) return
+            if (settings.isQuietNow()) {
+                ReminderScheduler(context).scheduleCustom(customId)
+                return
+            }
+            if (ReminderNotificationPublisher.showCustom(context, reminder)) {
+                repository.markTriggered(customId, System.currentTimeMillis())
+            }
+            if (reminder.repeat == CustomReminder.REPEAT_ONCE) {
+                ReminderScheduler(context).cancelCustom(customId)
+            } else {
+                ReminderScheduler(context).scheduleCustom(customId)
+            }
+            return
+        }
+
         val type = intent?.getStringExtra(ReminderScheduler.EXTRA_REMINDER_TYPE) ?: return
         if (type != ReminderSettingsRepository.TYPE_DAILY_STUDY &&
             type != ReminderSettingsRepository.TYPE_DAILY_LOG
         ) return
-
-        val settings = ReminderSettingsRepository(context)
-        if (!settings.isMasterEnabled() || !settings.getRule(type).enabled) return
+        if (!settings.getRule(type).enabled) return
         if (settings.isQuietNow()) {
             ReminderScheduler(context).schedule(type)
             return
@@ -184,56 +238,73 @@ class ReminderBootReceiver : BroadcastReceiver() {
 }
 
 object ReminderNotificationPublisher {
-    private const val CHANNEL_ID = "study_reminders"
+    private const val CHANNEL_ID = "sigma_jee_reminders_v2"
 
     fun show(context: Context, type: String): Boolean {
+        val isProgress = type == ReminderSettingsRepository.TYPE_DAILY_LOG
+        val title = if (isProgress) "Close today's study loop" else "Your JEE session is waiting"
+        val body = if (isProgress) {
+            "Mark today's progress and jot down what you covered."
+        } else {
+            "Pick up your next topic and make progress in one focused study block."
+        }
+        val target = if (isProgress) "daily_progress" else "timer"
+        return post(context, notificationId(type), title, body, target, if (isProgress) "Open progress" else "Start session")
+    }
+
+    fun showCustom(context: Context, reminder: CustomReminder): Boolean {
+        val title = reminder.title.ifBlank { "Sigma JEE reminder" }
+        val body = reminder.message.ifBlank { "Your scheduled reminder is ready." }
+        return post(context, notificationId(reminder.id), title, body, "home", "Open Sigma JEE")
+    }
+
+    private fun post(context: Context, notificationId: Int, title: String, body: String, target: String, actionTitle: String): Boolean {
         if (Build.VERSION.SDK_INT >= 33 &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) return false
         if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) return false
 
-        val isDailyLog = type == ReminderSettingsRepository.TYPE_DAILY_LOG
-        val title = if (isDailyLog) "Log today's study" else "Time for your JEE study block"
-        val body = if (isDailyLog) {
-            "Mark today's Daily Log and note what you studied."
-        } else {
-            "Start a focused session and make progress on your next JEE topic."
-        }
         createChannel(context)
-        val target = if (isDailyLog) "daily_log" else "timer"
         val openIntent = Intent(context, MainActivity::class.java)
             .putExtra(MainActivity.EXTRA_OPEN_TARGET, target)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
         val contentIntent = PendingIntent.getActivity(
-            context,
-            if (isDailyLog) 7512 else 7511,
-            openIntent,
+            context, 30000 + (notificationId and 0x3fffffff), openIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val actionIntent = PendingIntent.getActivity(
+            context, 50000 + (notificationId and 0x3fffffff), Intent(openIntent),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_popup_reminder)
+            .setSmallIcon(R.drawable.ic_notification_sigma)
+            .setColor(android.graphics.Color.parseColor("#C2E58D"))
+            .setCategory(NotificationCompat.CATEGORY_REMINDER)
+            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
             .setContentTitle(title)
             .setContentText(body)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
+            .setStyle(NotificationCompat.BigTextStyle().bigText(body).setBigContentTitle(title))
             .setContentIntent(contentIntent)
+            .addAction(R.drawable.ic_notification_sigma, actionTitle, actionIntent)
             .setAutoCancel(true)
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
             .build()
         return try {
-            NotificationManagerCompat.from(context).notify(if (isDailyLog) 7512 else 7511, notification)
+            NotificationManagerCompat.from(context).notify(notificationId, notification)
             true
         } catch (_: SecurityException) {
-            // The notification permission can be revoked between the check and post.
             false
         }
     }
+
+    private fun notificationId(key: String): Int = 90000 + (key.hashCode() and 0x3fffffff)
 
     private fun createChannel(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             manager.createNotificationChannel(
-                NotificationChannel(CHANNEL_ID, "Study reminders", NotificationManager.IMPORTANCE_DEFAULT).apply {
-                    description = "Scheduled JEE study and Daily Log reminders"
+                NotificationChannel(CHANNEL_ID, "Sigma JEE reminders", NotificationManager.IMPORTANCE_HIGH).apply {
+                    description = "Personal JEE study and progress reminders"
                 }
             )
         }
