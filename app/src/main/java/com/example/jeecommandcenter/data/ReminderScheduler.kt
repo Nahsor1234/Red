@@ -15,6 +15,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.example.jeecommandcenter.MainActivity
 import com.example.jeecommandcenter.R
+import java.time.LocalDate
 import java.time.LocalTime
 import java.util.Calendar
 
@@ -128,26 +129,58 @@ class ReminderScheduler(context: Context) {
             alarmManager.cancel(pendingIntent)
             return
         }
+
         val configuredTime = LocalTime.of(reminder.hour, reminder.minute)
         val quiet = settings.getQuietHours()
         val useQuietEnd = settings.isQuietAt(configuredTime)
+        val scheduledDate = if (reminder.repeat == CustomReminder.REPEAT_ONCE) {
+            reminder.scheduledDate?.let { raw -> runCatching { LocalDate.parse(raw) }.getOrNull() }
+        } else null
+        if (reminder.repeat == CustomReminder.REPEAT_ONCE && !reminder.scheduledDate.isNullOrBlank() && scheduledDate == null) {
+            alarmManager.cancel(pendingIntent)
+            return
+        }
+
         val trigger = Calendar.getInstance().apply {
-            if (useQuietEnd) {
-                set(Calendar.HOUR_OF_DAY, quiet.endHour)
-                set(Calendar.MINUTE, quiet.endMinute)
+            if (scheduledDate != null) {
+                set(Calendar.YEAR, scheduledDate.year)
+                set(Calendar.MONTH, scheduledDate.monthValue - 1)
+                set(Calendar.DAY_OF_MONTH, scheduledDate.dayOfMonth)
+                if (useQuietEnd) {
+                    val quietEnd = LocalTime.of(quiet.endHour, quiet.endMinute)
+                    if (!quietEnd.isAfter(configuredTime)) add(Calendar.DAY_OF_YEAR, 1)
+                    set(Calendar.HOUR_OF_DAY, quiet.endHour)
+                    set(Calendar.MINUTE, quiet.endMinute)
+                } else {
+                    set(Calendar.HOUR_OF_DAY, reminder.hour)
+                    set(Calendar.MINUTE, reminder.minute)
+                }
             } else {
-                set(Calendar.HOUR_OF_DAY, reminder.hour)
-                set(Calendar.MINUTE, reminder.minute)
+                if (useQuietEnd) {
+                    set(Calendar.HOUR_OF_DAY, quiet.endHour)
+                    set(Calendar.MINUTE, quiet.endMinute)
+                } else {
+                    set(Calendar.HOUR_OF_DAY, reminder.hour)
+                    set(Calendar.MINUTE, reminder.minute)
+                }
             }
             set(Calendar.SECOND, 0)
             set(Calendar.MILLISECOND, 0)
-            if (timeInMillis <= System.currentTimeMillis()) add(Calendar.DAY_OF_YEAR, 1)
-            if (reminder.repeat == CustomReminder.REPEAT_WEEKDAYS) {
+            if (scheduledDate == null && timeInMillis <= System.currentTimeMillis()) {
+                add(Calendar.DAY_OF_YEAR, 1)
+            }
+            if (scheduledDate == null && reminder.repeat == CustomReminder.REPEAT_WEEKDAYS) {
                 while (get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY || get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY) {
                     add(Calendar.DAY_OF_YEAR, 1)
                 }
             }
         }.timeInMillis
+
+        // A date-specific reminder never silently rolls over to another date if its time has passed.
+        if (scheduledDate != null && trigger <= System.currentTimeMillis()) {
+            alarmManager.cancel(pendingIntent)
+            return
+        }
         alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, trigger, pendingIntent)
     }
 
