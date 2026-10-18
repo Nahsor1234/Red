@@ -8,6 +8,9 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.provider.Settings
 import android.text.format.DateFormat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
@@ -19,6 +22,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Alarm
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Settings
@@ -34,6 +40,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.core.app.NotificationManagerCompat
+import com.example.jeecommandcenter.data.CustomReminder
+import com.example.jeecommandcenter.data.CustomReminderRepository
 import com.example.jeecommandcenter.data.QuietHours
 import com.example.jeecommandcenter.data.ReminderRule
 import com.example.jeecommandcenter.data.ReminderScheduler
@@ -50,7 +58,15 @@ import java.util.Locale
 fun NotificationCenterScreen(onBack: () -> Unit, onOpenSettings: () -> Unit) {
     val context = LocalContext.current
     val settings = remember { ReminderSettingsRepository(context) }
+    val lifecycleOwner = LocalLifecycleOwner.current
     var refresh by remember { mutableIntStateOf(0) }
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) refresh++
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
     val study = remember(refresh) { settings.getRule(ReminderSettingsRepository.TYPE_DAILY_STUDY) }
     val dailyLog = remember(refresh) { settings.getRule(ReminderSettingsRepository.TYPE_DAILY_LOG) }
     val masterEnabled = remember(refresh) { settings.isMasterEnabled() }
@@ -65,26 +81,28 @@ fun NotificationCenterScreen(onBack: () -> Unit, onOpenSettings: () -> Unit) {
             Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp).verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            JeeCard(featured = true) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Filled.Notifications, null, tint = PrimaryLight, modifier = Modifier.size(26.dp))
-                    Spacer(Modifier.width(11.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text("Study reminders", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-                        Text(if (notificationsAllowed && appNotificationsEnabled) "Android notifications are available." else "System permission is needed to show reminders.", color = TextSecondary, fontSize = 11.sp)
+            if (!notificationsAllowed || !appNotificationsEnabled) {
+                JeeCard(featured = true) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Filled.Notifications, null, tint = PrimaryLight, modifier = Modifier.size(26.dp))
+                        Spacer(Modifier.width(11.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("Notifications are disabled", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                            Text("Allow notifications so scheduled reminders can reach you.", color = TextSecondary, fontSize = 11.sp)
+                        }
                     }
+                    Spacer(Modifier.height(10.dp))
+                    OutlinedButton(
+                        onClick = {
+                            context.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName))
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(13.dp)
+                    ) { Text("Open Android notification settings") }
                 }
-                Spacer(Modifier.height(10.dp))
-                OutlinedButton(
-                    onClick = {
-                        context.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName))
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(13.dp)
-                ) { Text("Check Android notification settings") }
             }
 
-            Text("SCHEDULED", color = TextMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+            Text("YOUR REMINDERS", color = TextMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
             ReminderSummaryCard(
                 title = "Daily study reminder",
                 subtitle = "A nudge to begin a focused JEE session",
@@ -95,8 +113,8 @@ fun NotificationCenterScreen(onBack: () -> Unit, onOpenSettings: () -> Unit) {
                 onRefresh = { refresh++ }
             )
             ReminderSummaryCard(
-                title = "Daily Log reminder",
-                subtitle = "Remember to complete today's checklist and notes",
+                title = "Daily Progress reminder",
+                subtitle = "Remember to mark today's progress and record what you studied",
                 icon = Icons.Filled.Today,
                 rule = dailyLog,
                 masterEnabled = masterEnabled,
@@ -108,14 +126,14 @@ fun NotificationCenterScreen(onBack: () -> Unit, onOpenSettings: () -> Unit) {
             JeeCard {
                 RecentReminderRow("Daily study reminder", recentStudy)
                 HorizontalDivider(color = BgDivider.copy(alpha = .6f))
-                RecentReminderRow("Daily Log reminder", recentLog)
+                RecentReminderRow("Daily Progress reminder", recentLog)
             }
             Button(onClick = onOpenSettings, modifier = Modifier.fillMaxWidth().height(50.dp), shape = RoundedCornerShape(15.dp)) {
                 Icon(Icons.Filled.Settings, null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
                 Text("Manage reminder settings")
             }
-            Text("Reminders run locally on this device. No study notes are included in notification text.", color = TextMuted, fontSize = 10.sp, lineHeight = 15.sp)
+            Text("Reminders run locally on this device. Notification text never reveals your private study notes.", color = TextMuted, fontSize = 10.sp, lineHeight = 15.sp)
         }
     }
 }
@@ -174,7 +192,19 @@ private fun RecentReminderRow(title: String, timestamp: Long) {
 fun NotificationSettingsScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val settings = remember { ReminderSettingsRepository(context) }
+    val customRepository = remember { CustomReminderRepository(context) }
+    val lifecycleOwner = LocalLifecycleOwner.current
     var refresh by remember { mutableIntStateOf(0) }
+    var showCustomDialog by remember { mutableStateOf(false) }
+    var editingCustomReminder by remember { mutableStateOf<CustomReminder?>(null) }
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) refresh++
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    val customReminders = remember(refresh) { customRepository.all() }
     var pendingType by remember { mutableStateOf<String?>(null) }
     var permissionMessage by remember { mutableStateOf<String?>(null) }
     val study = remember(refresh) { settings.getRule(ReminderSettingsRepository.TYPE_DAILY_STUDY) }
@@ -256,14 +286,47 @@ fun NotificationSettingsScreen(onBack: () -> Unit) {
                 } }
             )
             ReminderSettingCard(
-                title = "Daily Log reminder",
-                subtitle = "Prompt yourself to tick today's checklist and record what you studied.",
+                title = "Daily Progress reminder",
+                subtitle = "Prompt yourself to mark today's progress and record what you studied.",
                 rule = dailyLog,
                 onToggle = { toggleRule(ReminderSettingsRepository.TYPE_DAILY_LOG, it) },
                 onTimeClick = { showTimePicker(context, dailyLog.hour, dailyLog.minute) { hour, minute ->
                     saveRule(ReminderSettingsRepository.TYPE_DAILY_LOG, settings.getRule(ReminderSettingsRepository.TYPE_DAILY_LOG).copy(hour = hour, minute = minute))
                 } }
             )
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Custom reminders", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                    Text("Create your own title, message and schedule.", color = TextMuted, fontSize = 11.sp)
+                }
+                FilledIconButton(
+                    onClick = { editingCustomReminder = null; showCustomDialog = true },
+                    colors = IconButtonDefaults.filledIconButtonColors(containerColor = Primary, contentColor = BgApp)
+                ) { Icon(Icons.Filled.Add, contentDescription = "Add custom reminder") }
+            }
+            if (customReminders.isEmpty()) {
+                JeeCard {
+                    Text("No custom reminders yet", fontWeight = FontWeight.Medium)
+                    Text("Add a reminder for a topic, revision block or personal study goal.", color = TextSecondary, fontSize = 11.sp)
+                }
+            } else {
+                customReminders.forEach { reminder ->
+                    CustomReminderCard(
+                        reminder = reminder,
+                        onEnabledChange = { enabled ->
+                            customRepository.setEnabled(reminder.id, enabled)
+                            ReminderScheduler(context).scheduleCustom(reminder.id)
+                            refresh++
+                        },
+                        onEdit = { editingCustomReminder = reminder; showCustomDialog = true },
+                        onDelete = {
+                            customRepository.delete(reminder.id)
+                            ReminderScheduler(context).cancelCustom(reminder.id)
+                            refresh++
+                        }
+                    )
+                }
+            }
             permissionMessage?.let { Text(it, color = TextSecondary, fontSize = 11.sp) }
             val permissionGranted = Build.VERSION.SDK_INT < 33 ||
                 ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
@@ -279,6 +342,141 @@ fun NotificationSettingsScreen(onBack: () -> Unit) {
             Text("No exact-alarm permission is requested. Android may deliver reminders a little later to protect battery life.", color = TextMuted, fontSize = 10.sp, lineHeight = 15.sp)
         }
     }
+    if (showCustomDialog) {
+        CustomReminderDialog(
+            existing = editingCustomReminder,
+            onDismiss = { showCustomDialog = false; editingCustomReminder = null },
+            onSave = { reminder ->
+                customRepository.save(reminder)
+                ReminderScheduler(context).scheduleCustom(reminder.id)
+                showCustomDialog = false
+                editingCustomReminder = null
+                refresh++
+            }
+        )
+    }
+}
+
+@Composable
+private fun CustomReminderCard(
+    reminder: CustomReminder,
+    onEnabledChange: (Boolean) -> Unit,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
+) {
+    JeeCard {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(reminder.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                if (reminder.message.isNotBlank()) {
+                    Spacer(Modifier.height(3.dp))
+                    Text(reminder.message, color = TextSecondary, fontSize = 11.sp, lineHeight = 15.sp, maxLines = 3)
+                }
+                Spacer(Modifier.height(4.dp))
+                Text("${formatReminderTime(reminder.hour, reminder.minute)} · ${reminder.repeat}", color = PrimaryLight, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                if (reminder.lastTriggered > 0L) {
+                    Text("Last delivered ${formatInstant(reminder.lastTriggered)}", color = TextMuted, fontSize = 10.sp)
+                }
+            }
+            Switch(checked = reminder.enabled, onCheckedChange = onEnabledChange)
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+            TextButton(onClick = onEdit) { Icon(Icons.Filled.Edit, null, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(4.dp)); Text("Edit") }
+            TextButton(onClick = onDelete) { Icon(Icons.Filled.Delete, null, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(4.dp)); Text("Delete") }
+        }
+    }
+}
+
+@Composable
+private fun CustomReminderDialog(
+    existing: CustomReminder?,
+    onDismiss: () -> Unit,
+    onSave: (CustomReminder) -> Unit
+) {
+    val context = LocalContext.current
+    var title by remember(existing?.id) { mutableStateOf(existing?.title.orEmpty()) }
+    var message by remember(existing?.id) { mutableStateOf(existing?.message.orEmpty()) }
+    var hour by remember(existing?.id) { mutableIntStateOf(existing?.hour ?: 18) }
+    var minute by remember(existing?.id) { mutableIntStateOf(existing?.minute ?: 0) }
+    var repeat by remember(existing?.id) { mutableStateOf(existing?.repeat ?: CustomReminder.REPEAT_DAILY) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(if (existing == null) "Create reminder" else "Edit reminder") },
+        text = {
+            Column(
+                Modifier.fillMaxWidth().heightIn(max = 520.dp).verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(9.dp)
+            ) {
+                Text("Reminder title", color = TextSecondary, fontSize = 11.sp)
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it.take(CustomReminderRepository.MAX_TITLE_LENGTH) },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text("e.g. Revise Chemical Bonding") },
+                    singleLine = true
+                )
+                Text("Message", color = TextSecondary, fontSize = 11.sp)
+                OutlinedTextField(
+                    value = message,
+                    onValueChange = { message = it.take(CustomReminderRepository.MAX_MESSAGE_LENGTH) },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text("What should the notification remind you about?") },
+                    minLines = 2,
+                    maxLines = 4
+                )
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                    Column {
+                        Text("Reminder time", color = TextMuted, fontSize = 10.sp)
+                        Text(formatReminderTime(hour, minute), color = PrimaryLight, fontWeight = FontWeight.SemiBold)
+                    }
+                    OutlinedButton(onClick = { showTimePicker(context, hour, minute) { h, m -> hour = h; minute = m } }) {
+                        Icon(Icons.Filled.Alarm, null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(5.dp))
+                        Text("Set time")
+                    }
+                }
+                Text("Repeat", color = TextSecondary, fontSize = 11.sp)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                    CustomReminder.repeatOptions.forEach { option ->
+                        FilterChip(
+                            selected = repeat == option,
+                            onClick = { repeat = option },
+                            label = { Text(option, fontSize = 11.sp) }
+                        )
+                    }
+                }
+                Text(
+                    when (repeat) {
+                        CustomReminder.REPEAT_ONCE -> "One-time reminders run at the next scheduled time, then turn themselves off."
+                        CustomReminder.REPEAT_WEEKDAYS -> "Repeats Monday to Friday."
+                        else -> "Repeats every day at this time."
+                    },
+                    color = TextMuted,
+                    fontSize = 10.sp,
+                    lineHeight = 14.sp
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = title.isNotBlank(),
+                onClick = {
+                    val reminder = CustomReminder(
+                        id = existing?.id ?: java.util.UUID.randomUUID().toString(),
+                        title = title.trim(),
+                        message = message.trim(),
+                        hour = hour,
+                        minute = minute,
+                        repeat = repeat,
+                        enabled = existing?.enabled ?: true,
+                        lastTriggered = existing?.lastTriggered ?: 0L
+                    )
+                    onSave(reminder)
+                }
+            ) { Text("Save reminder") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+    )
 }
 
 @Composable
