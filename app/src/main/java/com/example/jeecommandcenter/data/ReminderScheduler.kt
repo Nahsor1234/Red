@@ -166,8 +166,9 @@ class DailyReminderReceiver : BroadcastReceiver() {
             ReminderScheduler(context).schedule(type)
             return
         }
-        settings.recordTriggered(type, System.currentTimeMillis())
-        ReminderNotificationPublisher.show(context, type)
+        if (ReminderNotificationPublisher.show(context, type)) {
+            settings.recordTriggered(type, System.currentTimeMillis())
+        }
         ReminderScheduler(context).schedule(type)
     }
 }
@@ -185,10 +186,11 @@ class ReminderBootReceiver : BroadcastReceiver() {
 object ReminderNotificationPublisher {
     private const val CHANNEL_ID = "study_reminders"
 
-    fun show(context: Context, type: String) {
+    fun show(context: Context, type: String): Boolean {
         if (Build.VERSION.SDK_INT >= 33 &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
-        ) return
+        ) return false
+        if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) return false
 
         val isDailyLog = type == ReminderSettingsRepository.TYPE_DAILY_LOG
         val title = if (isDailyLog) "Log today's study" else "Time for your JEE study block"
@@ -217,10 +219,12 @@ object ReminderNotificationPublisher {
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .build()
-        try {
+        return try {
             NotificationManagerCompat.from(context).notify(if (isDailyLog) 7512 else 7511, notification)
+            true
         } catch (_: SecurityException) {
             // The notification permission can be revoked between the check and post.
+            false
         }
     }
 
