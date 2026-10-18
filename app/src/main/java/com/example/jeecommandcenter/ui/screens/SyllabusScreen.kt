@@ -128,7 +128,7 @@ fun SyllabusScreen(
     Box(Modifier.fillMaxSize()) {
         Scaffold(
             containerColor = BgApp.copy(alpha = 0f),
-            bottomBar = { BottomNavBar(selectedTab, onTabSelected) }
+            bottomBar = { AnimatedBottomNavBar(selectedTab, onTabSelected, visible = selectedTab != AppTab.AI) }
         ) { padding ->
             Column(
                 Modifier.fillMaxSize()
