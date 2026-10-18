@@ -2,6 +2,8 @@ package com.example.jeecommandcenter.ui.components
 
 import android.view.HapticFeedbackConstants
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
@@ -10,6 +12,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.Canvas
@@ -158,6 +161,17 @@ fun BottomNavBar(selected: AppTab, onTabSelected: (AppTab) -> Unit) {
                 }
             }
         }
+    }
+}
+
+@Composable
+fun AnimatedBottomNavBar(selected: AppTab, onTabSelected: (AppTab) -> Unit, visible: Boolean) {
+    AnimatedVisibility(
+        visible = visible,
+        enter = slideInVertically(animationSpec = tween(220, easing = FastOutSlowInEasing)) { it } + fadeIn(tween(180)),
+        exit = slideOutVertically(animationSpec = tween(170, easing = FastOutSlowInEasing)) { it } + fadeOut(tween(120))
+    ) {
+        BottomNavBar(selected, onTabSelected)
     }
 }
 
