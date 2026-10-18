@@ -438,7 +438,7 @@ private fun NotificationManagementScreen(onBack: () -> Unit) {
         AlertDialog(
             onDismissRequest = { confirmDeleteReminder = null },
             title = { Text("Delete reminder?") },
-            text = { Text("Delete \\"" + reminder.title + "\\"? This cannot be undone.") },
+            text = { Text("Delete " + reminder.title + "? This cannot be undone.") },
             confirmButton = {
                 TextButton(
                     onClick = {
