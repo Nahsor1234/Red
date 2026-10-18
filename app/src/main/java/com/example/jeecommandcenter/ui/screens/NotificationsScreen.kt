@@ -14,6 +14,8 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Alarm
@@ -58,7 +60,7 @@ fun NotificationCenterScreen(onBack: () -> Unit, onOpenSettings: () -> Unit) {
 
     Scaffold(containerColor = BgApp, topBar = { JeeTopBar(title = "Notifications", onBack = onBack) }) { padding ->
         Column(
-            Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp),
+            Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp).verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             JeeCard(featured = true) {
@@ -200,7 +202,7 @@ fun NotificationSettingsScreen(onBack: () -> Unit) {
     }
 
     Scaffold(containerColor = BgApp, topBar = { JeeTopBar(title = "Reminder settings", onBack = onBack) }) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             JeeCard(featured = true) {
                 Text("Build a reliable routine", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.height(4.dp))
