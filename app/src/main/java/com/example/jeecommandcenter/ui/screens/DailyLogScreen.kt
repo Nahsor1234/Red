@@ -1,6 +1,7 @@
 package com.example.jeecommandcenter.ui.screens
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -17,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.font.FontWeight
@@ -60,6 +62,21 @@ fun DailyLogScreen(onBack: () -> Unit) {
     val entry = remember(selectedDate, refresh) { repository.getEntry(selectedDate) }
     val completedCount = remember(visibleMonth, refresh) { repository.completedCount(visibleMonth) }
     val monthDays = visibleMonth.lengthOfMonth()
+    val daysInScope = when {
+        visibleMonth.isBefore(YearMonth.from(today)) -> monthDays
+        visibleMonth.isAfter(YearMonth.from(today)) -> 1
+        else -> today.dayOfMonth.coerceAtLeast(1)
+    }
+    val consistencyPercent = (completedCount.coerceAtMost(daysInScope) * 100f / daysInScope).toInt().coerceIn(0, 100)
+    val dayStreak = remember(today, refresh) {
+        var cursor = if (repository.getEntry(today).completed) today else today.minusDays(1)
+        var streak = 0
+        while (repository.getEntry(cursor).completed) {
+            streak++
+            cursor = cursor.minusDays(1)
+        }
+        streak
+    }
     val calendarCells = remember(visibleMonth) {
         buildList<LocalDate?> {
             repeat(visibleMonth.atDay(1).dayOfWeek.value - 1) { add(null) }
@@ -77,19 +94,91 @@ fun DailyLogScreen(onBack: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             JeeCard {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Surface(shape = RoundedCornerShape(13.dp), color = PrimarySoft) {
-                        Icon(Icons.Filled.EventNote, null, tint = PrimaryLight, modifier = Modifier.padding(10.dp).size(21.dp))
-                    }
-                    Spacer(Modifier.width(11.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text("Monthly consistency", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                        Text("$completedCount of $monthDays days completed", color = TextSecondary, fontSize = 11.sp)
-                    }
-                    Text("${(completedCount * 100 / monthDays)}%", color = PrimaryLight, fontWeight = FontWeight.Bold)
+                Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text(
+                        "YOUR MONTH AT A GLANCE",
+                        color = TextMuted,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.1.sp
+                    )
+                    Text(
+                        "${visibleMonth.month.getDisplayName(TextStyle.FULL, Locale.getDefault())} ${visibleMonth.year}",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
                 }
-                Spacer(Modifier.height(11.dp))
-                LinearStatBar(completedCount.toFloat() / monthDays.coerceAtLeast(1), height = 6.dp, fillColor = Primary)
+                Spacer(Modifier.height(14.dp))
+                Row(
+                    Modifier.fillMaxWidth().heightIn(min = 96.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(
+                        Modifier.width(104.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Box(Modifier.size(86.dp), contentAlignment = Alignment.Center) {
+                            Canvas(Modifier.fillMaxSize()) {
+                                val stroke = Stroke(width = 7.dp.toPx(), cap = StrokeCap.Round)
+                                drawArc(
+                                    color = BgDivider,
+                                    startAngle = -90f,
+                                    sweepAngle = 360f,
+                                    useCenter = false,
+                                    style = stroke
+                                )
+                                if (consistencyPercent > 0) {
+                                    drawArc(
+                                        color = PrimaryLight,
+                                        startAngle = -90f,
+                                        sweepAngle = 360f * consistencyPercent / 100f,
+                                        useCenter = false,
+                                        style = stroke
+                                    )
+                                }
+                            }
+                            Text(
+                                "$consistencyPercent%",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary
+                            )
+                        }
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            "CONSISTENCY",
+                            color = TextMuted,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = .7.sp
+                        )
+                    }
+                    Spacer(Modifier.width(7.dp))
+                    Row(
+                        Modifier.weight(1f).height(72.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(
+                            Modifier.weight(1f),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Text("$completedCount", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                            Spacer(Modifier.height(3.dp))
+                            Text("Days studied", color = TextSecondary, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                        }
+                        Box(Modifier.width(1.dp).height(42.dp).background(BgDivider))
+                        Column(
+                            Modifier.weight(1f),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Text("$dayStreak", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                            Spacer(Modifier.height(3.dp))
+                            Text("Day streak", color = TextSecondary, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                        }
+                    }
+                }
             }
 
             JeeCard {
@@ -184,7 +273,7 @@ fun DailyLogScreen(onBack: () -> Unit) {
                             colors = CheckboxDefaults.colors(checkedColor = Primary, checkmarkColor = BgApp, uncheckedColor = TextMuted)
                         )
                         Column(Modifier.weight(1f)) {
-                            Text("Daily study completed", fontWeight = FontWeight.Medium, fontSize = 13.sp)
+                            Text("I've completed my study today", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
                             Text("Tick only when you're done for today.", color = TextMuted, fontSize = 10.sp)
                         }
                     }
