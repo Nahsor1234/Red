@@ -286,7 +286,7 @@ private fun QuietHoursCard(context: Context, hours: QuietHours, onChange: (Quiet
     JeeCard {
         Text("Quiet hours", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
         Spacer(Modifier.height(3.dp))
-        Text("Reminders are suppressed during this window. A reminder that fires during quiet hours is skipped for that day.", color = TextSecondary, fontSize = 11.sp, lineHeight = 15.sp)
+        Text("Alerts are suppressed during this window. Reminders scheduled inside it move to the quiet-hours end time.", color = TextSecondary, fontSize = 11.sp, lineHeight = 15.sp)
         Spacer(Modifier.height(9.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
             Column(Modifier.weight(1f)) {
