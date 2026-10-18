@@ -39,7 +39,7 @@ fun AppRoot(initialTarget: String? = null, launchRequestId: Int = 0) {
     }
 
     fun selectTab(tab: AppTab) { secondaryStack = emptyList(); selectedTab = tab }
-    fun openPage(page: SecondaryPage) { navigationDirection = 1; secondaryStack = secondaryStack + page }
+    fun openPage(page: SecondaryPage) { secondaryStack = secondaryStack + page }
     fun popPage() { if (secondaryStack.isNotEmpty()) { secondaryStack = secondaryStack.dropLast(1) } }
     fun openAuth(mode: CloudAuthMode) { authMode = mode; openPage(SecondaryPage.AUTH) }
     fun openAiConversation(id: Long) {
