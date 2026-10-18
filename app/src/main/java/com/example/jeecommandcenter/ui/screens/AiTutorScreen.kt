@@ -12,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -53,7 +54,10 @@ fun AiTutorScreen(
     onConversationCleared: () -> Unit = {},
     showMainNavigation: Boolean = false,
     selectedTab: AppTab = AppTab.AI,
-    onTabSelected: (AppTab) -> Unit = {}
+    onTabSelected: (AppTab) -> Unit = {},
+    initialQuestionContext: String? = null,
+    initialQuestionRequestId: Int = 0,
+    onInitialQuestionContextConsumed: () -> Unit = {}
 ) {
     val settings = remember { AiSettingsRepository(context) }
     val orchestrator = remember { AiOrchestrator(context) }
@@ -81,7 +85,8 @@ fun AiTutorScreen(
     val coachingHeadline = when { priorities.isNotEmpty() -> priorities.first().title; revisions.isNotEmpty() -> "Clear " + revisions.first().chapter.name + " revision"; weak.isNotEmpty() -> "Strengthen " + weak.first().chapter.name; hasData -> "Keep building your study signal"; else -> "Start collecting real study data" }
     var activeId by remember { mutableStateOf(conversationId) }
     var messages by remember { mutableStateOf(conversationId?.let { history.getConversation(it)?.messages }.orEmpty()) }
-    var input by remember { mutableStateOf("") }
+    var input by rememberSaveable { mutableStateOf("") }
+    var questionContext by rememberSaveable { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf(false) }
     var streamingText by remember { mutableStateOf("") }
     var streamingMessageId by remember { mutableStateOf<Long?>(null) }
@@ -108,14 +113,18 @@ fun AiTutorScreen(
     }
 
     fun exitConversation() {
-        activeRequestJob?.cancel(); activeRequestJob = null; activeId = null; messages = emptyList(); streamingText = ""; streamingMessageId = null; busy = false; history.setActiveConversationId(null); onConversationCleared()
+        activeRequestJob?.cancel(); activeRequestJob = null; activeId = null; messages = emptyList(); streamingText = ""; streamingMessageId = null; busy = false; questionContext = null; history.setActiveConversationId(null); onConversationCleared()
     }
 
     fun handleBack() { if (activeId != null || messages.isNotEmpty()) exitConversation() else onBack() }
 
     fun send(prompt: String, title: String = "Study coach", block: (suspend () -> AiResult)? = null) {
         if (prompt.isBlank() || busy) return
-        if (!settings.hasApiKey()) { onOpenSettings(); return }
+        if (!settings.hasApiKey()) {
+            if (!questionContext.isNullOrBlank()) input = prompt
+            onOpenSettings()
+            return
+        }
         val id = ensureConversation(title)
         history.appendMessage(id, "USER", prompt.trim())
         val placeholderId = -System.currentTimeMillis()
@@ -127,7 +136,11 @@ fun AiTutorScreen(
                     val turns = history.getConversation(id)?.messages.orEmpty().takeLast(24).map { message -> AiPromptMessage(role = if (message.role == "COACH") "assistant" else "user", content = message.text) }
                     AiEngine(settings).streamConversation(
                         messages = turns,
-                        systemInstruction = JeeAiPrompt.taskInstruction("multi-turn JEE study coaching") + "\n\nCurrent student context:\n" + contextSummary(analytics, topMistakes),
+                        systemInstruction = JeeAiPrompt.taskInstruction("multi-turn JEE study coaching") +
+                            "\n\nCurrent student context:\n" + contextSummary(analytics, topMistakes) +
+                            questionContext?.takeIf { it.isNotBlank() }
+                                ?.let { "\n\nCurrent practice question context:\n" + it }
+                                .orEmpty(),
                         onChunk = { chunk ->
                             withContext(Dispatchers.Main.immediate) {
                                 streamingText += chunk
@@ -146,6 +159,27 @@ fun AiTutorScreen(
                 history.appendMessage(id, "COACH", coachText)
                 messages = history.getConversation(id)?.messages.orEmpty(); streamingText = ""; streamingMessageId = null; busy = false
             }
+        }
+    }
+
+    LaunchedEffect(initialQuestionRequestId, initialQuestionContext) {
+        val suppliedContext = initialQuestionContext
+        if (initialQuestionRequestId > 0 && !suppliedContext.isNullOrBlank()) {
+            activeRequestJob?.cancel()
+            activeRequestJob = null
+            activeId = null
+            messages = emptyList()
+            streamingText = ""
+            streamingMessageId = null
+            busy = false
+            history.setActiveConversationId(null)
+            onConversationCleared()
+            questionContext = suppliedContext
+            send(
+                "Help me work through the current practice question step by step. Start with a hint and guide my reasoning instead of revealing the answer immediately.",
+                "Question tutor"
+            )
+            onInitialQuestionContextConsumed()
         }
     }
 

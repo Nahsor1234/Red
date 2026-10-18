@@ -26,6 +26,8 @@ fun AppRoot(initialTarget: String? = null, launchRequestId: Int = 0) {
     var selectedAttempt by remember { mutableStateOf<TestAttemptRecord?>(null) }
     var authMode by remember { mutableStateOf(CloudAuthMode.SIGN_IN) }
     var activeAiConversationId by remember { mutableStateOf(aiHistory.getActiveConversationId()?.takeIf { aiHistory.getConversation(it) != null }) }
+    var pendingAiQuestionContext by remember { mutableStateOf<String?>(null) }
+    var aiQuestionRequestId by remember { mutableIntStateOf(0) }
     val secondaryPage = secondaryStack.lastOrNull()
     val saveableStateHolder = rememberSaveableStateHolder()
 
@@ -41,6 +43,11 @@ fun AppRoot(initialTarget: String? = null, launchRequestId: Int = 0) {
     fun selectTab(tab: AppTab) { secondaryStack = emptyList(); selectedTab = tab }
     fun openPage(page: SecondaryPage) { secondaryStack = secondaryStack + page }
     fun popPage() { if (secondaryStack.isNotEmpty()) { secondaryStack = secondaryStack.dropLast(1) } }
+    fun openAiTutorForQuestion(questionContext: String) {
+        pendingAiQuestionContext = questionContext
+        aiQuestionRequestId += 1
+        openPage(SecondaryPage.AI_TUTOR)
+    }
     fun openAuth(mode: CloudAuthMode) { authMode = mode; openPage(SecondaryPage.AUTH) }
     fun openAiConversation(id: Long) {
         activeAiConversationId = id
@@ -82,7 +89,10 @@ fun AppRoot(initialTarget: String? = null, launchRequestId: Int = 0) {
                     onOpenHistory = { openPage(SecondaryPage.AI_HISTORY) },
                     conversationId = activeAiConversationId,
                     onConversationOpened = { id -> activeAiConversationId = id; aiHistory.setActiveConversationId(id) },
-                    onConversationCleared = ::clearAiConversation
+                    onConversationCleared = ::clearAiConversation,
+                    initialQuestionContext = pendingAiQuestionContext,
+                    initialQuestionRequestId = aiQuestionRequestId,
+                    onInitialQuestionContextConsumed = { pendingAiQuestionContext = null }
                 )
                 SecondaryPage.AI_HISTORY -> AiHistoryScreen(context, ::popPage, ::openAiConversation)
                 SecondaryPage.ANALYTICS -> AnalyticsScreen(repo, learning, ::popPage) { openPage(SecondaryPage.AI_TUTOR) }
@@ -91,7 +101,14 @@ fun AppRoot(initialTarget: String? = null, launchRequestId: Int = 0) {
                 SecondaryPage.ASSESSMENT_RESULT -> selectedAttempt?.let { AssessmentResultScreen(it, ::popPage) }
                 SecondaryPage.MISTAKES -> MistakeBankScreen(learning, ::popPage) { openPage(SecondaryPage.AI_TUTOR) }
                 SecondaryPage.CHAPTER_DETAIL -> selectedChapter?.let { chapter -> ChapterDetailScreen(context, repo, chapter, ::popPage) { openPage(SecondaryPage.CHAPTER_QUESTIONS) } }
-                SecondaryPage.CHAPTER_QUESTIONS -> selectedChapter?.let { chapter -> ChapterQuestionPracticeScreen(chapter.id, chapter.name, ::popPage) }
+                SecondaryPage.CHAPTER_QUESTIONS -> selectedChapter?.let { chapter ->
+                    ChapterQuestionPracticeScreen(
+                        chapterId = chapter.id,
+                        chapterName = chapter.name,
+                        onBack = ::popPage,
+                        onOpenAiTutor = ::openAiTutorForQuestion
+                    )
+                }
                 SecondaryPage.DAILY_LOG -> DailyLogScreen(::popPage)
                 SecondaryPage.NOTIFICATIONS -> NotificationCenterScreen(::popPage) { openPage(SecondaryPage.NOTIFICATION_SETTINGS) }
                 SecondaryPage.NOTIFICATION_SETTINGS -> NotificationSettingsScreen(::popPage)
