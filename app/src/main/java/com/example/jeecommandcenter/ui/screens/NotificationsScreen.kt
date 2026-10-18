@@ -9,6 +9,11 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.provider.Settings
 import android.text.format.DateFormat
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -53,6 +58,7 @@ import com.example.jeecommandcenter.ui.components.JeeTopBar
 import com.example.jeecommandcenter.ui.theme.*
 import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -60,102 +66,7 @@ import java.util.Locale
 
 @Composable
 fun NotificationCenterScreen(onBack: () -> Unit, onOpenSettings: () -> Unit) {
-    val context = LocalContext.current
-    val settings = remember { ReminderSettingsRepository(context) }
-    val customRepository = remember { CustomReminderRepository(context) }
-    val lifecycleOwner = LocalLifecycleOwner.current
-    var refresh by remember { mutableIntStateOf(0) }
-    DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) refresh++
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-    }
-    val study = remember(refresh) { settings.getRule(ReminderSettingsRepository.TYPE_DAILY_STUDY) }
-    val dailyLog = remember(refresh) { settings.getRule(ReminderSettingsRepository.TYPE_DAILY_LOG) }
-    val masterEnabled = remember(refresh) { settings.isMasterEnabled() }
-    val recentStudy = remember(refresh) { settings.getLastTriggered(ReminderSettingsRepository.TYPE_DAILY_STUDY) }
-    val recentLog = remember(refresh) { settings.getLastTriggered(ReminderSettingsRepository.TYPE_DAILY_LOG) }
-    val customReminders = remember(refresh) { customRepository.all() }
-    val notificationsAllowed = Build.VERSION.SDK_INT < 33 ||
-        ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
-    val appNotificationsEnabled = NotificationManagerCompat.from(context).areNotificationsEnabled()
-
-    Scaffold(containerColor = BgApp, topBar = { JeeTopBar(title = "Notifications", onBack = onBack) }) { padding ->
-        Column(
-            Modifier.fillMaxSize().padding(padding).padding(horizontal = 18.dp).verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-            if (!notificationsAllowed || !appNotificationsEnabled) {
-                JeeCard(featured = true) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Filled.Notifications, null, tint = PrimaryLight, modifier = Modifier.size(26.dp))
-                        Spacer(Modifier.width(11.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text("Notifications are disabled", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                            Text("Allow notifications so scheduled reminders can reach you.", color = TextSecondary, fontSize = 11.sp)
-                        }
-                    }
-                    Spacer(Modifier.height(10.dp))
-                    OutlinedButton(
-                        onClick = {
-                            context.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName))
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(13.dp)
-                    ) { Text("Open Android notification settings") }
-                }
-            }
-
-            Text("YOUR REMINDERS", color = TextMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
-            ReminderSummaryCard(
-                title = "Daily study reminder",
-                subtitle = "A nudge to begin a focused JEE session",
-                icon = Icons.Filled.Alarm,
-                rule = study,
-                masterEnabled = masterEnabled,
-                lastTriggered = recentStudy,
-                onRefresh = { refresh++ }
-            )
-            ReminderSummaryCard(
-                title = "Daily Progress reminder",
-                subtitle = "Remember to mark today's progress and record what you studied",
-                icon = Icons.Filled.Today,
-                rule = dailyLog,
-                masterEnabled = masterEnabled,
-                lastTriggered = recentLog,
-                onRefresh = { refresh++ }
-            )
-
-            Text("CUSTOM REMINDERS", color = TextMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
-            if (customReminders.isEmpty()) {
-                Text("No custom reminders created yet.", color = TextMuted, fontSize = 11.sp)
-            } else {
-                customReminders.forEach { reminder ->
-                    CustomReminderSummaryCard(reminder)
-                }
-            }
-
-            Text("RECENT ACTIVITY", color = TextMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
-            JeeCard {
-                RecentReminderRow("Daily study reminder", recentStudy)
-                HorizontalDivider(color = BgDivider.copy(alpha = .6f))
-                RecentReminderRow("Daily Progress reminder", recentLog)
-                customReminders.filter { it.lastTriggered > 0L }.sortedByDescending { it.lastTriggered }.forEach { reminder ->
-                    HorizontalDivider(color = BgDivider.copy(alpha = .6f))
-                    RecentReminderRow(reminder.title, reminder.lastTriggered)
-                }
-            }
-            Button(onClick = onOpenSettings, modifier = Modifier.fillMaxWidth().height(50.dp), shape = RoundedCornerShape(15.dp)) {
-                Icon(Icons.Filled.Settings, null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(8.dp))
-                Text("Manage reminder settings")
-            }
-            Text("Reminders run locally on this device. Notification text never reveals your private study notes.", color = TextMuted, fontSize = 10.sp, lineHeight = 15.sp)
-            DailyReminderTimeline(study, dailyLog, masterEnabled, customReminders)
-        }
-    }
+    NotificationManagementScreen(onBack = onBack)
 }
 
 @Composable
@@ -319,7 +230,7 @@ private fun DailyReminderTimeline(
 }
 
 @Composable
-fun NotificationSettingsScreen(onBack: () -> Unit) {
+private fun NotificationManagementScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val settings = remember { ReminderSettingsRepository(context) }
     val customRepository = remember { CustomReminderRepository(context) }
@@ -327,6 +238,8 @@ fun NotificationSettingsScreen(onBack: () -> Unit) {
     var refresh by remember { mutableIntStateOf(0) }
     var showCustomDialog by remember { mutableStateOf(false) }
     var editingCustomReminder by remember { mutableStateOf<CustomReminder?>(null) }
+    var confirmDeleteReminder by remember { mutableStateOf<CustomReminder?>(null) }
+    var showTimeline by remember { mutableStateOf(false) }
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) refresh++
@@ -377,16 +290,37 @@ fun NotificationSettingsScreen(onBack: () -> Unit) {
         }
     }
 
-    Scaffold(containerColor = BgApp, topBar = { JeeTopBar(title = "Reminder settings", onBack = onBack) }) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 18.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            JeeCard(featured = true) {
-                Text("Build a reliable routine", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-                Spacer(Modifier.height(4.dp))
-                Text("Choose which reminders you receive and when. Times use your device's local time.", color = TextSecondary, fontSize = 11.sp, lineHeight = 16.sp)
+    val notificationsAllowed = Build.VERSION.SDK_INT < 33 ||
+        ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+    val appNotificationsEnabled = NotificationManagerCompat.from(context).areNotificationsEnabled()
+    val timelineItems = buildTimelineItems(study, dailyLog, customReminders)
+    val nextUpcoming = if (masterEnabled) timelineItems
+        .filter { it.enabled && it.at.isAfter(LocalDateTime.now()) }
+        .minByOrNull { it.at } else null
+
+    Scaffold(containerColor = BgApp, topBar = { JeeTopBar(title = "Notifications", onBack = onBack) }) { padding ->
+        Column(
+            Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Row(
+                Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text("YOUR STUDY ROUTINE", color = TextMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
+                    Text("Your reminders", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                    Text("Keep your study rhythm.", color = TextSecondary, fontSize = 12.sp)
+                }
+                Surface(shape = RoundedCornerShape(16.dp), color = PrimarySoft) {
+                    Icon(Icons.Filled.Notifications, contentDescription = null, tint = PrimaryLight, modifier = Modifier.padding(13.dp).size(25.dp))
+                }
             }
+
             JeeCard {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                         Text("All reminders", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                         Text("Pause or resume every scheduled reminder.", color = TextSecondary, fontSize = 11.sp, lineHeight = 15.sp)
                     }
@@ -400,80 +334,175 @@ fun NotificationSettingsScreen(onBack: () -> Unit) {
                         }
                     )
                 }
+                if (!masterEnabled) {
+                    Spacer(Modifier.height(4.dp))
+                    Text("All scheduled reminders are paused.", color = TextMuted, fontSize = 10.sp)
+                }
             }
-            QuietHoursCard(context, quietHours) { updated ->
-                settings.setQuietHours(updated)
-                ReminderScheduler(context).scheduleAll()
-                refresh++
+
+            JeeCard(featured = true) {
+                if (!masterEnabled) {
+                    Text("REMINDERS PAUSED", color = PrimaryLight, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                    Spacer(Modifier.height(8.dp))
+                    Text("Nothing will notify you until reminders are turned back on.", color = TextSecondary, fontSize = 12.sp, lineHeight = 17.sp)
+                } else if (nextUpcoming == null) {
+                    Text("YOUR NEXT REMINDER", color = PrimaryLight, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                    Spacer(Modifier.height(8.dp))
+                    Text("Nothing scheduled", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text("Enable a daily reminder or add a custom one to build your schedule.", color = TextSecondary, fontSize = 12.sp, lineHeight = 17.sp)
+                } else {
+                    val today = LocalDate.now()
+                    val scheduledDate = nextUpcoming.at.toLocalDate()
+                    val dayLabel = when (scheduledDate) {
+                        today -> "UP NEXT · TODAY"
+                        today.plusDays(1) -> "UP NEXT · TOMORROW"
+                        else -> "UP NEXT · ${scheduledDate.format(DateTimeFormatter.ofPattern("EEE, d MMM", Locale.getDefault())).uppercase(Locale.getDefault())}"
+                    }
+                    Text(dayLabel, color = PrimaryLight, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                    Spacer(Modifier.height(7.dp))
+                    Text(nextUpcoming.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    if (nextUpcoming.message.isNotBlank()) {
+                        Spacer(Modifier.height(3.dp))
+                        Text(nextUpcoming.message, color = TextSecondary, fontSize = 12.sp, lineHeight = 17.sp, maxLines = 2)
+                    }
+                    Spacer(Modifier.height(13.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Filled.Alarm, contentDescription = null, tint = PrimaryLight, modifier = Modifier.size(19.dp))
+                        Spacer(Modifier.width(7.dp))
+                        Text(formatReminderTime(nextUpcoming.at.hour, nextUpcoming.at.minute), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = PrimaryLight)
+                        Spacer(Modifier.width(9.dp))
+                        Text("·", color = TextMuted)
+                        Spacer(Modifier.width(9.dp))
+                        Text(scheduledDate.format(DateTimeFormatter.ofPattern("d MMM yyyy", Locale.getDefault())), color = TextSecondary, fontSize = 12.sp)
+                    }
+                }
             }
-            ReminderSettingCard(
-                title = "Daily study reminder",
-                subtitle = "Prompt yourself to begin a focused study session.",
-                rule = study,
-                onToggle = { toggleRule(ReminderSettingsRepository.TYPE_DAILY_STUDY, it) },
-                onTimeClick = { showTimePicker(context, study.hour, study.minute) { hour, minute ->
-                    saveRule(ReminderSettingsRepository.TYPE_DAILY_STUDY, settings.getRule(ReminderSettingsRepository.TYPE_DAILY_STUDY).copy(hour = hour, minute = minute))
-                } }
-            )
-            ReminderSettingCard(
-                title = "Daily Progress reminder",
-                subtitle = "Prompt yourself to mark today's progress and record what you studied.",
-                rule = dailyLog,
-                onToggle = { toggleRule(ReminderSettingsRepository.TYPE_DAILY_LOG, it) },
-                onTimeClick = { showTimePicker(context, dailyLog.hour, dailyLog.minute) { hour, minute ->
-                    saveRule(ReminderSettingsRepository.TYPE_DAILY_LOG, settings.getRule(ReminderSettingsRepository.TYPE_DAILY_LOG).copy(hour = hour, minute = minute))
-                } }
-            )
+
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.Top
+            ) {
+                DailyReminderTile(
+                    modifier = Modifier.weight(1f),
+                    title = "Daily study",
+                    subtitle = "Focused session",
+                    icon = Icons.Filled.Alarm,
+                    rule = study,
+                    onToggle = { toggleRule(ReminderSettingsRepository.TYPE_DAILY_STUDY, it) },
+                    onTimeClick = {
+                        showTimePicker(context, study.hour, study.minute) { hour, minute ->
+                            saveRule(ReminderSettingsRepository.TYPE_DAILY_STUDY, settings.getRule(ReminderSettingsRepository.TYPE_DAILY_STUDY).copy(hour = hour, minute = minute))
+                        }
+                    }
+                )
+                DailyReminderTile(
+                    modifier = Modifier.weight(1f),
+                    title = "Daily progress",
+                    subtitle = "Log today's work",
+                    icon = Icons.Filled.Today,
+                    rule = dailyLog,
+                    onToggle = { toggleRule(ReminderSettingsRepository.TYPE_DAILY_LOG, it) },
+                    onTimeClick = {
+                        showTimePicker(context, dailyLog.hour, dailyLog.minute) { hour, minute ->
+                            saveRule(ReminderSettingsRepository.TYPE_DAILY_LOG, settings.getRule(ReminderSettingsRepository.TYPE_DAILY_LOG).copy(hour = hour, minute = minute))
+                        }
+                    }
+                )
+            }
+
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text("Custom reminders", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-                    Text("Create your own title, message and schedule.", color = TextMuted, fontSize = 11.sp)
+                    Text("${customReminders.size} scheduled", color = TextMuted, fontSize = 11.sp)
                 }
                 FilledIconButton(
                     onClick = { editingCustomReminder = null; showCustomDialog = true },
-                    modifier = Modifier.size(48.dp),
-                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.size(46.dp),
+                    shape = RoundedCornerShape(15.dp),
                     colors = IconButtonDefaults.filledIconButtonColors(containerColor = PrimaryLight, contentColor = BgApp)
                 ) {
-                    Icon(Icons.Filled.Add, contentDescription = "Add custom reminder", tint = BgApp, modifier = Modifier.size(25.dp))
+                    Icon(Icons.Filled.Add, contentDescription = "Add reminder", tint = BgApp, modifier = Modifier.size(24.dp))
+                }
+                Spacer(Modifier.width(7.dp))
+                OutlinedButton(
+                    onClick = { showTimeline = !showTimeline },
+                    shape = RoundedCornerShape(13.dp),
+                    contentPadding = PaddingValues(horizontal = 11.dp, vertical = 10.dp)
+                ) {
+                    Icon(if (showTimeline) Icons.Filled.Notifications else Icons.Filled.Today, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(5.dp))
+                    Text(if (showTimeline) "Cards" else "Timeline", fontSize = 12.sp)
                 }
             }
-            if (customReminders.isEmpty()) {
-                JeeCard {
-                    Text("No custom reminders yet", fontWeight = FontWeight.Medium)
-                    Text("Add a reminder for a topic, revision block or personal study goal.", color = TextSecondary, fontSize = 11.sp)
-                }
-            } else {
-                customReminders.forEach { reminder ->
-                    CustomReminderCard(
-                        reminder = reminder,
-                        onToggleEnabled = { enabled ->
+
+            AnimatedContent(
+                targetState = showTimeline,
+                transitionSpec = {
+                    (slideInHorizontally { width -> width / 4 } + fadeIn())
+                        .togetherWith(slideOutHorizontally { width -> -width / 4 } + fadeOut())
+                },
+                label = "reminder-view-transition"
+            ) { timelineMode ->
+                if (timelineMode) {
+                    ReminderTimeline(
+                        items = timelineItems,
+                        masterEnabled = masterEnabled,
+                        onCustomToggle = { reminder, enabled ->
                             customRepository.setEnabled(reminder.id, enabled)
                             ReminderScheduler(context).scheduleCustom(reminder.id)
                             refresh++
                         },
-                        onEdit = { editingCustomReminder = reminder; showCustomDialog = true },
-                        onDelete = {
-                            customRepository.delete(reminder.id)
-                            ReminderScheduler(context).cancelCustom(reminder.id)
-                            refresh++
-                        }
+                        onCustomEdit = { reminder -> editingCustomReminder = reminder; showCustomDialog = true },
+                        onCustomDelete = { reminder -> confirmDeleteReminder = reminder }
                     )
+                } else {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        if (customReminders.isEmpty()) {
+                            JeeCard {
+                                Text("No custom reminders yet", fontWeight = FontWeight.SemiBold)
+                                Text("Add a topic, revision block or personal study goal.", color = TextSecondary, fontSize = 11.sp, lineHeight = 16.sp)
+                            }
+                        } else {
+                            customReminders.forEach { reminder ->
+                                CustomReminderCard(
+                                    reminder = reminder,
+                                    onToggleEnabled = { enabled ->
+                                        customRepository.setEnabled(reminder.id, enabled)
+                                        ReminderScheduler(context).scheduleCustom(reminder.id)
+                                        refresh++
+                                    },
+                                    onEdit = { editingCustomReminder = reminder; showCustomDialog = true },
+                                    onDelete = { confirmDeleteReminder = reminder }
+                                )
+                            }
+                        }
+                    }
                 }
             }
-            permissionMessage?.let { Text(it, color = TextSecondary, fontSize = 11.sp) }
-            val permissionGranted = Build.VERSION.SDK_INT < 33 ||
-                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
-            if (!permissionGranted || !NotificationManagerCompat.from(context).areNotificationsEnabled()) {
+
+            permissionMessage?.let { Text(it, color = TextSecondary, fontSize = 11.sp, lineHeight = 15.sp) }
+
+            if (!notificationsAllowed || !appNotificationsEnabled) {
                 JeeCard {
-                    Text("Notifications are blocked by Android", fontWeight = FontWeight.SemiBold)
-                    Text("Allow JeE notifications in system settings. If permission is denied, scheduled alarms won't display notifications.", color = TextSecondary, fontSize = 11.sp, lineHeight = 16.sp)
-                    OutlinedButton(onClick = {
-                        context.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName))
-                    }) { Text("Open system settings") }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Filled.Notifications, null, tint = PrimaryLight, modifier = Modifier.size(22.dp))
+                        Spacer(Modifier.width(10.dp))
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                            Text("Notifications are blocked by Android", fontWeight = FontWeight.SemiBold)
+                            Text("Allow notifications so your scheduled reminders can reach you.", color = TextSecondary, fontSize = 11.sp, lineHeight = 15.sp)
+                        }
+                    }
+                    Spacer(Modifier.height(9.dp))
+                    OutlinedButton(
+                        onClick = {
+                            context.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName))
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(13.dp)
+                    ) { Text("Open system notification settings") }
                 }
             }
-            Text("No exact-alarm permission is requested. Android may deliver reminders a little later to protect battery life.", color = TextMuted, fontSize = 10.sp, lineHeight = 15.sp)
         }
     }
     if (showCustomDialog) {
@@ -489,6 +518,26 @@ fun NotificationSettingsScreen(onBack: () -> Unit) {
             }
         )
     }
+    confirmDeleteReminder?.let { reminder ->
+        AlertDialog(
+            onDismissRequest = { confirmDeleteReminder = null },
+            title = { Text("Delete reminder?") },
+            text = { Text("Delete \"${reminder.title}\"? This cannot be undone.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        customRepository.delete(reminder.id)
+                        ReminderScheduler(context).cancelCustom(reminder.id)
+                        confirmDeleteReminder = null
+                        refresh++
+                    }
+                ) { Text("Delete", color = Danger) }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmDeleteReminder = null }) { Text("Cancel") }
+            }
+        )
+    }
 }
 
 @Composable
@@ -498,58 +547,225 @@ private fun CustomReminderCard(
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
-    var menuExpanded by remember(reminder.id) { mutableStateOf(false) }
     JeeCard {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(reminder.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 if (reminder.message.isNotBlank()) {
-                    Text(
-                        reminder.message,
-                        color = TextSecondary,
-                        fontSize = 12.sp,
-                        lineHeight = 17.sp,
-                        maxLines = 3
-                    )
+                    Text(reminder.message, color = TextSecondary, fontSize = 11.sp, lineHeight = 15.sp, maxLines = 2)
                 }
-                Spacer(Modifier.height(2.dp))
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                    Icon(Icons.Filled.Alarm, null, tint = PrimaryLight, modifier = Modifier.size(15.dp))
-                    Text(
-                        if (reminder.repeat == CustomReminder.REPEAT_ONCE && !reminder.scheduledDate.isNullOrBlank()) {
-                            "${formatReminderDate(reminder.scheduledDate)} · ${formatReminderTime(reminder.hour, reminder.minute)}"
-                        } else {
-                            formatReminderTime(reminder.hour, reminder.minute)
-                        },
-                        color = PrimaryLight,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
+                Text(
+                    if (reminder.repeat == CustomReminder.REPEAT_ONCE && !reminder.scheduledDate.isNullOrBlank()) {
+                        "${formatReminderDate(reminder.scheduledDate)} · ${formatReminderTime(reminder.hour, reminder.minute)}"
+                    } else {
+                        "${formatReminderTime(reminder.hour, reminder.minute)} · ${reminder.repeat.lowercase(Locale.getDefault())}"
+                    },
+                    color = if (reminder.enabled) PrimaryLight else TextMuted,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
             }
-            Box {
-                IconButton(onClick = { menuExpanded = true }, modifier = Modifier.size(36.dp)) {
-                    Icon(Icons.Filled.MoreVert, contentDescription = "Reminder options", tint = TextSecondary)
-                }
-                DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
-                    DropdownMenuItem(
-                        text = { Text(if (reminder.enabled) "Pause reminder" else "Enable reminder") },
-                        leadingIcon = { Icon(Icons.Filled.Alarm, null) },
-                        onClick = {
-                            menuExpanded = false
-                            onToggleEnabled(!reminder.enabled)
+            CustomReminderActions(
+                reminder = reminder,
+                onToggleEnabled = onToggleEnabled,
+                onEdit = onEdit,
+                onDelete = onDelete
+            )
+        }
+    }
+}
+
+@Composable
+private fun CustomReminderActions(
+    reminder: CustomReminder,
+    onToggleEnabled: (Boolean) -> Unit,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
+) {
+    var menuExpanded by remember(reminder.id) { mutableStateOf(false) }
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(0.dp)) {
+        IconButton(onClick = onEdit, modifier = Modifier.size(36.dp)) {
+            Icon(Icons.Filled.Edit, contentDescription = "Edit reminder", tint = TextSecondary, modifier = Modifier.size(19.dp))
+        }
+        Switch(
+            checked = reminder.enabled,
+            onCheckedChange = onToggleEnabled,
+            modifier = Modifier.width(48.dp)
+        )
+        Box {
+            IconButton(onClick = { menuExpanded = true }, modifier = Modifier.size(32.dp)) {
+                Icon(Icons.Filled.MoreVert, contentDescription = "Reminder options", tint = TextSecondary, modifier = Modifier.size(19.dp))
+            }
+            DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+                DropdownMenuItem(
+                    text = { Text("Edit") },
+                    leadingIcon = { Icon(Icons.Filled.Edit, null) },
+                    onClick = { menuExpanded = false; onEdit() }
+                )
+                DropdownMenuItem(
+                    text = { Text("Delete") },
+                    leadingIcon = { Icon(Icons.Filled.Delete, null, tint = Danger) },
+                    onClick = { menuExpanded = false; onDelete() }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DailyReminderTile(
+    modifier: Modifier = Modifier,
+    title: String,
+    subtitle: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    rule: ReminderRule,
+    onToggle: (Boolean) -> Unit,
+    onTimeClick: () -> Unit
+) {
+    JeeCard(modifier = modifier) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Surface(shape = RoundedCornerShape(10.dp), color = PrimarySoft) {
+                Icon(icon, contentDescription = null, tint = PrimaryLight, modifier = Modifier.padding(8.dp).size(18.dp))
+            }
+            Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, lineHeight = 16.sp)
+        }
+        Spacer(Modifier.height(7.dp))
+        Text(subtitle, color = TextSecondary, fontSize = 10.sp, lineHeight = 14.sp, minLines = 1, maxLines = 2)
+        Spacer(Modifier.height(8.dp))
+        Text(formatReminderTime(rule.hour, rule.minute), color = PrimaryLight, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(4.dp))
+        Text("Every day", color = TextMuted, fontSize = 10.sp)
+        TextButton(onClick = onTimeClick, contentPadding = PaddingValues(horizontal = 0.dp, vertical = 0.dp)) {
+            Icon(Icons.Filled.Alarm, contentDescription = null, modifier = Modifier.size(15.dp))
+            Spacer(Modifier.width(4.dp))
+            Text("Change time", fontSize = 11.sp)
+        }
+        Row(
+            Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(if (rule.enabled) "ON" else "OFF", color = if (rule.enabled) PrimaryLight else TextMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+            Switch(checked = rule.enabled, onCheckedChange = onToggle, modifier = Modifier.width(48.dp))
+        }
+    }
+}
+
+private data class ReminderScheduleItem(
+    val title: String,
+    val message: String,
+    val at: LocalDateTime,
+    val enabled: Boolean,
+    val customReminder: CustomReminder? = null,
+    val repeatLabel: String = "Daily"
+)
+
+private fun nextScheduledDateTime(
+    now: LocalDateTime,
+    hour: Int,
+    minute: Int,
+    repeat: String,
+    scheduledDate: String? = null
+): LocalDateTime? {
+    val time = LocalTime.of(hour.coerceIn(0, 23), minute.coerceIn(0, 59))
+    if (repeat == CustomReminder.REPEAT_ONCE) {
+        val date = scheduledDate?.let { runCatching { LocalDate.parse(it) }.getOrNull() } ?: return null
+        return date.atTime(time).takeIf { it.isAfter(now) }
+    }
+    for (offset in 0L..7L) {
+        val date = now.toLocalDate().plusDays(offset)
+        if (repeat == CustomReminder.REPEAT_WEEKDAYS &&
+            (date.dayOfWeek == java.time.DayOfWeek.SATURDAY || date.dayOfWeek == java.time.DayOfWeek.SUNDAY)
+        ) continue
+        val candidate = date.atTime(time)
+        if (candidate.isAfter(now)) return candidate
+    }
+    return null
+}
+
+private fun buildTimelineItems(
+    study: ReminderRule,
+    dailyLog: ReminderRule,
+    customReminders: List<CustomReminder>
+): List<ReminderScheduleItem> {
+    val now = LocalDateTime.now()
+    return buildList {
+        nextScheduledDateTime(now, study.hour, study.minute, CustomReminder.REPEAT_DAILY)?.let {
+            add(ReminderScheduleItem("Daily study", "Start a focused JEE study block.", it, study.enabled, repeatLabel = "Daily"))
+        }
+        nextScheduledDateTime(now, dailyLog.hour, dailyLog.minute, CustomReminder.REPEAT_DAILY)?.let {
+            add(ReminderScheduleItem("Daily progress", "Record what you studied and close today's loop.", it, dailyLog.enabled, repeatLabel = "Daily"))
+        }
+        customReminders.forEach { reminder ->
+            nextScheduledDateTime(now, reminder.hour, reminder.minute, reminder.repeat, reminder.scheduledDate)?.let {
+                add(ReminderScheduleItem(
+                    title = reminder.title,
+                    message = reminder.message.ifBlank { "Your scheduled study reminder." },
+                    at = it,
+                    enabled = reminder.enabled,
+                    customReminder = reminder,
+                    repeatLabel = reminder.repeat
+                ))
+            }
+        }
+    }.sortedBy { it.at }
+}
+
+@Composable
+private fun ReminderTimeline(
+    items: List<ReminderScheduleItem>,
+    masterEnabled: Boolean,
+    onCustomToggle: (CustomReminder, Boolean) -> Unit,
+    onCustomEdit: (CustomReminder) -> Unit,
+    onCustomDelete: (CustomReminder) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+        Text("TIMELINE", color = TextMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
+        if (items.isEmpty()) {
+            JeeCard {
+                Text("No reminders to show yet.", fontWeight = FontWeight.SemiBold)
+                Text("Add a custom reminder or enable a daily reminder.", color = TextSecondary, fontSize = 11.sp)
+            }
+        } else {
+            JeeCard {
+                items.forEachIndexed { index, item ->
+                    Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.Top) {
+                        Column(Modifier.width(76.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                            Text(formatReminderTime(item.at.hour, item.at.minute), color = PrimaryLight, fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                            Text(
+                                when (item.at.toLocalDate()) {
+                                    LocalDate.now() -> "Today"
+                                    LocalDate.now().plusDays(1) -> "Tomorrow"
+                                    else -> item.at.format(DateTimeFormatter.ofPattern("d MMM", Locale.getDefault()))
+                                },
+                                color = TextMuted, fontSize = 10.sp
+                            )
                         }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Edit") },
-                        leadingIcon = { Icon(Icons.Filled.Edit, null) },
-                        onClick = { menuExpanded = false; onEdit() }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Delete") },
-                        leadingIcon = { Icon(Icons.Filled.Delete, null) },
-                        onClick = { menuExpanded = false; onDelete() }
-                    )
+                        Column(Modifier.width(13.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Box(Modifier.padding(top = 3.dp).size(8.dp).clip(RoundedCornerShape(50)).background(if (item.enabled && masterEnabled) PrimaryLight else TextMuted))
+                            if (index < items.lastIndex) Spacer(Modifier.padding(top = 4.dp).width(1.dp).height(32.dp).background(BgDivider))
+                        }
+                        Spacer(Modifier.width(7.dp))
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                            Text(item.title, color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                            if (item.message.isNotBlank()) Text(item.message, color = TextSecondary, fontSize = 11.sp, lineHeight = 15.sp, maxLines = 2)
+                            val stateText = when {
+                                !masterEnabled -> "PAUSED"
+                                !item.enabled -> "OFF"
+                                else -> item.repeatLabel.uppercase(Locale.getDefault())
+                            }
+                            Text(stateText, color = if (masterEnabled && item.enabled) PrimaryLight else TextMuted, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = .6.sp)
+                            item.customReminder?.let { reminder ->
+                                CustomReminderActions(
+                                    reminder = reminder,
+                                    onToggleEnabled = { onCustomToggle(reminder, it) },
+                                    onEdit = { onCustomEdit(reminder) },
+                                    onDelete = { onCustomDelete(reminder) }
+                                )
+                            }
+                        }
+                    }
+                    if (index < items.lastIndex) HorizontalDivider(color = BgDivider.copy(alpha = .45f))
                 }
             }
         }
@@ -568,7 +784,7 @@ private fun CustomReminderDialog(
     var hour by remember(existing?.id) { mutableIntStateOf(existing?.hour ?: 18) }
     var minute by remember(existing?.id) { mutableIntStateOf(existing?.minute ?: 0) }
     var repeat by remember(existing?.id) {
-        mutableStateOf(if (existing?.repeat == CustomReminder.REPEAT_ONCE) CustomReminder.REPEAT_ONCE else CustomReminder.REPEAT_DAILY)
+        mutableStateOf(existing?.repeat?.takeIf { it in CustomReminder.repeatOptions } ?: CustomReminder.REPEAT_DAILY)
     }
     var scheduledDate by remember(existing?.id) {
         mutableStateOf(
@@ -617,11 +833,20 @@ private fun CustomReminderDialog(
                 }
                 Text("Schedule", color = TextSecondary, fontSize = 11.sp)
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                    listOf(CustomReminder.REPEAT_DAILY, CustomReminder.REPEAT_ONCE).forEach { option ->
+                    listOf(CustomReminder.REPEAT_DAILY, CustomReminder.REPEAT_WEEKDAYS, CustomReminder.REPEAT_ONCE).forEach { option ->
                         FilterChip(
                             selected = repeat == option,
                             onClick = { repeat = option },
-                            label = { Text(if (option == CustomReminder.REPEAT_ONCE) "Specific date" else "Daily", fontSize = 11.sp) }
+                            label = {
+                                Text(
+                                    when (option) {
+                                        CustomReminder.REPEAT_ONCE -> "Specific date"
+                                        CustomReminder.REPEAT_WEEKDAYS -> "Weekdays"
+                                        else -> "Daily"
+                                    },
+                                    fontSize = 11.sp
+                                )
+                            }
                         )
                     }
                 }
@@ -659,7 +884,7 @@ private fun CustomReminderDialog(
                         Text("This reminder runs once on the selected date.", color = TextMuted, fontSize = 10.sp, lineHeight = 14.sp)
                     }
                 } else {
-                    Text("Repeats every day at this time.", color = TextMuted, fontSize = 10.sp, lineHeight = 14.sp)
+                    Text(if (repeat == CustomReminder.REPEAT_WEEKDAYS) "Repeats Monday to Friday at this time." else "Repeats every day at this time.", color = TextMuted, fontSize = 10.sp, lineHeight = 14.sp)
                 }
             }
         },
@@ -743,6 +968,11 @@ private fun ReminderSettingCard(
             }
         }
     }
+}
+
+@Composable
+fun NotificationSettingsScreen(onBack: () -> Unit) {
+    NotificationManagementScreen(onBack = onBack)
 }
 
 private fun showTimePicker(context: Context, hour: Int, minute: Int, onTime: (Int, Int) -> Unit) {
