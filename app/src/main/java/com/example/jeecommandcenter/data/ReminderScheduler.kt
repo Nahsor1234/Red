@@ -200,12 +200,12 @@ class DailyReminderReceiver : BroadcastReceiver() {
                 ReminderScheduler(context).scheduleCustom(customId)
                 return
             }
-            if (ReminderNotificationPublisher.showCustom(context, reminder)) {
-                repository.markTriggered(customId, System.currentTimeMillis())
-            }
-            if (reminder.repeat == CustomReminder.REPEAT_ONCE) {
+            val delivered = ReminderNotificationPublisher.showCustom(context, reminder)
+            if (delivered) repository.markTriggered(customId, System.currentTimeMillis())
+            if (reminder.repeat == CustomReminder.REPEAT_ONCE && delivered) {
                 ReminderScheduler(context).cancelCustom(customId)
             } else {
+                // If Android blocks the notification, keep the one-time reminder queued.
                 ReminderScheduler(context).scheduleCustom(customId)
             }
             return
