@@ -447,6 +447,11 @@ fun NotificationSettingsScreen(onBack: () -> Unit) {
                 customReminders.forEach { reminder ->
                     CustomReminderCard(
                         reminder = reminder,
+                        onToggleEnabled = { enabled ->
+                            customRepository.setEnabled(reminder.id, enabled)
+                            ReminderScheduler(context).scheduleCustom(reminder.id)
+                            refresh++
+                        },
                         onEdit = { editingCustomReminder = reminder; showCustomDialog = true },
                         onDelete = {
                             customRepository.delete(reminder.id)
@@ -489,6 +494,7 @@ fun NotificationSettingsScreen(onBack: () -> Unit) {
 @Composable
 private fun CustomReminderCard(
     reminder: CustomReminder,
+    onToggleEnabled: (Boolean) -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
@@ -526,6 +532,14 @@ private fun CustomReminderCard(
                     Icon(Icons.Filled.MoreVert, contentDescription = "Reminder options", tint = TextSecondary)
                 }
                 DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+                    DropdownMenuItem(
+                        text = { Text(if (reminder.enabled) "Pause reminder" else "Enable reminder") },
+                        leadingIcon = { Icon(Icons.Filled.Alarm, null) },
+                        onClick = {
+                            menuExpanded = false
+                            onToggleEnabled(!reminder.enabled)
+                        }
+                    )
                     DropdownMenuItem(
                         text = { Text("Edit") },
                         leadingIcon = { Icon(Icons.Filled.Edit, null) },
