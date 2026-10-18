@@ -37,8 +37,6 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -82,7 +80,7 @@ enum class AppTab { HOME, SYLLABUS, AI, TASKS, STATS }
 @Composable fun LinearStatBar(progress: Float, modifier: Modifier = Modifier, trackColor: Color = BgDivider, fillColor: Color = AccentBlue, height: androidx.compose.ui.unit.Dp = 5.dp) { val p by animateFloatAsState(progress.coerceIn(0f, 1f), animationSpec = tween(320), label = "progress"); Box(modifier.fillMaxWidth().height(height).clip(JeeShapes.pill).background(trackColor)) { Box(Modifier.fillMaxHeight().fillMaxWidth(p).clip(JeeShapes.pill).background(fillColor)) } }
 @Composable fun SectionHeader(title: String, actionLabel: String? = null, onActionClick: () -> Unit = {}) { Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), Arrangement.SpaceBetween, Alignment.CenterVertically) { Text(title, style = MaterialTheme.typography.titleMedium); if (actionLabel != null) Text(actionLabel, color = AccentBlueLight, fontSize = 12.sp, modifier = Modifier.premiumClick { onActionClick() }) } }
 data class TaskItem(val id: String, val title: String, val subtitle: String, val duration: String, val done: Boolean = false, val inProgress: Boolean = false)
-@Composable fun TaskRow(task: TaskItem, onToggle: (String) -> Unit, onClick: () -> Unit = {}) { val alpha by animateFloatAsState(if (task.done) .62f else 1f, label = "task-alpha"); val check by animateColorAsState(if (task.done) AccentGreen else Color.Transparent, label = "task-check"); val scale by animateFloatAsState(if (task.done) .985f else 1f, animationSpec = tween(180), label = "task-scale"); Row(Modifier.fillMaxWidth().graphicsLayer(alpha = alpha, scaleX = scale, scaleY = scale).premiumClick(onClick = onClick).padding(vertical = 11.dp), verticalAlignment = Alignment.CenterVertically) { Box(Modifier.size(22.dp).clip(RoundedCornerShape(7.dp)).background(check).border(1.dp, if (task.done) AccentGreen else BgCardBorder, RoundedCornerShape(7.dp)).premiumClick(haptic = if (!task.done) HapticFeedbackConstants.KEYBOARD_TAP else HapticFeedbackConstants.VIRTUAL_KEY) { onToggle(task.id) }, Alignment.Center) { if (task.done) Icon(Icons.Filled.Check, null, tint = AccentGreenDark, modifier = Modifier.size(14.dp)) }; Spacer(Modifier.width(12.dp)); Column(Modifier.weight(1f)) { Text(task.title, color = TextOnCard, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium), textDecoration = if (task.done) TextDecoration.LineThrough else TextDecoration.None); if (task.subtitle.isNotEmpty()) Text(task.subtitle, color = TextSecondary, style = MaterialTheme.typography.bodySmall) }; Text(task.duration, color = TextMuted, style = MaterialTheme.typography.labelMedium) } }
+@Composable fun TaskRow(task: TaskItem, onToggle: (String) -> Unit, onClick: () -> Unit = {}) { val alpha by animateFloatAsState(if (task.done) .62f else 1f, label = "task-alpha"); val check by animateColorAsState(if (task.done) AccentGreen else Color.Transparent, label = "task-check"); val scale by animateFloatAsState(if (task.done) .985f else 1f, animationSpec = tween(180), label = "task-scale"); Row(Modifier.fillMaxWidth().graphicsLayer(alpha = alpha, scaleX = scale, scaleY = scale).premiumClick(onClick = onClick).padding(vertical = 11.dp), verticalAlignment = Alignment.CenterVertically) { Box(Modifier.size(21.dp).clip(RoundedCornerShape(7.dp)).background(check).border(1.dp, if (task.done) AccentGreen else BgCardBorder, RoundedCornerShape(7.dp)).premiumClick(haptic = if (!task.done) HapticFeedbackConstants.KEYBOARD_TAP else HapticFeedbackConstants.VIRTUAL_KEY) { onToggle(task.id) }, Alignment.Center) { if (task.done) Icon(Icons.Filled.Check, null, tint = AccentGreenDark, modifier = Modifier.size(14.dp)) }; Spacer(Modifier.width(12.dp)); Column(Modifier.weight(1f)) { Text(task.title, color = TextOnCard, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium), textDecoration = if (task.done) TextDecoration.LineThrough else TextDecoration.None); if (task.subtitle.isNotEmpty()) Text(task.subtitle, color = TextSecondary, style = MaterialTheme.typography.bodySmall) }; Text(task.duration, color = TextMuted, style = MaterialTheme.typography.labelMedium) } }
 @Composable fun JeeFilterChip(label: String, selected: Boolean, onClick: () -> Unit) { FilterChip(selected = selected, onClick = onClick, label = { Text(label, fontSize = 12.sp, fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal) }, shape = JeeShapes.pill, colors = FilterChipDefaults.filterChipColors(containerColor = BgCard, labelColor = TextSecondary, selectedContainerColor = AccentBlue, selectedLabelColor = Color(0xFF17120A))) }
 
 private enum class NavVisual { HOME, SYLLABUS, AI, TASKS, TIMER }
@@ -90,12 +88,8 @@ private enum class NavVisual { HOME, SYLLABUS, AI, TASKS, TIMER }
 @Composable
 fun BottomNavBar(selected: AppTab, onTabSelected: (AppTab) -> Unit) {
     val view = LocalView.current
-    val density = LocalDensity.current
-    var navWidth by remember { mutableStateOf(0.dp) }
-    val itemCount = 5
     val horizontalInset = 4.dp
-    val contentWidth = (navWidth - horizontalInset * 2).coerceAtLeast(0.dp)
-    val slotWidth = if (contentWidth > 0.dp) contentWidth / itemCount else 0.dp
+    val indicatorSize = 38.dp
     val activeIndex = when (selected) {
         AppTab.HOME -> 0
         AppTab.SYLLABUS -> 1
@@ -103,35 +97,35 @@ fun BottomNavBar(selected: AppTab, onTabSelected: (AppTab) -> Unit) {
         AppTab.TASKS -> 3
         AppTab.STATS -> 4
     }
-    val indicatorSize = 42.dp
-    val indicatorX by animateDpAsState(
-        targetValue = horizontalInset + slotWidth * activeIndex + ((slotWidth - indicatorSize).coerceAtLeast(0.dp) / 2f),
-        animationSpec = spring(dampingRatio = .82f, stiffness = 420f),
-        label = "nav-selected-circle"
-    )
 
     Box(
         Modifier
             .fillMaxWidth()
             .navigationBarsPadding()
             .padding(horizontal = 28.dp)
-            .padding(bottom = 8.dp),
+            .padding(bottom = 4.dp),
         contentAlignment = Alignment.Center
     ) {
-        Box(
+        BoxWithConstraints(
             Modifier
                 .fillMaxWidth()
-                .height(66.dp)
-                .shadow(14.dp, JeeShapes.pill, clip = false)
+                .height(60.dp)
+                .shadow(10.dp, JeeShapes.pill, clip = false)
                 .clip(JeeShapes.pill)
                 .background(BgCard.copy(alpha = .94f))
                 .border(1.dp, BgCardBorder.copy(alpha = .95f), JeeShapes.pill)
-                .onGloballyPositioned { navWidth = with(density) { it.size.width.toDp() } }
         ) {
+            val slotWidth = (maxWidth - horizontalInset * 2).coerceAtLeast(0.dp) / 5
+            val indicatorX by animateDpAsState(
+                targetValue = horizontalInset + slotWidth * activeIndex +
+                    ((slotWidth - indicatorSize).coerceAtLeast(0.dp) / 2f),
+                animationSpec = spring(dampingRatio = .86f, stiffness = 460f),
+                label = "nav-selected-circle"
+            )
             if (slotWidth > 0.dp) {
                 Box(
                     Modifier
-                        .offset(x = indicatorX, y = 4.dp)
+                        .offset(x = indicatorX, y = (60.dp - indicatorSize) / 2)
                         .size(indicatorSize)
                         .clip(RoundedCornerShape(50))
                         .background(Primary.copy(alpha = .20f))
@@ -139,7 +133,7 @@ fun BottomNavBar(selected: AppTab, onTabSelected: (AppTab) -> Unit) {
                 )
             }
             Row(
-                Modifier.fillMaxSize().padding(horizontal = horizontalInset, vertical = 5.dp),
+                Modifier.fillMaxSize().padding(horizontal = horizontalInset, vertical = 3.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 NavIconSlot(NavVisual.HOME, selected == AppTab.HOME, Modifier.weight(1f)) {
@@ -217,7 +211,7 @@ private fun RowScope.NavIconSlot(
                 role = Role.Tab,
                 onClick = onClick
             )
-            .padding(top = 3.dp, bottom = 3.dp),
+            .padding(top = 2.dp, bottom = 2.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
@@ -227,16 +221,16 @@ private fun RowScope.NavIconSlot(
             tint = contentColor,
             modifier = Modifier.size(22.dp)
         )
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(3.dp))
         Text(
             text = label,
             color = contentColor,
             fontSize = 10.sp,
-            lineHeight = 12.sp,
+            lineHeight = 11.sp,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
             maxLines = 1
         )
-        Spacer(Modifier.height(3.dp))
+        Spacer(Modifier.height(2.dp))
         Box(
             Modifier
                 .size(4.dp)
