@@ -24,6 +24,9 @@ import com.example.jeecommandcenter.ui.components.*
 import com.example.jeecommandcenter.ui.theme.*
 import java.time.LocalDate
 import java.time.LocalTime
+import java.time.YearMonth
+import java.time.format.TextStyle
+import java.util.Locale
 import java.time.temporal.ChronoUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -51,7 +54,9 @@ fun DashboardScreen(
     onOpenSettings: () -> Unit = {},
     onOpenAssessment: () -> Unit = {},
     onOpenMistakes: () -> Unit = {},
-    onOpenStudyTimer: () -> Unit = {}
+    onOpenStudyTimer: () -> Unit = {},
+    onOpenDailyLog: () -> Unit = {},
+    onOpenNotifications: () -> Unit = {}
 ) {
     var refresh by remember { mutableIntStateOf(0) }
     var showFocusPicker by remember { mutableStateOf(false) }
@@ -90,6 +95,9 @@ fun DashboardScreen(
     val unresolvedMistakes = snapshot?.unresolvedMistakes ?: 0
     val questionsAttempted = snapshot?.questionsAttempted ?: 0
     val todayTasks = tasks.filter { it.dueDay == "Today" }
+    val dailyLog = remember { DailyLogRepository(context) }
+    val currentMonth = YearMonth.now()
+    val dailyLogCompleted = remember(refresh, currentMonth) { dailyLog.completedCount(currentMonth) }
     val nextTask = todayTasks.firstOrNull { !it.done } ?: tasks.firstOrNull { !it.done }
     val autoFocus = priorities.firstOrNull()
     val selectedFocusChapter = selectedFocusId?.let { JeeCatalog.find(it) }
@@ -119,7 +127,14 @@ fun DashboardScreen(
                         Text(greeting, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
                         Text("JEE 2027 · focused preparation", color = TextSecondary, fontSize = 12.sp)
                     }
-                    IconButton(onClick = onOpenSettings) { Icon(Icons.Filled.Settings, "Settings", tint = TextPrimary, modifier = Modifier.size(24.dp)) }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = onOpenNotifications) {
+                            Icon(Icons.Filled.Notifications, "Notifications", tint = PrimaryLight, modifier = Modifier.size(23.dp))
+                        }
+                        IconButton(onClick = onOpenSettings) {
+                            Icon(Icons.Filled.Settings, "Settings", tint = TextPrimary, modifier = Modifier.size(24.dp))
+                        }
+                    }
                 }
 
                 JeeCard {
@@ -146,6 +161,23 @@ fun DashboardScreen(
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     QuickAction("Mistakes", unresolvedMistakes.toString() + " unresolved", Icons.Filled.ErrorOutline, Modifier.weight(1f), false, onOpenMistakes)
                     QuickAction("Study", (todayMinutes / 60).toString() + "h " + (todayMinutes % 60).toString() + "m today", Icons.Filled.Timer, Modifier.weight(1f), false, onOpenStudyTimer)
+                }
+
+                Spacer(Modifier.height(18.dp))
+                JeeCard(modifier = Modifier.premiumClick(onClick = onOpenDailyLog)) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Surface(shape = RoundedCornerShape(12.dp), color = PrimarySoft) {
+                            Icon(Icons.Filled.CalendarMonth, "Daily Log", tint = PrimaryLight, modifier = Modifier.padding(10.dp).size(21.dp))
+                        }
+                        Spacer(Modifier.width(11.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("Daily Log", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                            Text("${currentMonth.month.getDisplayName(TextStyle.SHORT, Locale.getDefault())} · $dailyLogCompleted/${currentMonth.lengthOfMonth()} days completed", color = TextSecondary, fontSize = 11.sp)
+                        }
+                        Icon(Icons.Filled.ChevronRight, "Open Daily Log", tint = PrimaryLight)
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    LinearStatBar(dailyLogCompleted.toFloat() / currentMonth.lengthOfMonth().coerceAtLeast(1), height = 5.dp, fillColor = Primary)
                 }
 
                 Spacer(Modifier.height(18.dp))
