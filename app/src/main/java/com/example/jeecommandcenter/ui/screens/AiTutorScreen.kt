@@ -32,6 +32,14 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+private data class AiTutorInsights(
+    val analytics: AnalyticsSnapshot,
+    val priorities: List<DailyPriority>,
+    val revisions: List<RevisionRecommendation>,
+    val weak: List<WeakChapter>,
+    val topMistakes: List<MistakeRecord>
+)
+
 @Composable
 fun AiTutorScreen(
     context: android.content.Context,
@@ -42,18 +50,33 @@ fun AiTutorScreen(
     onOpenHistory: () -> Unit = {},
     conversationId: Long? = null,
     onConversationOpened: (Long) -> Unit = {},
-    onConversationCleared: () -> Unit = {}
+    onConversationCleared: () -> Unit = {},
+    showMainNavigation: Boolean = false,
+    selectedTab: AppTab = AppTab.AI,
+    onTabSelected: (AppTab) -> Unit = {}
 ) {
     val settings = remember { AiSettingsRepository(context) }
     val orchestrator = remember { AiOrchestrator(context) }
     val history = remember { AiChatHistoryRepository(context) }
     val scope = rememberCoroutineScope()
-    val analytics = remember { learning.analytics(jee) }
-    val intelligence = remember { JeeIntelligence(jee, learning) }
-    val priorities = remember { intelligence.dailyPriorities(3) }
-    val revisions = remember { intelligence.revisionRecommendations(3) }
-    val weak = remember { intelligence.weakChapters(3) }
-    val topMistakes = remember { learning.getMistakes().filterNot { it.resolved }.take(5) }
+    var insights by remember { mutableStateOf<AiTutorInsights?>(null) }
+    LaunchedEffect(jee, learning) {
+        insights = withContext(Dispatchers.Default) {
+            val intelligence = JeeIntelligence(jee, learning)
+            AiTutorInsights(
+                analytics = learning.analytics(jee),
+                priorities = intelligence.dailyPriorities(3),
+                revisions = intelligence.revisionRecommendations(3),
+                weak = intelligence.weakChapters(3),
+                topMistakes = learning.getMistakes().filterNot { it.resolved }.take(5)
+            )
+        }
+    }
+    val analytics = insights?.analytics ?: AnalyticsSnapshot(0, 0, 0, 0f, 0, 0f, 0, 0, 0, 0, emptyList())
+    val priorities = insights?.priorities.orEmpty()
+    val revisions = insights?.revisions.orEmpty()
+    val weak = insights?.weak.orEmpty()
+    val topMistakes = insights?.topMistakes.orEmpty()
     val hasData = analytics.studyMinutes7d > 0 || analytics.testsCompleted > 0 || analytics.unresolvedMistakes > 0 || priorities.isNotEmpty()
     val coachingHeadline = when { priorities.isNotEmpty() -> priorities.first().title; revisions.isNotEmpty() -> "Clear " + revisions.first().chapter.name + " revision"; weak.isNotEmpty() -> "Strengthen " + weak.first().chapter.name; hasData -> "Keep building your study signal"; else -> "Start collecting real study data" }
     var activeId by remember { mutableStateOf(conversationId) }
@@ -136,19 +159,27 @@ fun AiTutorScreen(
             }
         })
     }, bottomBar = {
-        Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(start = 16.dp, end = 16.dp, bottom = 10.dp, top = 5.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-            if (!inChat) {
-                CoachQuickAction("Analyze my preparation", Icons.Filled.Analytics, Modifier.fillMaxWidth()) { send("Analyze my preparation", "Preparation analysis") { orchestrator.analyzePerformance() } }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                    CoachQuickAction("What should I study?", Icons.Filled.Today, Modifier.weight(1f)) { send("What should I study now? Use my current study data, revision backlog, mistakes, and weak chapters to recommend the next concrete JEE study action.", "Daily study recommendation") }
-                    CoachQuickAction("Analyze my mistakes from now", Icons.Filled.ErrorOutline, Modifier.weight(1f)) { send("Analyze my mistakes from now", "Mistake analysis") { orchestrator.explainMistakes() } }
+        Column {
+            Column(
+                Modifier.fillMaxWidth()
+                    .then(if (showMainNavigation) Modifier else Modifier.navigationBarsPadding())
+                    .padding(start = 16.dp, end = 16.dp, bottom = if (showMainNavigation) 0.dp else 10.dp, top = 5.dp),
+                verticalArrangement = Arrangement.spacedBy(7.dp)
+            ) {
+                if (!inChat) {
+                    CoachQuickAction("Analyze my preparation", Icons.Filled.Analytics, Modifier.fillMaxWidth()) { send("Analyze my preparation", "Preparation analysis") { orchestrator.analyzePerformance() } }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                        CoachQuickAction("What should I study?", Icons.Filled.Today, Modifier.weight(1f)) { send("What should I study now? Use my current study data, revision backlog, mistakes, and weak chapters to recommend the next concrete JEE study action.", "Daily study recommendation") }
+                        CoachQuickAction("Analyze my mistakes from now", Icons.Filled.ErrorOutline, Modifier.weight(1f)) { send("Analyze my mistakes from now", "Mistake analysis") { orchestrator.explainMistakes() } }
+                    }
+                }
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(BgCardAlt).border(1.dp, BgCardBorder.copy(alpha = .85f), RoundedCornerShape(28.dp)).padding(horizontal = 5.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Filled.Add, null, tint = TextSecondary, modifier = Modifier.padding(8.dp).size(21.dp))
+                    TextField(value = input, onValueChange = { input = it }, modifier = Modifier.weight(1f), placeholder = { Text("Ask your study coach", color = TextMuted) }, singleLine = false, maxLines = 3, colors = TextFieldDefaults.colors(focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent, disabledContainerColor = Color.Transparent, focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent))
+                    IconButton(onClick = { send(input) }, enabled = input.isNotBlank() && !busy) { Icon(Icons.Filled.Send, "Ask coach", tint = if (input.isNotBlank() && !busy) PrimaryLight else TextMuted) }
                 }
             }
-            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(BgCardAlt).border(1.dp, BgCardBorder.copy(alpha = .85f), RoundedCornerShape(28.dp)).padding(horizontal = 5.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Filled.Add, null, tint = TextSecondary, modifier = Modifier.padding(8.dp).size(21.dp))
-                TextField(value = input, onValueChange = { input = it }, modifier = Modifier.weight(1f), placeholder = { Text("Ask your study coach", color = TextMuted) }, singleLine = false, maxLines = 3, colors = TextFieldDefaults.colors(focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent, disabledContainerColor = Color.Transparent, focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent))
-                IconButton(onClick = { send(input) }, enabled = input.isNotBlank() && !busy) { Icon(Icons.Filled.Send, "Ask coach", tint = if (input.isNotBlank() && !busy) PrimaryLight else TextMuted) }
-            }
+            if (showMainNavigation) BottomNavBar(selectedTab, onTabSelected)
         }
     }) { padding ->
         LaunchedEffect(messages.lastOrNull()?.text, streamingText) { if (messages.isNotEmpty()) chatListState.animateScrollToItem(messages.lastIndex) }

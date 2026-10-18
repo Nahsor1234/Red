@@ -36,7 +36,10 @@ import com.example.jeecommandcenter.data.*
 import com.example.jeecommandcenter.ui.components.*
 import com.example.jeecommandcenter.ui.theme.*
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.util.Locale
+import java.time.LocalDate
 import kotlin.math.ceil
 
 private enum class TimerPreset(val label: String, val sublabel: String, val minutes: Int) {
@@ -62,7 +65,17 @@ fun StudyTimerScreen(repo: JeeRepository, selectedTab: AppTab, onTabSelected: (A
     val view = LocalView.current
     val subjects = listOf("General", "Physics", "Chemistry", "Mathematics")
     val chapters = remember(subject) { if (subject == "General") emptyList() else JeeCatalog.forSubject(subject) }
-    val recentSessions = remember(refresh) { repo.getSessions().take(6) }
+    var sessions by remember { mutableStateOf<List<StudySession>>(emptyList()) }
+    var sessionsLoaded by remember { mutableStateOf(false) }
+    LaunchedEffect(refresh) {
+        sessions = withContext(Dispatchers.IO) { repo.getSessions() }
+        sessionsLoaded = true
+    }
+    val todayDate = LocalDate.now().toString()
+    val todayMinutes = remember(sessions, todayDate) {
+        sessions.asSequence().filter { it.date == todayDate }.sumOf { it.minutes }
+    }
+    val recentSessions = remember(sessions) { sessions.take(6) }
 
     LaunchedEffect(running) {
         if (!running) return@LaunchedEffect
@@ -91,7 +104,7 @@ fun StudyTimerScreen(repo: JeeRepository, selectedTab: AppTab, onTabSelected: (A
         view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
     }
 
-    Scaffold(containerColor = BgApp, bottomBar = { BottomNavBar(selectedTab, onTabSelected, onAiClick) }) { padding ->
+    Scaffold(containerColor = BgApp, bottomBar = { BottomNavBar(selectedTab, onTabSelected) }) { padding ->
         LazyColumn(
             Modifier.fillMaxSize().padding(padding).padding(horizontal = 18.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -100,7 +113,7 @@ fun StudyTimerScreen(repo: JeeRepository, selectedTab: AppTab, onTabSelected: (A
             item {
                 Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
                     Text("Study session", style = MaterialTheme.typography.headlineSmall)
-                    Text(repo.getTodayMinutes().toString() + " min today", color = TextMuted, fontSize = 11.sp)
+                    Text(if (sessionsLoaded) "$todayMinutes min today" else "Loading…", color = TextMuted, fontSize = 11.sp)
                 }
             }
             item {

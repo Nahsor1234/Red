@@ -20,6 +20,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Home
@@ -39,6 +40,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
@@ -74,7 +76,7 @@ fun JeeBackground(modifier: Modifier = Modifier) {
     }
 }
 
-enum class AppTab { HOME, SYLLABUS, TASKS, STATS }
+enum class AppTab { HOME, SYLLABUS, AI, TASKS, STATS }
 
 @Composable fun JeeCard(modifier: Modifier = Modifier, featured: Boolean = false, content: @Composable ColumnScope.() -> Unit) { val shape = if (featured) JeeShapes.large else JeeShapes.medium; Column(modifier.fillMaxWidth().clip(shape).background(if (featured) BgCardAlt else BgCard).border(JeeSurfaceTokens.borderWidth, BgCardBorder.copy(alpha = if (featured) JeeSurfaceTokens.featuredBorderAlpha else JeeSurfaceTokens.cardBorderAlpha), shape).padding(16.dp), content = content) }
 @Composable fun LinearStatBar(progress: Float, modifier: Modifier = Modifier, trackColor: Color = BgDivider, fillColor: Color = AccentBlue, height: androidx.compose.ui.unit.Dp = 5.dp) { val p by animateFloatAsState(progress.coerceIn(0f, 1f), animationSpec = tween(320), label = "progress"); Box(modifier.fillMaxWidth().height(height).clip(JeeShapes.pill).background(trackColor)) { Box(Modifier.fillMaxHeight().fillMaxWidth(p).clip(JeeShapes.pill).background(fillColor)) } }
@@ -86,7 +88,7 @@ data class TaskItem(val id: String, val title: String, val subtitle: String, val
 private enum class NavVisual { HOME, SYLLABUS, AI, TASKS, TIMER }
 
 @Composable
-fun BottomNavBar(selected: AppTab, onTabSelected: (AppTab) -> Unit, onAiClick: () -> Unit) {
+fun BottomNavBar(selected: AppTab, onTabSelected: (AppTab) -> Unit) {
     val view = LocalView.current
     val density = LocalDensity.current
     var navWidth by remember { mutableStateOf(0.dp) }
@@ -97,10 +99,11 @@ fun BottomNavBar(selected: AppTab, onTabSelected: (AppTab) -> Unit, onAiClick: (
     val activeIndex = when (selected) {
         AppTab.HOME -> 0
         AppTab.SYLLABUS -> 1
+        AppTab.AI -> 2
         AppTab.TASKS -> 3
         AppTab.STATS -> 4
     }
-    val indicatorSize = 48.dp
+    val indicatorSize = 42.dp
     val indicatorX by animateDpAsState(
         targetValue = horizontalInset + slotWidth * activeIndex + ((slotWidth - indicatorSize).coerceAtLeast(0.dp) / 2f),
         animationSpec = spring(dampingRatio = .82f, stiffness = 420f),
@@ -112,14 +115,14 @@ fun BottomNavBar(selected: AppTab, onTabSelected: (AppTab) -> Unit, onAiClick: (
             .fillMaxWidth()
             .navigationBarsPadding()
             .padding(horizontal = 28.dp)
-            .padding(bottom = 12.dp),
+            .padding(bottom = 8.dp),
         contentAlignment = Alignment.Center
     ) {
         Box(
             Modifier
                 .fillMaxWidth()
-                .height(76.dp)
-                .shadow(20.dp, JeeShapes.pill, clip = false)
+                .height(66.dp)
+                .shadow(14.dp, JeeShapes.pill, clip = false)
                 .clip(JeeShapes.pill)
                 .background(BgCard.copy(alpha = .94f))
                 .border(1.dp, BgCardBorder.copy(alpha = .95f), JeeShapes.pill)
@@ -128,7 +131,7 @@ fun BottomNavBar(selected: AppTab, onTabSelected: (AppTab) -> Unit, onAiClick: (
             if (slotWidth > 0.dp) {
                 Box(
                     Modifier
-                        .offset(x = indicatorX, y = 5.dp)
+                        .offset(x = indicatorX, y = 4.dp)
                         .size(indicatorSize)
                         .clip(RoundedCornerShape(50))
                         .background(Primary.copy(alpha = .20f))
@@ -147,9 +150,9 @@ fun BottomNavBar(selected: AppTab, onTabSelected: (AppTab) -> Unit, onAiClick: (
                     view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
                     onTabSelected(AppTab.SYLLABUS)
                 }
-                NavIconSlot(NavVisual.AI, false, Modifier.weight(1f)) {
+                NavIconSlot(NavVisual.AI, selected == AppTab.AI, Modifier.weight(1f)) {
                     view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-                    onAiClick()
+                    onTabSelected(AppTab.AI)
                 }
                 NavIconSlot(NavVisual.TASKS, selected == AppTab.TASKS, Modifier.weight(1f)) {
                     view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
@@ -207,20 +210,22 @@ private fun RowScope.NavIconSlot(
             .fillMaxHeight()
             .clip(JeeShapes.pill)
             .graphicsLayer(scaleX = scale, scaleY = scale)
-            .clickable(
+            .selectable(
+                selected = selected,
                 interactionSource = interaction,
                 indication = null,
+                role = Role.Tab,
                 onClick = onClick
             )
-            .padding(top = 7.dp, bottom = 5.dp),
+            .padding(top = 3.dp, bottom = 3.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
         Icon(
             imageVector = icon,
-            contentDescription = label,
+            contentDescription = null,
             tint = contentColor,
-            modifier = Modifier.size(24.dp)
+            modifier = Modifier.size(22.dp)
         )
         Spacer(Modifier.height(4.dp))
         Text(

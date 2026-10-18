@@ -22,6 +22,8 @@ import com.example.jeecommandcenter.data.*
 import com.example.jeecommandcenter.ui.components.*
 import com.example.jeecommandcenter.ui.theme.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @Composable
 fun SyllabusScreen(
@@ -70,11 +72,15 @@ fun SyllabusScreen(
     val intelligence = remember(context) {
         JeeIntelligence(repo, LearningRepository(context.applicationContext))
     }
-    val weak = remember(refresh, subject) {
-        intelligence.weakChapters(20).map { it.chapter.id }.toSet()
-    }
-    val due = remember(refresh) {
-        repo.getRevisionQueue().map { it.chapter.id }.toSet()
+    var weak by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var due by remember { mutableStateOf<Set<String>>(emptySet()) }
+    LaunchedEffect(refresh, subject) {
+        val signals = withContext(Dispatchers.Default) {
+            intelligence.weakChapters(20).map { it.chapter.id }.toSet() to
+                repo.getRevisionQueue().map { it.chapter.id }.toSet()
+        }
+        weak = signals.first
+        due = signals.second
     }
 
     fun progressFor(id: String): Float {
@@ -120,10 +126,9 @@ fun SyllabusScreen(
     val attention = models.firstOrNull { weak.contains(it.first.id) }
 
     Box(Modifier.fillMaxSize()) {
-        JeeBackground()
         Scaffold(
             containerColor = BgApp.copy(alpha = 0f),
-            bottomBar = { BottomNavBar(selectedTab, onTabSelected, onAiClick) }
+            bottomBar = { BottomNavBar(selectedTab, onTabSelected) }
         ) { padding ->
             Column(
                 Modifier.fillMaxSize()

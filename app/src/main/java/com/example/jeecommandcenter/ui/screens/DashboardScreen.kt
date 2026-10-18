@@ -25,6 +25,20 @@ import com.example.jeecommandcenter.ui.theme.*
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.temporal.ChronoUnit
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
+private data class DashboardSnapshot(
+    val tasks: List<AppTask>,
+    val todayMinutes: Int,
+    val goalMinutes: Int,
+    val completedChapters: Int,
+    val revisionDue: Int,
+    val priorities: List<DailyPriority>,
+    val weak: WeakChapter?,
+    val unresolvedMistakes: Int,
+    val questionsAttempted: Int
+)
 
 @Composable
 fun DashboardScreen(
@@ -46,25 +60,35 @@ fun DashboardScreen(
     val context = androidx.compose.ui.platform.LocalContext.current.applicationContext
     val learning = remember { LearningRepository(context) }
     val intelligence = remember { JeeIntelligence(repo, learning) }
-    val tasks = remember(refresh) { repo.getTasks() }
-    val todayMinutes = remember(refresh) { repo.getTodayMinutes() }
-    val goalMinutes = remember(refresh) { repo.getDailyGoalMinutes() }
     val totalChapters = JeeRepository.syllabus.values.sumOf { it.size }
-    val completedChapters = remember(refresh) { JeeRepository.syllabus.keys.sumOf { subject -> repo.chapters(subject).count { it.progress >= 1f } } }
+    var snapshot by remember { mutableStateOf<DashboardSnapshot?>(null) }
+    LaunchedEffect(refresh) {
+        snapshot = withContext(Dispatchers.Default) {
+            DashboardSnapshot(
+                tasks = repo.getTasks(),
+                todayMinutes = repo.getTodayMinutes(),
+                goalMinutes = repo.getDailyGoalMinutes(),
+                completedChapters = JeeRepository.syllabus.keys.sumOf { subject ->
+                    repo.chapters(subject).count { it.progress >= 1f }
+                },
+                revisionDue = repo.getRevisionQueue().size,
+                priorities = intelligence.dailyPriorities(3),
+                weak = intelligence.weakChapters(1).firstOrNull(),
+                unresolvedMistakes = learning.getMistakes().count { !it.resolved },
+                questionsAttempted = learning.getQuestionAttempts().size
+            )
+        }
+    }
+    val tasks = snapshot?.tasks.orEmpty()
+    val todayMinutes = snapshot?.todayMinutes ?: 0
+    val goalMinutes = snapshot?.goalMinutes ?: repo.getDailyGoalMinutes()
+    val completedChapters = snapshot?.completedChapters ?: 0
     val coverage = if (totalChapters == 0) 0f else completedChapters.toFloat() / totalChapters
-    val revisionDue = remember(refresh) { repo.getRevisionQueue().size }
-    val priorities = remember(refresh) { intelligence.dailyPriorities(3) }
-    val weak = remember(refresh) { intelligence.weakChapters(1).firstOrNull() }
-    val todayTasks = tasks.filter { it.dueDay == "Today" }
-    val nextTask = todayTasks.firstOrNull { !it.done } ?: tasks.firstOrNull { !it.done }
-    val autoFocus = priorities.firstOrNull()
-    val selectedFocusChapter = selectedFocusId?.let { JeeCatalog.find(it) }
-    val focus = selectedFocusChapter?.let { chapter ->
-        val progress = repo.chapters(focusSubject).firstOrNull { it.number == chapter.number }
-        FocusDisplay(chapter.name, if (progress == null) "Selected chapter · start building a study signal." else "${(progress.progress * 100).toInt()}% complete · confidence ${progress.confidence}/5", 30, chapter.subject)
-    } ?: autoFocus?.let { FocusDisplay(it.title, it.reason, it.durationMin, it.subject) }
-    val unresolvedMistakes = remember(refresh) { learning.getMistakes().count { !it.resolved } }
-    val questionsAttempted = remember(refresh) { learning.getQuestionAttempts().size }
+    val revisionDue = snapshot?.revisionDue ?: 0
+    val priorities = snapshot?.priorities.orEmpty()
+    val weak = snapshot?.weak
+    val unresolvedMistakes = snapshot?.unresolvedMistakes ?: 0
+    val questionsAttempted = snapshot?.questionsAttempted ?: 0
     val daysToJee = remember { ChronoUnit.DAYS.between(LocalDate.now(), LocalDate.of(2027, 1, 22)).coerceAtLeast(0) }
     val greeting = when (LocalTime.now().hour) {
         in 5..11 -> "Good morning"
@@ -73,8 +97,7 @@ fun DashboardScreen(
     }
 
     Box(Modifier.fillMaxSize()) {
-        JeeBackground()
-        Scaffold(containerColor = BgApp.copy(alpha = 0f), bottomBar = { BottomNavBar(selectedTab, onTabSelected, onAiClick) }) { padding ->
+        Scaffold(containerColor = BgApp.copy(alpha = 0f), bottomBar = { BottomNavBar(selectedTab, onTabSelected) }) { padding ->
             Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 18.dp).verticalScroll(rememberScrollState())) {
                 Spacer(Modifier.height(12.dp))
                 Row(Modifier.fillMaxWidth().padding(bottom = 14.dp), Arrangement.SpaceBetween, Alignment.CenterVertically) {

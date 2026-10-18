@@ -4,8 +4,6 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
@@ -65,17 +63,21 @@ fun AppRoot() {
     AnimatedContent(
         targetState = screenKey,
         transitionSpec = {
-            val forward = navigationDirection >= 0
-            val enterOffset: (Int) -> Int = { full -> if (forward) full / 14 else -full / 14 }
-            val exitOffset: (Int) -> Int = { full -> if (forward) -full / 24 else full / 24 }
-            (fadeIn(tween(250, easing = FastOutSlowInEasing)) +
-                slideInHorizontally(tween(270, easing = FastOutSlowInEasing), enterOffset) +
-                scaleIn(tween(270, easing = FastOutSlowInEasing), initialScale = .985f))
-                .togetherWith(
-                    fadeOut(tween(180, easing = FastOutSlowInEasing)) +
-                        slideOutHorizontally(tween(220, easing = FastOutSlowInEasing), exitOffset) +
-                        scaleOut(tween(220, easing = FastOutSlowInEasing), targetScale = .992f)
-                )
+            val topLevelTabSwitch = initialState.startsWith("tab:") && targetState.startsWith("tab:")
+            if (topLevelTabSwitch) {
+                fadeIn(tween(90, easing = FastOutSlowInEasing))
+                    .togetherWith(fadeOut(tween(60, easing = FastOutSlowInEasing)))
+            } else {
+                val forward = navigationDirection >= 0
+                val enterOffset: (Int) -> Int = { full -> if (forward) full / 18 else -full / 18 }
+                val exitOffset: (Int) -> Int = { full -> if (forward) -full / 28 else full / 28 }
+                (fadeIn(tween(150, easing = FastOutSlowInEasing)) +
+                    slideInHorizontally(tween(160, easing = FastOutSlowInEasing), enterOffset))
+                    .togetherWith(
+                        fadeOut(tween(100, easing = FastOutSlowInEasing)) +
+                            slideOutHorizontally(tween(110, easing = FastOutSlowInEasing), exitOffset)
+                    )
+            }
         },
         label = "app-screen-transition"
     ) { key ->
@@ -112,6 +114,20 @@ fun AppRoot() {
                 null -> when (targetTab ?: AppTab.HOME) {
                     AppTab.HOME -> DashboardScreen(repo, selectedTab, ::selectTab, { openPage(SecondaryPage.AI_TUTOR) }, { openPage(SecondaryPage.PLANNER) }, { openPage(SecondaryPage.REVISION) }, { openPage(SecondaryPage.SETTINGS) }, { openPage(SecondaryPage.ASSESSMENT) }, { openPage(SecondaryPage.MISTAKES) }, { selectTab(AppTab.STATS) })
                     AppTab.SYLLABUS -> SyllabusScreen(repo, selectedTab, ::selectTab, { openPage(SecondaryPage.AI_TUTOR) }, { openPage(SecondaryPage.PLANNER) }, { openPage(SecondaryPage.REVISION) }) { chapter -> selectedChapter = chapter; openPage(SecondaryPage.CHAPTER_DETAIL) }
+                    AppTab.AI -> AiTutorScreen(
+                        context = context,
+                        jee = repo,
+                        learning = learning,
+                        onBack = { selectTab(AppTab.HOME) },
+                        onOpenSettings = { openPage(SecondaryPage.AI_SETTINGS) },
+                        onOpenHistory = { openPage(SecondaryPage.AI_HISTORY) },
+                        conversationId = activeAiConversationId,
+                        onConversationOpened = { id -> activeAiConversationId = id; aiHistory.setActiveConversationId(id) },
+                        onConversationCleared = ::clearAiConversation,
+                        showMainNavigation = true,
+                        selectedTab = AppTab.AI,
+                        onTabSelected = ::selectTab
+                    )
                     AppTab.TASKS -> TasksScreen(repo, selectedTab, ::selectTab) { openPage(SecondaryPage.AI_TUTOR) }
                     AppTab.STATS -> StudyTimerScreen(repo, selectedTab, ::selectTab) { openPage(SecondaryPage.AI_TUTOR) }
                 }
