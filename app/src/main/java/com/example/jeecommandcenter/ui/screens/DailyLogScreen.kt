@@ -177,7 +177,7 @@ fun DailyLogScreen(onBack: () -> Unit) {
                     }
                     if (!selectedIsToday) {
                         Surface(shape = RoundedCornerShape(8.dp), color = BgCardAlt) {
-                            Text(if (selectedDate.isAfter(today)) "Upcoming" else if (entry.completed) "Complete" else "Recorded", color = TextSecondary, fontSize = 10.sp, modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp))
+                            Text(if (selectedDate.isAfter(today)) "Upcoming" else if (entry.completed) "Complete" else if (entry.notes.isNotBlank()) "Notes saved" else "No record", color = TextSecondary, fontSize = 10.sp, modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp))
                         }
                     }
                 }
