@@ -64,15 +64,17 @@ class ReminderSettingsRepository(context: Context) {
             .apply()
     }
 
-    fun isQuietNow(now: LocalTime = LocalTime.now()): Boolean {
+    fun isQuietNow(now: LocalTime = LocalTime.now()): Boolean = isQuietAt(now)
+
+    fun isQuietAt(time: LocalTime): Boolean {
         val hours = getQuietHours()
         val start = LocalTime.of(hours.startHour, hours.startMinute)
         val end = LocalTime.of(hours.endHour, hours.endMinute)
         if (start == end) return false
         return if (start.isBefore(end)) {
-            !now.isBefore(start) && now.isBefore(end)
+            !time.isBefore(start) && time.isBefore(end)
         } else {
-            !now.isBefore(start) || now.isBefore(end)
+            !time.isBefore(start) || time.isBefore(end)
         }
     }
 
@@ -109,12 +111,21 @@ class ReminderScheduler(context: Context) {
             alarmManager.cancel(pendingIntent)
             return
         }
+        val nowMillis = System.currentTimeMillis()
+        val configuredTime = LocalTime.of(rule.hour, rule.minute)
         val trigger = Calendar.getInstance().apply {
-            set(Calendar.HOUR_OF_DAY, rule.hour)
-            set(Calendar.MINUTE, rule.minute)
+            val quietHours = settings.getQuietHours()
+            if (settings.isQuietAt(configuredTime)) {
+                // Preserve the daily reminder by moving it to the quiet window end.
+                set(Calendar.HOUR_OF_DAY, quietHours.endHour)
+                set(Calendar.MINUTE, quietHours.endMinute)
+            } else {
+                set(Calendar.HOUR_OF_DAY, rule.hour)
+                set(Calendar.MINUTE, rule.minute)
+            }
             set(Calendar.SECOND, 0)
             set(Calendar.MILLISECOND, 0)
-            if (timeInMillis <= System.currentTimeMillis()) add(Calendar.DAY_OF_YEAR, 1)
+            if (timeInMillis <= nowMillis) add(Calendar.DAY_OF_YEAR, 1)
         }.timeInMillis
 
         // These are user reminders, not time-critical alarms. Inexact idle-safe scheduling avoids
