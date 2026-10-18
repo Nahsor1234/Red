@@ -91,16 +91,6 @@ private enum class NavVisual { HOME, SYLLABUS, AI, TASKS, TIMER }
 @Composable
 fun BottomNavBar(selected: AppTab, onTabSelected: (AppTab) -> Unit) {
     val view = LocalView.current
-    val horizontalInset = 4.dp
-    val indicatorSize = 38.dp
-    val activeIndex = when (selected) {
-        AppTab.HOME -> 0
-        AppTab.SYLLABUS -> 1
-        AppTab.AI -> 2
-        AppTab.TASKS -> 3
-        AppTab.STATS -> 4
-    }
-
     Box(
         Modifier
             .fillMaxWidth()
@@ -109,7 +99,7 @@ fun BottomNavBar(selected: AppTab, onTabSelected: (AppTab) -> Unit) {
             .padding(bottom = 4.dp),
         contentAlignment = Alignment.Center
     ) {
-        BoxWithConstraints(
+        Row(
             Modifier
                 .fillMaxWidth()
                 .height(60.dp)
@@ -117,49 +107,28 @@ fun BottomNavBar(selected: AppTab, onTabSelected: (AppTab) -> Unit) {
                 .clip(JeeShapes.pill)
                 .background(BgCard.copy(alpha = .94f))
                 .border(1.dp, BgCardBorder.copy(alpha = .95f), JeeShapes.pill)
+                .padding(horizontal = 4.dp, vertical = 3.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            val slotWidth = (maxWidth - horizontalInset * 2).coerceAtLeast(0.dp) / 5
-            val indicatorX by animateDpAsState(
-                targetValue = horizontalInset + slotWidth * activeIndex +
-                    ((slotWidth - indicatorSize).coerceAtLeast(0.dp) / 2f),
-                // Slower travel makes the selected halo clearly follow the user's tap.
-                animationSpec = tween(durationMillis = 520, easing = FastOutSlowInEasing),
-                label = "nav-selected-circle"
-            )
-            if (slotWidth > 0.dp) {
-                Box(
-                    Modifier
-                        .offset(x = indicatorX, y = 4.dp)
-                        .size(indicatorSize)
-                        .clip(RoundedCornerShape(50))
-                        .background(Primary.copy(alpha = .20f))
-                        .border(1.dp, Primary.copy(alpha = .22f), RoundedCornerShape(50))
-                )
+            NavIconSlot(NavVisual.HOME, selected == AppTab.HOME, Modifier.weight(1f)) {
+                view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                onTabSelected(AppTab.HOME)
             }
-            Row(
-                Modifier.fillMaxSize().padding(horizontal = horizontalInset, vertical = 3.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                NavIconSlot(NavVisual.HOME, selected == AppTab.HOME, Modifier.weight(1f)) {
-                    view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-                    onTabSelected(AppTab.HOME)
-                }
-                NavIconSlot(NavVisual.SYLLABUS, selected == AppTab.SYLLABUS, Modifier.weight(1f)) {
-                    view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-                    onTabSelected(AppTab.SYLLABUS)
-                }
-                NavIconSlot(NavVisual.AI, selected == AppTab.AI, Modifier.weight(1f)) {
-                    view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-                    onTabSelected(AppTab.AI)
-                }
-                NavIconSlot(NavVisual.TASKS, selected == AppTab.TASKS, Modifier.weight(1f)) {
-                    view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-                    onTabSelected(AppTab.TASKS)
-                }
-                NavIconSlot(NavVisual.TIMER, selected == AppTab.STATS, Modifier.weight(1f)) {
-                    view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-                    onTabSelected(AppTab.STATS)
-                }
+            NavIconSlot(NavVisual.SYLLABUS, selected == AppTab.SYLLABUS, Modifier.weight(1f)) {
+                view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                onTabSelected(AppTab.SYLLABUS)
+            }
+            NavIconSlot(NavVisual.AI, selected == AppTab.AI, Modifier.weight(1f)) {
+                view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                onTabSelected(AppTab.AI)
+            }
+            NavIconSlot(NavVisual.TASKS, selected == AppTab.TASKS, Modifier.weight(1f)) {
+                view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                onTabSelected(AppTab.TASKS)
+            }
+            NavIconSlot(NavVisual.TIMER, selected == AppTab.STATS, Modifier.weight(1f)) {
+                view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                onTabSelected(AppTab.STATS)
             }
         }
     }
@@ -167,13 +136,7 @@ fun BottomNavBar(selected: AppTab, onTabSelected: (AppTab) -> Unit) {
 
 @Composable
 fun AnimatedBottomNavBar(selected: AppTab, onTabSelected: (AppTab) -> Unit, visible: Boolean) {
-    AnimatedVisibility(
-        visible = visible,
-        enter = slideInVertically(animationSpec = tween(460, easing = FastOutSlowInEasing)) { it } + fadeIn(tween(360)),
-        exit = slideOutVertically(animationSpec = tween(440, easing = FastOutSlowInEasing)) { it } + fadeOut(tween(300))
-    ) {
-        BottomNavBar(selected, onTabSelected)
-    }
+    if (visible) BottomNavBar(selected, onTabSelected)
 }
 
 @Composable
@@ -184,21 +147,7 @@ private fun RowScope.NavIconSlot(
     onClick: () -> Unit
 ) {
     val interaction = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-    val pressed by interaction.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = when {
-            pressed -> .91f
-            selected -> 1.02f
-            else -> 1f
-        },
-        animationSpec = spring(dampingRatio = .72f, stiffness = 500f),
-        label = "nav-item-scale-$visual"
-    )
-    val contentColor by animateColorAsState(
-        targetValue = if (selected) PrimaryLight else TextSecondary,
-        animationSpec = tween(160),
-        label = "nav-item-color-$visual"
-    )
+    val contentColor = if (selected) PrimaryLight else TextSecondary
     val icon = when (visual) {
         NavVisual.HOME -> Icons.Filled.Home
         NavVisual.SYLLABUS -> Icons.Filled.MenuBook
@@ -218,7 +167,6 @@ private fun RowScope.NavIconSlot(
         modifier
             .fillMaxHeight()
             .clip(JeeShapes.pill)
-            .graphicsLayer(scaleX = scale, scaleY = scale)
             .selectable(
                 selected = selected,
                 interactionSource = interaction,

@@ -1,14 +1,6 @@
 package com.example.jeecommandcenter.ui.navigation
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.togetherWith
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.tween
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.platform.LocalContext
@@ -33,7 +25,6 @@ fun AppRoot(initialTarget: String? = null, launchRequestId: Int = 0) {
     var selectedChapter by remember { mutableStateOf<JeeChapter?>(null) }
     var selectedAttempt by remember { mutableStateOf<TestAttemptRecord?>(null) }
     var authMode by remember { mutableStateOf(CloudAuthMode.SIGN_IN) }
-    var navigationDirection by remember { mutableIntStateOf(1) }
     var activeAiConversationId by remember { mutableStateOf(aiHistory.getActiveConversationId()?.takeIf { aiHistory.getConversation(it) != null }) }
     val secondaryPage = secondaryStack.lastOrNull()
     val saveableStateHolder = rememberSaveableStateHolder()
@@ -47,14 +38,13 @@ fun AppRoot(initialTarget: String? = null, launchRequestId: Int = 0) {
         }
     }
 
-    fun selectTab(tab: AppTab) { navigationDirection = 1; secondaryStack = emptyList(); selectedTab = tab }
-    fun openPage(page: SecondaryPage) { navigationDirection = 1; secondaryStack = secondaryStack + page }
-    fun popPage() { if (secondaryStack.isNotEmpty()) { navigationDirection = -1; secondaryStack = secondaryStack.dropLast(1) } }
+    fun selectTab(tab: AppTab) { secondaryStack = emptyList(); selectedTab = tab }
+    fun openPage(page: SecondaryPage) { secondaryStack = secondaryStack + page }
+    fun popPage() { if (secondaryStack.isNotEmpty()) { secondaryStack = secondaryStack.dropLast(1) } }
     fun openAuth(mode: CloudAuthMode) { authMode = mode; openPage(SecondaryPage.AUTH) }
     fun openAiConversation(id: Long) {
         activeAiConversationId = id
         aiHistory.setActiveConversationId(id)
-        navigationDirection = 1
         secondaryStack = when (secondaryStack.lastOrNull()) {
             SecondaryPage.AI_HISTORY -> secondaryStack.dropLast(1)
             SecondaryPage.AI_TUTOR -> secondaryStack
@@ -69,28 +59,10 @@ fun AppRoot(initialTarget: String? = null, launchRequestId: Int = 0) {
     BackHandler(enabled = secondaryStack.isNotEmpty()) { popPage() }
     val screenKey = secondaryPage?.let { "secondary:" + it.name } ?: ("tab:" + selectedTab.name)
 
-    AnimatedContent(
-        targetState = screenKey,
-        transitionSpec = {
-            val topLevelTabSwitch = initialState.startsWith("tab:") && targetState.startsWith("tab:")
-            if (topLevelTabSwitch) {
-                fadeIn(tween(90, easing = FastOutSlowInEasing))
-                    .togetherWith(fadeOut(tween(60, easing = FastOutSlowInEasing)))
-            } else {
-                val forward = navigationDirection >= 0
-                val enterOffset: (Int) -> Int = { full -> if (forward) full / 18 else -full / 18 }
-                val exitOffset: (Int) -> Int = { full -> if (forward) -full / 28 else full / 28 }
-                (fadeIn(tween(150, easing = FastOutSlowInEasing)) +
-                    slideInHorizontally(tween(160, easing = FastOutSlowInEasing), enterOffset))
-                    .togetherWith(
-                        fadeOut(tween(100, easing = FastOutSlowInEasing)) +
-                            slideOutHorizontally(tween(110, easing = FastOutSlowInEasing), exitOffset)
-                    )
-            }
-        },
-        label = "app-screen-transition"
-    ) { key ->
-        saveableStateHolder.SaveableStateProvider(key) {
+    key(screenKey) {
+        saveableStateHolder.SaveableStateProvider(screenKey) {
+            val key = screenKey
+
             val targetSecondary = if (key.startsWith("secondary:")) SecondaryPage.valueOf(key.removePrefix("secondary:")) else null
             val targetTab = if (key.startsWith("tab:")) AppTab.valueOf(key.removePrefix("tab:")) else null
             when (targetSecondary) {
