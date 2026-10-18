@@ -89,6 +89,20 @@ fun DashboardScreen(
     val weak = snapshot?.weak
     val unresolvedMistakes = snapshot?.unresolvedMistakes ?: 0
     val questionsAttempted = snapshot?.questionsAttempted ?: 0
+    val todayTasks = tasks.filter { it.dueDay == "Today" }
+    val nextTask = todayTasks.firstOrNull { !it.done } ?: tasks.firstOrNull { !it.done }
+    val autoFocus = priorities.firstOrNull()
+    val selectedFocusChapter = selectedFocusId?.let { JeeCatalog.find(it) }
+    val focus = selectedFocusChapter?.let { chapter ->
+        val progress = repo.chapters(focusSubject).firstOrNull { it.number == chapter.number }
+        FocusDisplay(
+            chapter.name,
+            if (progress == null) "Selected chapter · start building a study signal."
+            else "${(progress.progress * 100).toInt()}% complete · confidence ${progress.confidence}/5",
+            30,
+            chapter.subject
+        )
+    } ?: autoFocus?.let { FocusDisplay(it.title, it.reason, it.durationMin, it.subject) }
     val daysToJee = remember { ChronoUnit.DAYS.between(LocalDate.now(), LocalDate.of(2027, 1, 22)).coerceAtLeast(0) }
     val greeting = when (LocalTime.now().hour) {
         in 5..11 -> "Good morning"
