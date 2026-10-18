@@ -40,9 +40,10 @@ fun AppRoot(initialTarget: String? = null, launchRequestId: Int = 0) {
 
     LaunchedEffect(initialTarget, launchRequestId) {
         when (initialTarget) {
-            "daily_log" -> secondaryStack = listOf(SecondaryPage.DAILY_LOG)
+            "daily_log", "daily_progress" -> secondaryStack = listOf(SecondaryPage.DAILY_LOG)
             "notifications" -> secondaryStack = listOf(SecondaryPage.NOTIFICATIONS)
             "timer" -> { secondaryStack = emptyList(); selectedTab = AppTab.STATS }
+            "home" -> { secondaryStack = emptyList(); selectedTab = AppTab.HOME }
         }
     }
 
