@@ -712,18 +712,25 @@ private fun buildTimelineItems(
             }
         }
         customReminders.forEach { reminder ->
-            nextScheduledDateTime(
-                now,
-                reminder.hour,
-                reminder.minute,
-                reminder.repeat,
+            val scheduled = if (reminder.repeat == CustomReminder.REPEAT_ONCE) {
                 reminder.scheduledDate
-            )?.let { scheduled ->
+                    ?.let { raw -> runCatching { LocalDate.parse(raw) }.getOrNull() }
+                    ?.atTime(reminder.hour, reminder.minute)
+            } else {
+                nextScheduledDateTime(
+                    now,
+                    reminder.hour,
+                    reminder.minute,
+                    reminder.repeat,
+                    reminder.scheduledDate
+                )
+            }
+            scheduled?.let {
                 add(
                     ReminderScheduleItem(
                         title = reminder.title,
                         message = reminder.message,
-                        at = scheduled,
+                        at = it,
                         enabled = reminder.enabled,
                         customReminder = reminder,
                         repeatLabel = reminder.repeat
@@ -819,6 +826,7 @@ private fun ReminderTimeline(
                                         when {
                                             !masterEnabled -> "PAUSED"
                                             !item.enabled -> "OFF"
+                                            item.repeatLabel == CustomReminder.REPEAT_ONCE && item.at.isBefore(LocalDateTime.now()) -> "PAST DUE"
                                             item.repeatLabel == CustomReminder.REPEAT_ONCE -> "ONE-TIME REMINDER"
                                             else -> item.repeatLabel.uppercase(Locale.getDefault())
                                         },
