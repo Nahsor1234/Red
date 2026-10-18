@@ -125,7 +125,7 @@ fun BottomNavBar(selected: AppTab, onTabSelected: (AppTab) -> Unit) {
             if (slotWidth > 0.dp) {
                 Box(
                     Modifier
-                        .offset(x = indicatorX, y = (60.dp - indicatorSize) / 2)
+                        .offset(x = indicatorX, y = 2.dp)
                         .size(indicatorSize)
                         .clip(RoundedCornerShape(50))
                         .background(Primary.copy(alpha = .20f))
