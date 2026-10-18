@@ -162,8 +162,8 @@ fun AiTutorScreen(
         Column {
             Column(
                 Modifier.fillMaxWidth()
-                    .then(if (showMainNavigation) Modifier else Modifier.navigationBarsPadding())
-                    .padding(start = 16.dp, end = 16.dp, bottom = if (showMainNavigation) 0.dp else 10.dp, top = 5.dp),
+                    .navigationBarsPadding()
+                    .padding(start = 16.dp, end = 16.dp, bottom = 8.dp, top = 5.dp),
                 verticalArrangement = Arrangement.spacedBy(7.dp)
             ) {
                 if (!inChat) {
@@ -179,7 +179,7 @@ fun AiTutorScreen(
                     IconButton(onClick = { send(input) }, enabled = input.isNotBlank() && !busy) { Icon(Icons.Filled.Send, "Ask coach", tint = if (input.isNotBlank() && !busy) PrimaryLight else TextMuted) }
                 }
             }
-            if (showMainNavigation) BottomNavBar(selectedTab, onTabSelected)
+            if (showMainNavigation) AnimatedBottomNavBar(selectedTab, onTabSelected, visible = selectedTab != AppTab.AI)
         }
     }) { padding ->
         LaunchedEffect(messages.lastOrNull()?.text, streamingText) { if (messages.isNotEmpty()) chatListState.animateScrollToItem(messages.lastIndex) }
