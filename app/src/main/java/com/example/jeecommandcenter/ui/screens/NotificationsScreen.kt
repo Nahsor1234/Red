@@ -84,8 +84,8 @@ fun NotificationCenterScreen(onBack: () -> Unit, onOpenSettings: () -> Unit) {
 
     Scaffold(containerColor = BgApp, topBar = { JeeTopBar(title = "Notifications", onBack = onBack) }) { padding ->
         Column(
-            Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp).verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            Modifier.fillMaxSize().padding(padding).padding(horizontal = 18.dp).verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             if (!notificationsAllowed || !appNotificationsEnabled) {
                 JeeCard(featured = true) {
@@ -108,7 +108,7 @@ fun NotificationCenterScreen(onBack: () -> Unit, onOpenSettings: () -> Unit) {
                 }
             }
 
-            Text("YOUR REMINDERS", color = TextMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+            Text("YOUR REMINDERS", color = TextMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
             ReminderSummaryCard(
                 title = "Daily study reminder",
                 subtitle = "A nudge to begin a focused JEE session",
@@ -128,7 +128,7 @@ fun NotificationCenterScreen(onBack: () -> Unit, onOpenSettings: () -> Unit) {
                 onRefresh = { refresh++ }
             )
 
-            Text("CUSTOM REMINDERS", color = TextMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+            Text("CUSTOM REMINDERS", color = TextMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
             if (customReminders.isEmpty()) {
                 Text("No custom reminders created yet.", color = TextMuted, fontSize = 11.sp)
             } else {
@@ -137,7 +137,7 @@ fun NotificationCenterScreen(onBack: () -> Unit, onOpenSettings: () -> Unit) {
                 }
             }
 
-            Text("RECENT ACTIVITY", color = TextMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+            Text("RECENT ACTIVITY", color = TextMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
             JeeCard {
                 RecentReminderRow("Daily study reminder", recentStudy)
                 HorizontalDivider(color = BgDivider.copy(alpha = .6f))
@@ -167,9 +167,9 @@ private fun CustomReminderSummaryCard(reminder: CustomReminder) {
             }
             Spacer(Modifier.width(11.dp))
             Column(Modifier.weight(1f)) {
-                Text(reminder.title, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                Text(reminder.title, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                 if (reminder.message.isNotBlank()) {
-                    Text(reminder.message, color = TextMuted, fontSize = 10.sp, lineHeight = 14.sp, maxLines = 2)
+                    Text(reminder.message, color = TextMuted, fontSize = 11.sp, lineHeight = 15.sp, maxLines = 2)
                 }
                 Text(
                     if (reminder.repeat == CustomReminder.REPEAT_ONCE && !reminder.scheduledDate.isNullOrBlank()) {
@@ -203,8 +203,8 @@ private fun ReminderSummaryCard(
             }
             Spacer(Modifier.width(11.dp))
             Column(Modifier.weight(1f)) {
-                Text(title, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-                Text(subtitle, color = TextMuted, fontSize = 10.sp, lineHeight = 14.sp)
+                Text(title, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                Text(subtitle, color = TextSecondary, fontSize = 11.sp, lineHeight = 15.sp)
                 Text(
                     when {
                         !rule.enabled -> "OFF · not scheduled"
@@ -212,8 +212,8 @@ private fun ReminderSummaryCard(
                         else -> "ON · ${formatReminderTime(rule.hour, rule.minute)} daily"
                     },
                     color = if (rule.enabled && masterEnabled) PrimaryLight else TextMuted,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Medium
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold
                 )
             }
         }
@@ -230,8 +230,8 @@ private fun RecentReminderRow(title: String, timestamp: Long) {
         Icon(if (timestamp > 0) Icons.Filled.CheckCircle else Icons.Filled.Notifications, null, tint = if (timestamp > 0) PrimaryLight else TextMuted, modifier = Modifier.size(18.dp))
         Spacer(Modifier.width(9.dp))
         Column(Modifier.weight(1f)) {
-            Text(title, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-            Text(if (timestamp > 0) formatInstant(timestamp) else "No reminder delivered yet", color = TextMuted, fontSize = 10.sp)
+            Text(title, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+            Text(if (timestamp > 0) formatInstant(timestamp) else "No reminder delivered yet", color = TextMuted, fontSize = 11.sp)
         }
     }
 }
