@@ -73,7 +73,8 @@ fun AppRoot(initialTarget: String? = null, launchRequestId: Int = 0) {
 
             val targetSecondary = if (key.startsWith("secondary:")) SecondaryPage.valueOf(key.removePrefix("secondary:")) else null
             val targetTab = if (key.startsWith("tab:")) AppTab.valueOf(key.removePrefix("tab:")) else null
-            when (targetSecondary) {                SecondaryPage.REVISION -> RevisionScreen(::popPage)
+            when (targetSecondary) {
+                SecondaryPage.REVISION -> RevisionScreen(::popPage)
                 SecondaryPage.SETTINGS -> SettingsScreen(onBack = ::popPage, onOpenAnalytics = { openPage(SecondaryPage.ANALYTICS) }, onOpenAiSettings = { openPage(SecondaryPage.AI_SETTINGS) }, onOpenCloudAccount = { openPage(SecondaryPage.CLOUD_ACCOUNT) }, onOpenNotifications = { openPage(SecondaryPage.NOTIFICATION_SETTINGS) })
                 SecondaryPage.CLOUD_ACCOUNT -> CloudAccountScreen(context, ::popPage, ::openAuth)
                 SecondaryPage.AUTH -> AuthScreen(authMode, ::popPage) { popPage() }
