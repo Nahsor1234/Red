@@ -37,6 +37,16 @@ jobs:
         with:
           gradle-version: '8.7'
 
+      # GitHub-hosted runners are ephemeral. Reuse one stable debug keystore so
+      # subsequent debug APKs can update the installed app instead of conflicting.
+      # Debug keys are for development APKs only; production releases need a dedicated
+      # private release keystore managed separately.
+      - name: Restore stable debug signing key
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: sigma-je-debug-keystore-v1-${{ runner.os }}
+
       - name: Build APK
         run: gradle assembleDebug
 
