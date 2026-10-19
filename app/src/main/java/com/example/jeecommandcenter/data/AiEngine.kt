@@ -537,6 +537,8 @@ class AiEngine(private val settings: AiSettingsRepository) {
     ): HttpURLConnection =
         (url.openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"
+            // Do not forward Authorization headers to redirect targets chosen by a remote server.
+            instanceFollowRedirects = false
             connectTimeout = 15_000
             readTimeout = 120_000
             doOutput = true
