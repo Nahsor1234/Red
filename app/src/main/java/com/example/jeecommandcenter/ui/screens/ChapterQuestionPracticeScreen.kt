@@ -26,9 +26,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.jeecommandcenter.data.CloudJeeRepository
 import com.example.jeecommandcenter.data.CloudQuestion
+import com.example.jeecommandcenter.data.JeeCatalog
+import com.example.jeecommandcenter.data.LearningRepository
+import com.example.jeecommandcenter.data.MistakeType
+import com.example.jeecommandcenter.data.Question
 import com.example.jeecommandcenter.ui.components.JeeTopBar
 import com.example.jeecommandcenter.ui.theme.*
 import kotlinx.coroutines.launch
+import org.json.JSONArray
+import org.json.JSONObject
 
 private const val BOOKMARK_PREFS = "sigma_practice_bookmarks"
 private const val BOOKMARKS_KEY = "bookmarked_questions"
@@ -47,6 +53,10 @@ fun ChapterQuestionPracticeScreen(
     val bookmarkPrefs = remember(context) {
         context.getSharedPreferences(BOOKMARK_PREFS, Context.MODE_PRIVATE)
     }
+    val sessionPrefs = remember(context) {
+        context.getSharedPreferences("sigma_practice_sessions", Context.MODE_PRIVATE)
+    }
+    val learning = remember(context) { LearningRepository(context.applicationContext) }
     val jumpSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     var userId by remember { mutableStateOf<String?>(null) }
@@ -58,19 +68,43 @@ fun ChapterQuestionPracticeScreen(
         mutableStateOf(bookmarkPrefs.getStringSet(BOOKMARKS_KEY, emptySet()).orEmpty().toSet())
     }
     var showQuestionPicker by remember { mutableStateOf(false) }
+    var showBookmarkedQuestions by remember { mutableStateOf(false) }
+    var showMistakeTagDialog by remember { mutableStateOf(false) }
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(chapterId) {
         loading = true
         error = null
-        index = 0
-        selectedByQuestion = emptyMap()
-        checkedQuestionIds = emptySet()
         runCatching {
             val user = cloud.ensureSession()
             userId = user.id
-            questions = cloud.questions(chapterId).shuffled()
+            val loadedQuestions = cloud.questions(chapterId)
+            questions = loadedQuestions
+
+            val validIds = loadedQuestions.map { it.id }.toSet()
+            val savedRaw = sessionPrefs.getString("session_$chapterId", null)
+            val saved = savedRaw?.let { raw -> runCatching { JSONObject(raw) }.getOrNull() }
+            index = (saved?.optInt("index", 0) ?: 0).coerceIn(0, (loadedQuestions.size - 1).coerceAtLeast(0))
+
+            val answersObject = saved?.optJSONObject("answers")
+            val restoredAnswers = mutableMapOf<String, Int>()
+            if (answersObject != null) {
+                val keys = answersObject.keys()
+                while (keys.hasNext()) {
+                    val id = keys.next()
+                    val option = answersObject.optInt(id, -1)
+                    if (id in validIds && option in 0..3) restoredAnswers[id] = option
+                }
+            }
+            selectedByQuestion = restoredAnswers
+
+            val checkedArray = saved?.optJSONArray("checked") ?: JSONArray()
+            checkedQuestionIds = buildSet {
+                for (i in 0 until checkedArray.length()) {
+                    checkedArray.optString(i).takeIf { it in validIds }?.let(::add)
+                }
+            }
         }.onFailure {
             error = it.message ?: "Could not load questions."
         }
@@ -80,7 +114,25 @@ fun ChapterQuestionPracticeScreen(
     val question = questions.getOrNull(index)
     val selectedIndex = question?.let { selectedByQuestion[it.id] ?: -1 } ?: -1
     val submitted = question?.let { it.id in checkedQuestionIds } == true
+    val isIncorrect = submitted && question != null && selectedIndex != question.correctIndex
+    var selectedMistakeType by remember(question?.id) {
+        mutableStateOf(question?.let { q -> learning.getMistakes().firstOrNull { it.questionId == q.id }?.mistakeType })
+    }
     val bookmarked = question?.let { bookmarkKey(chapterId, it.id) in bookmarkedKeys } == true
+    val chapterBookmarkCount = questions.count { bookmarkKey(chapterId, it.id) in bookmarkedKeys }
+
+    LaunchedEffect(chapterId, index, selectedByQuestion, checkedQuestionIds, questions, loading) {
+        if (!loading && questions.isNotEmpty()) {
+            val answersObject = JSONObject()
+            selectedByQuestion.forEach { (id, option) -> answersObject.put(id, option) }
+            val checkedArray = JSONArray().apply { checkedQuestionIds.forEach { put(it) } }
+            val snapshot = JSONObject()
+                .put("index", index)
+                .put("answers", answersObject)
+                .put("checked", checkedArray)
+            sessionPrefs.edit().putString("session_$chapterId", snapshot.toString()).apply()
+        }
+    }
 
     fun toggleBookmark(questionId: String) {
         val key = bookmarkKey(chapterId, questionId)
@@ -111,10 +163,20 @@ fun ChapterQuestionPracticeScreen(
                 title = "Practice",
                 onBack = onBack,
                 trailing = {
-                    TextButton(onClick = ::openCurrentQuestionInAi, enabled = question != null) {
-                        Icon(Icons.Filled.AutoAwesome, null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text("AI Tutor", fontSize = 12.sp)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        TextButton(
+                            onClick = { showBookmarkedQuestions = true },
+                            enabled = chapterBookmarkCount > 0
+                        ) {
+                            Icon(Icons.Filled.Bookmark, null, modifier = Modifier.size(17.dp))
+                            Spacer(Modifier.width(3.dp))
+                            Text("Saved $chapterBookmarkCount", fontSize = 11.sp, maxLines = 1)
+                        }
+                        TextButton(onClick = ::openCurrentQuestionInAi, enabled = question != null) {
+                            Icon(Icons.Filled.AutoAwesome, null, modifier = Modifier.size(17.dp))
+                            Spacer(Modifier.width(3.dp))
+                            Text("AI Tutor", fontSize = 11.sp, maxLines = 1)
+                        }
                     }
                 }
             )
@@ -133,6 +195,15 @@ fun ChapterQuestionPracticeScreen(
                             onClick = {
                                 if (selectedIndex >= 0) {
                                     checkedQuestionIds = checkedQuestionIds + question.id
+                                    learning.saveQuestionAttempt(
+                                        testId = "practice_$chapterId",
+                                        question = question.toLearningQuestion(),
+                                        selectedIndex = selectedIndex,
+                                        responseTimeSec = 0,
+                                        source = "practice"
+                                    )
+                                    selectedMistakeType = if (selectedIndex == question.correctIndex) null
+                                    else learning.getMistakes().firstOrNull { it.questionId == question.id }?.mistakeType
                                     userId?.let { uid ->
                                         scope.launch {
                                             runCatching {
@@ -354,16 +425,141 @@ fun ChapterQuestionPracticeScreen(
                                     )
                                     Spacer(Modifier.width(8.dp))
                                     Text(
-                                        if (correct) "Correct answer" else "Review this one",
+                                        if (correct) "Correct answer" else "Answer Review",
                                         fontWeight = FontWeight.SemiBold,
                                         color = TextPrimary
                                     )
+                                    Spacer(Modifier.weight(1f))
+                                    if (!correct) {
+                                        Surface(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(50))
+                                                .clickable { showMistakeTagDialog = true },
+                                            shape = RoundedCornerShape(50),
+                                            color = if (selectedMistakeType != null) PrimarySoft else BgCard,
+                                            border = BorderStroke(1.dp, if (selectedMistakeType != null) Primary else BgCardBorder)
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                            ) {
+                                                Icon(Icons.Filled.Sell, null, tint = PrimaryLight, modifier = Modifier.size(14.dp))
+                                                Text(
+                                                    selectedMistakeType?.let(::mistakeTypeLabel) ?: "Tag mistake",
+                                                    color = TextPrimary,
+                                                    fontSize = 10.sp,
+                                                    maxLines = 1
+                                                )
+                                            }
+                                        }
+                                    }
                                 }
-                                Text(question.explanation, color = TextSecondary, fontSize = 13.sp)
-                                TextButton(onClick = ::openCurrentQuestionInAi) {
-                                    Icon(Icons.Filled.AutoAwesome, null, modifier = Modifier.size(17.dp))
-                                    Spacer(Modifier.width(5.dp))
-                                    Text("Discuss with AI tutor")
+                                Text(
+                                    question.explanation,
+                                    color = TextPrimary.copy(alpha = .94f),
+                                    fontSize = 14.sp,
+                                    lineHeight = 20.sp
+                                )
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(50))
+                                        .background(BgCard)
+                                        .border(1.dp, BgCardBorder, RoundedCornerShape(50))
+                                        .clickable(onClick = ::openCurrentQuestionInAi)
+                                        .padding(horizontal = 13.dp, vertical = 9.dp)
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                        Icon(Icons.Filled.AutoAwesome, null, tint = PrimaryLight, modifier = Modifier.size(16.dp))
+                                        Text("Discuss with AI Tutor", color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                                        Icon(Icons.Filled.ArrowForward, null, tint = TextSecondary, modifier = Modifier.size(14.dp))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (showMistakeTagDialog && question != null && isIncorrect) {
+        AlertDialog(
+            onDismissRequest = { showMistakeTagDialog = false },
+            title = { Text("Tag this mistake") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text("Choose the main reason this answer was wrong.", color = TextSecondary, fontSize = 12.sp)
+                    MistakeType.entries.filterNot { it == MistakeType.UNCLASSIFIED }.forEach { type ->
+                        TextButton(
+                            onClick = {
+                                learning.updateMistakeType("mistake_" + question.id, type)
+                                selectedMistakeType = type
+                                showMistakeTagDialog = false
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                mistakeTypeLabel(type),
+                                modifier = Modifier.fillMaxWidth(),
+                                color = if (selectedMistakeType == type) PrimaryLight else TextPrimary
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showMistakeTagDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
+
+    if (showBookmarkedQuestions && questions.isNotEmpty()) {
+        ModalBottomSheet(
+            onDismissRequest = { showBookmarkedQuestions = false },
+            sheetState = jumpSheetState,
+            containerColor = BgCardAlt,
+            contentColor = TextPrimary,
+            dragHandle = { BottomSheetDefaults.DragHandle(color = TextMuted) }
+        ) {
+            val savedIndices = questions.indices.filter { questionIndex ->
+                bookmarkKey(chapterId, questions[questionIndex].id) in bookmarkedKeys
+            }
+            Column(
+                Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text("Saved questions", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                Text("Bookmarks for $chapterName · ${savedIndices.size} saved", color = TextSecondary, fontSize = 12.sp)
+                if (savedIndices.isEmpty()) {
+                    Text("No bookmarked questions in this chapter yet.", color = TextSecondary)
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 440.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listItems(savedIndices, key = { questions[it].id }) { questionIndex ->
+                            val savedQuestion = questions[questionIndex]
+                            Surface(
+                                modifier = Modifier.fillMaxWidth().clickable {
+                                    index = questionIndex
+                                    showBookmarkedQuestions = false
+                                },
+                                shape = RoundedCornerShape(14.dp),
+                                color = BgCard,
+                                border = BorderStroke(1.dp, BgCardBorder)
+                            ) {
+                                Row(
+                                    Modifier.padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    Icon(Icons.Filled.Bookmark, null, tint = PrimaryLight)
+                                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                        Text("Question ${questionIndex + 1}", fontWeight = FontWeight.SemiBold)
+                                        Text(savedQuestion.prompt, color = TextSecondary, fontSize = 12.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                                    }
+                                    Icon(Icons.Filled.ChevronRight, null, tint = TextSecondary)
                                 }
                             }
                         }
@@ -465,6 +661,40 @@ fun ChapterQuestionPracticeScreen(
 }
 
 private fun bookmarkKey(chapterId: String, questionId: String): String = "${chapterId}::${questionId}"
+
+private fun CloudQuestion.toLearningQuestion() = Question(
+    id = id,
+    subject = when (subjectId.lowercase()) {
+        "physics" -> "Physics"
+        "chemistry" -> "Chemistry"
+        "mathematics" -> "Mathematics"
+        else -> subjectId.replace('_', ' ').replaceFirstChar { it.uppercase() }
+    },
+    chapterId = JeeCatalog.normalizeChapterId(chapterId),
+    chapter = chapterName,
+    topic = topic,
+    prompt = prompt,
+    options = options,
+    correctIndex = correctIndex,
+    explanation = explanation,
+    difficulty = difficulty,
+    source = source,
+    year = year,
+    marks = marks,
+    negativeMarks = negativeMarks
+)
+
+private fun mistakeTypeLabel(type: MistakeType): String = when (type) {
+    MistakeType.CONCEPT -> "Conceptual mistake"
+    MistakeType.FORMULA -> "Formula mistake"
+    MistakeType.CALCULATION -> "Calculation error"
+    MistakeType.SILLY -> "Silly mistake"
+    MistakeType.MISREAD -> "Misread question"
+    MistakeType.TIME_PRESSURE -> "Time pressure"
+    MistakeType.GUESS -> "Guessing"
+    MistakeType.METHOD -> "Wrong method"
+    MistakeType.UNCLASSIFIED -> "Unclassified"
+}
 
 private fun createQuestionTutorContext(
     chapterId: String,
