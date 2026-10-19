@@ -360,14 +360,28 @@ class JeeRepository(context: Context) {
 
     fun getOrCreateDailyPlan(learning: LearningRepository? = null): DailyPlan {
         val today = LocalDate.now().toString()
-        getDailyPlan()?.takeIf { it.date == today }?.let { return it }
+        val unresolvedMistakes = learning?.getMistakes()?.filterNot { it.resolved }.orEmpty()
+        val currentMistakeSignature = mistakeSignature(unresolvedMistakes)
+        val existing = getDailyPlan()?.takeIf { it.date == today }
+        if (existing != null && (learning == null ||
+                prefs.getString(DAILY_PLAN_MISTAKE_SIGNATURE_KEY, null) == currentMistakeSignature)
+        ) {
+            return existing
+        }
         return regenerateDailyPlan(learning)
     }
+
+    private fun mistakeSignature(mistakes: List<MistakeRecord>): String =
+        mistakes.sortedBy { it.id }
+            .joinToString("|") { "${it.id}:${it.count}:${it.lastSeenAt}:${it.chapterId}" }
+            .hashCode()
+            .toString()
 
     fun regenerateDailyPlan(learning: LearningRepository? = null): DailyPlan {
         val today = LocalDate.now().toString()
         val previous = getDailyPlan()?.takeIf { it.date == today }
         val goal = getDailyGoalMinutes()
+        val unresolvedMistakes = learning?.getMistakes()?.filterNot { it.resolved }.orEmpty()
         val selected = mutableListOf<PlannerItem>()
         var remaining = goal
 
@@ -390,7 +404,7 @@ class JeeRepository(context: Context) {
         val candidates = JeeCatalog.chapters.map { chapter ->
             val state = getChapterState(chapter.id)
             val daysSinceStudy = if (state.lastStudiedAt == 0L) 999 else ((System.currentTimeMillis() - state.lastStudiedAt) / 86_400_000L).toInt()
-            val repeatedMistakes = learning?.getMistakes()?.count { it.chapterId == chapter.id && !it.resolved } ?: 0
+            val repeatedMistakes = unresolvedMistakes.count { it.chapterId == chapter.id }
             val score = (1f - state.progress) * 100f + (5 - state.confidence) * 9f + chapter.difficulty * 5f + minOf(daysSinceStudy, 30) * 0.5f + repeatedMistakes * 18f
             chapter to score
         }.sortedByDescending { it.second }
@@ -428,6 +442,9 @@ class JeeRepository(context: Context) {
             if (previousCompleted.containsKey(item.id)) item.copy(completed = true) else item
         })
         saveDailyPlan(plan)
+        prefs.edit()
+            .putString(DAILY_PLAN_MISTAKE_SIGNATURE_KEY, mistakeSignature(unresolvedMistakes))
+            .apply()
         return plan
     }
 
@@ -595,6 +612,7 @@ class JeeRepository(context: Context) {
     companion object {
         const val CURRENT_SCHEMA_VERSION = 2
         private const val DATA_VERSION_KEY = "data_schema_version"
+        private const val DAILY_PLAN_MISTAKE_SIGNATURE_KEY = "daily_plan_mistake_signature"
 
         val syllabus: Map<String, List<String>>
             get() = JeeCatalog.chapters.groupBy { it.subject }.mapValues { entry -> entry.value.sortedBy { it.number }.map { it.name } }
