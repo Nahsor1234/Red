@@ -51,8 +51,7 @@ class CloudPreferenceSync(
         "daily_log_v1",
         "jee_revision_notes",
         "custom_reminders_v1",
-        "reminder_settings_v1",
-        "jee_topics"
+        "reminder_settings_v1"
     )
 
     suspend fun sync(userId: String): PreferenceSyncResult {
