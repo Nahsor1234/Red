@@ -5,6 +5,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.platform.LocalContext
 import com.example.jeecommandcenter.data.AiChatHistoryRepository
+import com.example.jeecommandcenter.data.JeeCatalog
 import com.example.jeecommandcenter.data.JeeChapter
 import com.example.jeecommandcenter.data.JeeRepository
 import com.example.jeecommandcenter.data.LearningRepository
@@ -73,7 +74,17 @@ fun AppRoot(initialTarget: String? = null, launchRequestId: Int = 0) {
             val targetSecondary = if (key.startsWith("secondary:")) SecondaryPage.valueOf(key.removePrefix("secondary:")) else null
             val targetTab = if (key.startsWith("tab:")) AppTab.valueOf(key.removePrefix("tab:")) else null
             when (targetSecondary) {
-                SecondaryPage.PLANNER -> StudyPlannerScreen(repo, ::popPage) { openPage(SecondaryPage.REVISION) }
+                SecondaryPage.PLANNER -> StudyPlannerScreen(
+                    repo = repo,
+                    onBack = ::popPage,
+                    onOpenRevision = { openPage(SecondaryPage.REVISION) },
+                    onOpenChapter = { chapterId ->
+                        JeeCatalog.find(chapterId)?.let { chapter ->
+                            selectedChapter = chapter
+                            openPage(SecondaryPage.CHAPTER_DETAIL)
+                        } ?: openPage(SecondaryPage.REVISION)
+                    }
+                )
                 SecondaryPage.REVISION -> RevisionScreen(repo, ::popPage) { openPage(SecondaryPage.PLANNER) }
                 SecondaryPage.SETTINGS -> SettingsScreen(onBack = ::popPage, onOpenAnalytics = { openPage(SecondaryPage.ANALYTICS) }, onOpenAiSettings = { openPage(SecondaryPage.AI_SETTINGS) }, onOpenCloudAccount = { openPage(SecondaryPage.CLOUD_ACCOUNT) }, onOpenNotifications = { openPage(SecondaryPage.NOTIFICATION_SETTINGS) })
                 SecondaryPage.CLOUD_ACCOUNT -> CloudAccountScreen(context, ::popPage, ::openAuth)
