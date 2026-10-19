@@ -107,6 +107,15 @@ class AiEngine(private val settings: AiSettingsRepository) {
         const val MAX_QUIZ_OUTPUT_TOKENS = 8_192
     }
 
+    private fun requireValidHttpsEndpoint(raw: String) {
+        val uri = runCatching { java.net.URI(raw.trim()) }
+            .getOrElse { throw IllegalArgumentException("API endpoint must be a valid HTTPS URL.") }
+        require(uri.scheme.equals("https", ignoreCase = true) &&
+            !uri.host.isNullOrBlank() && uri.userInfo.isNullOrBlank()) {
+            "API endpoint must be HTTPS with a valid host and no embedded credentials."
+        }
+    }
+
     suspend fun ask(
         prompt: String,
         systemInstruction: String? = null,
@@ -314,7 +323,7 @@ class AiEngine(private val settings: AiSettingsRepository) {
         maxOutputTokens: Int,
         provider: AiProvider
     ): AiResult {
-        require(endpoint.startsWith("https://")) { "API endpoint must start with https://" }
+        requireValidHttpsEndpoint(endpoint)
         require(model.isNotBlank()) { "Model ID cannot be blank." }
 
         val requestMessages = JSONArray()
