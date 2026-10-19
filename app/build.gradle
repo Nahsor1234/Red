@@ -13,8 +13,8 @@ android {
         applicationId 'com.sigmaje.app'
         minSdk 23
         targetSdk 35
-        versionCode 4
-        versionName '2.2'
+        versionCode 5
+        versionName '2.3'
 
         def supabaseUrl = project.findProperty("SUPABASE_URL") ?: "https://clirtdxtqtiatuqkitmy.supabase.co"
         def supabaseKey = project.findProperty("SUPABASE_PUBLISHABLE_KEY") ?: "sb_publishable_VjQYGoJjFoAQXHSGwOohtQ_XL1XWIjU"
