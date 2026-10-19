@@ -1009,7 +1009,7 @@ private fun CustomReminderDialog(
                         Text("Add it to your study routine.", color = TextSecondary, fontSize = 12.sp)
                     }
                     IconButton(onClick = onDismiss) {
-                        Icon(Icons.Filled.Delete, contentDescription = "Close reminder editor", tint = TextMuted)
+                        Icon(Icons.Filled.Close, contentDescription = "Close reminder editor", tint = TextMuted)
                     }
                 }
 
