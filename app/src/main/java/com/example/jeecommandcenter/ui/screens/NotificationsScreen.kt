@@ -1,10 +1,12 @@
 package com.example.jeecommandcenter.ui.screens
 
 import android.Manifest
+import android.app.AlarmManager
 import android.app.TimePickerDialog
 import android.app.DatePickerDialog
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.content.pm.PackageManager
 import android.os.Build
 import android.provider.Settings
@@ -22,6 +24,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -46,6 +49,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
 import androidx.core.app.NotificationManagerCompat
 import com.example.jeecommandcenter.data.CustomReminder
@@ -240,6 +245,7 @@ private fun NotificationManagementScreen(onBack: () -> Unit) {
     var showCustomDialog by remember { mutableStateOf(false) }
     var editingCustomReminder by remember { mutableStateOf<CustomReminder?>(null) }
     var confirmDeleteReminder by remember { mutableStateOf<CustomReminder?>(null) }
+    var testNotificationStatus by remember { mutableStateOf<String?>(null) }
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -268,6 +274,8 @@ private fun NotificationManagementScreen(onBack: () -> Unit) {
     val notificationsAllowed = Build.VERSION.SDK_INT < 33 ||
         ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
     val appNotificationsEnabled = NotificationManagerCompat.from(context).areNotificationsEnabled()
+    val exactAlarmsAllowed = Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+        (context.getSystemService(Context.ALARM_SERVICE) as AlarmManager).canScheduleExactAlarms()
 
     var pendingSystemType by remember { mutableStateOf<String?>(null) }
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -277,6 +285,9 @@ private fun NotificationManagementScreen(onBack: () -> Unit) {
             val current = settings.getRule(type)
             settings.setRule(type, current.copy(enabled = true))
             ReminderScheduler(context).schedule(type)
+            refresh++
+        } else {
+            if (granted) ReminderScheduler(context).scheduleAll()
             refresh++
         }
     }
@@ -364,6 +375,24 @@ private fun NotificationManagementScreen(onBack: () -> Unit) {
                         },
                         modifier = Modifier.width(48.dp)
                     )
+                }
+                HorizontalDivider(color = BgDivider.copy(alpha = .45f))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    TextButton(onClick = {
+                        val posted = ReminderNotificationPublisher.showTest(context)
+                        testNotificationStatus = if (posted) {
+                            "Test notification requested. Check your notification shade."
+                        } else {
+                            "Test was blocked. Check notification permission and the Sigma JEE reminders channel."
+                        }
+                    }) {
+                        Icon(Icons.Filled.Notifications, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Send test notification")
+                    }
+                }
+                testNotificationStatus?.let {
+                    Text(it, color = TextSecondary, fontSize = 11.sp, lineHeight = 15.sp)
                 }
             }
 
@@ -455,14 +484,57 @@ private fun NotificationManagementScreen(onBack: () -> Unit) {
                     Spacer(Modifier.height(9.dp))
                     OutlinedButton(
                         onClick = {
-                            context.startActivity(
-                                Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
-                                    .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
-                            )
+                            if (Build.VERSION.SDK_INT >= 33 &&
+                                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+                            ) {
+                                pendingSystemType = null
+                                permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            } else {
+                                context.startActivity(
+                                    Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                                        .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                                )
+                            }
                         },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(13.dp)
-                    ) { Text("Open system notification settings") }
+                    ) {
+                        Text(if (Build.VERSION.SDK_INT >= 33 && !notificationsAllowed) "Allow notifications" else "Open system notification settings")
+                    }
+                }
+            }
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !exactAlarmsAllowed) {
+                JeeCard {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Filled.Alarm, null, tint = PrimaryLight, modifier = Modifier.size(22.dp))
+                        Spacer(Modifier.width(10.dp))
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                            Text("Precise alarm access is off", fontWeight = FontWeight.SemiBold)
+                            Text(
+                                "Android may delay reminders. Enable Alarms & reminders access for the most reliable timing.",
+                                color = TextSecondary, fontSize = 11.sp, lineHeight = 15.sp
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(9.dp))
+                    OutlinedButton(
+                        onClick = {
+                            runCatching {
+                                context.startActivity(
+                                    Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
+                                        .setData(Uri.parse("package:${context.packageName}"))
+                                )
+                            }.onFailure {
+                                context.startActivity(
+                                    Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                                        .setData(Uri.parse("package:${context.packageName}"))
+                                )
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(13.dp)
+                    ) { Text("Enable precise timing") }
                 }
             }
         }
@@ -473,14 +545,11 @@ private fun NotificationManagementScreen(onBack: () -> Unit) {
             existing = editingCustomReminder,
             onDismiss = { showCustomDialog = false; editingCustomReminder = null },
             onSave = { reminder ->
-                val oneTimeReminder = reminder.copy(
-                    repeat = CustomReminder.REPEAT_ONCE,
-                    scheduledDate = reminder.scheduledDate ?: LocalDate.now().plusDays(1).toString()
-                )
-                customRepository.save(oneTimeReminder)
-                ReminderScheduler(context).scheduleCustom(oneTimeReminder.id)
+                customRepository.save(reminder)
+                ReminderScheduler(context).scheduleCustom(reminder.id)
                 showCustomDialog = false
                 editingCustomReminder = null
+                testNotificationStatus = null
                 refresh++
             }
         )
@@ -808,7 +877,10 @@ private fun ReminderTimeline(
                             }
                         }
                         Surface(
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier.weight(1f).clickable {
+                                item.customReminder?.let { onCustomToggle(it, !it.enabled) }
+                                item.systemType?.let { onSystemToggle(it, !item.enabled) }
+                            },
                             shape = RoundedCornerShape(14.dp),
                             color = BgCard,
                             border = BorderStroke(1.dp, BgCardBorder)
@@ -818,22 +890,34 @@ private fun ReminderTimeline(
                                 verticalAlignment = Alignment.Top
                             ) {
                                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                                    Text(item.title, color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                                    Text(
+                                        item.title,
+                                        color = TextPrimary,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        lineHeight = 19.sp
+                                    )
                                     if (item.message.isNotBlank()) {
-                                        Text(item.message, color = TextSecondary, fontSize = 10.sp, lineHeight = 14.sp, maxLines = 2)
+                                        Text(
+                                            item.message,
+                                            color = TextSecondary,
+                                            fontSize = 11.sp,
+                                            lineHeight = 16.sp,
+                                            maxLines = 3
+                                        )
                                     }
                                     Text(
                                         when {
-                                            !masterEnabled -> "PAUSED"
+                                            !masterEnabled && item.enabled -> "PAUSED"
                                             !item.enabled -> "OFF"
-                                            item.repeatLabel == CustomReminder.REPEAT_ONCE && item.at.isBefore(LocalDateTime.now()) -> "PAST DUE"
-                                            item.repeatLabel == CustomReminder.REPEAT_ONCE -> "ONE-TIME REMINDER"
-                                            else -> item.repeatLabel.uppercase(Locale.getDefault())
+                                            item.repeatLabel == CustomReminder.REPEAT_ONCE && item.at.isBefore(LocalDateTime.now()) -> "PAST DUE · EDIT TO RESCHEDULE"
+                                            item.repeatLabel == CustomReminder.REPEAT_ONCE -> "ONCE · TAP TO TURN OFF"
+                                            else -> "DAILY · TAP TO TURN OFF"
                                         },
                                         color = if (masterEnabled && item.enabled) PrimaryLight else TextMuted,
-                                        fontSize = 9.sp,
+                                        fontSize = 10.sp,
                                         fontWeight = FontWeight.Bold,
-                                        letterSpacing = .5.sp
+                                        letterSpacing = .35.sp
                                     )
                                 }
                                 when {
@@ -871,61 +955,129 @@ private fun CustomReminderDialog(
     onSave: (CustomReminder) -> Unit
 ) {
     val context = LocalContext.current
+    val defaultHour = existing?.hour ?: 18
+    val defaultMinute = existing?.minute ?: 0
+    val defaultTime = LocalTime.of(defaultHour, defaultMinute)
     var title by remember(existing?.id) { mutableStateOf(existing?.title.orEmpty()) }
     var message by remember(existing?.id) { mutableStateOf(existing?.message.orEmpty()) }
-    var hour by remember(existing?.id) { mutableIntStateOf(existing?.hour ?: 18) }
-    var minute by remember(existing?.id) { mutableIntStateOf(existing?.minute ?: 0) }
+    var hour by remember(existing?.id) { mutableIntStateOf(defaultHour) }
+    var minute by remember(existing?.id) { mutableIntStateOf(defaultMinute) }
+    var repeatMode by remember(existing?.id) {
+        mutableStateOf(if (existing?.repeat == CustomReminder.REPEAT_ONCE) CustomReminder.REPEAT_ONCE else CustomReminder.REPEAT_DAILY)
+    }
+    val today = LocalDate.now()
+    val suggestedDate = if (defaultTime.isAfter(LocalTime.now())) today else today.plusDays(1)
     var scheduledDate by remember(existing?.id) {
         mutableStateOf(
             existing?.scheduledDate
                 ?.let { raw -> runCatching { LocalDate.parse(raw) }.getOrNull() }
-                ?.takeIf { !it.isBefore(LocalDate.now()) }
-                ?: existing?.let {
-                    nextScheduledDateTime(
-                        LocalDateTime.now(), it.hour, it.minute, it.repeat, it.scheduledDate
-                    )?.toLocalDate()
+                ?.takeIf { date ->
+                    !date.isBefore(today) && (date.isAfter(today) || defaultTime.isAfter(LocalTime.now()))
                 }
-                ?: LocalDate.now().plusDays(1)
+                ?: suggestedDate
         )
     }
     val chosenTime = LocalTime.of(hour, minute)
-    val validSchedule = scheduledDate.isAfter(LocalDate.now()) ||
-        (scheduledDate == LocalDate.now() && chosenTime.isAfter(LocalTime.now()))
+    val validSchedule = !scheduledDate.isBefore(today) &&
+        (scheduledDate.isAfter(today) || chosenTime.isAfter(LocalTime.now()))
+    val dateLabel = if (repeatMode == CustomReminder.REPEAT_DAILY) "Start date" else "Date"
 
-    AlertDialog(
+    Dialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (existing == null) "Add reminder" else "Edit reminder") },
-        text = {
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            modifier = Modifier.fillMaxWidth(0.93f).widthIn(max = 420.dp).heightIn(max = 620.dp),
+            shape = RoundedCornerShape(26.dp),
+            color = BgCard,
+            border = BorderStroke(1.dp, BgCardBorder)
+        ) {
             Column(
-                Modifier.fillMaxWidth().heightIn(max = 430.dp).verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                Modifier.fillMaxWidth()
+                    .imePadding()
+                    .verticalScroll(rememberScrollState())
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(13.dp)
             ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        Text(
+                            if (existing == null) "New reminder" else "Edit reminder",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text("Add it to your study routine.", color = TextSecondary, fontSize = 12.sp)
+                    }
+                    IconButton(onClick = onDismiss) {
+                        Icon(Icons.Filled.Delete, contentDescription = "Close reminder editor", tint = TextMuted)
+                    }
+                }
+
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it.take(CustomReminderRepository.MAX_TITLE_LENGTH) },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Title") },
-                    placeholder = { Text("e.g. Revise vectors") },
-                    singleLine = true
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp, max = 66.dp),
+                    label = { Text("Title", fontSize = 13.sp) },
+                    placeholder = { Text("e.g. Revise vectors", fontSize = 15.sp) },
+                    textStyle = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp),
+                    singleLine = true,
+                    shape = RoundedCornerShape(14.dp)
                 )
+
                 OutlinedTextField(
                     value = message,
                     onValueChange = { message = it.take(CustomReminderRepository.MAX_MESSAGE_LENGTH) },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Message (optional)") },
-                    placeholder = { Text("What should you remember?") },
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp, max = 104.dp),
+                    label = { Text("Message (optional)", fontSize = 13.sp) },
+                    placeholder = { Text("What should you remember?", fontSize = 15.sp) },
+                    textStyle = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp),
                     minLines = 1,
-                    maxLines = 3
+                    maxLines = 3,
+                    shape = RoundedCornerShape(14.dp)
                 )
 
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("Date", color = TextSecondary, fontSize = 11.sp)
+                Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                    Text("Repeat", color = TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(
+                            selected = repeatMode == CustomReminder.REPEAT_DAILY,
+                            onClick = { repeatMode = CustomReminder.REPEAT_DAILY },
+                            label = { Text("Daily") },
+                            leadingIcon = if (repeatMode == CustomReminder.REPEAT_DAILY) {
+                                { Icon(Icons.Filled.CheckCircle, null, modifier = Modifier.size(16.dp)) }
+                            } else null
+                        )
+                        FilterChip(
+                            selected = repeatMode == CustomReminder.REPEAT_ONCE,
+                            onClick = { repeatMode = CustomReminder.REPEAT_ONCE },
+                            label = { Text("Once") },
+                            leadingIcon = if (repeatMode == CustomReminder.REPEAT_ONCE) {
+                                { Icon(Icons.Filled.CheckCircle, null, modifier = Modifier.size(16.dp)) }
+                            } else null
+                        )
+                    }
+                    Text(
+                        if (repeatMode == CustomReminder.REPEAT_DAILY) {
+                            "Repeats every day from the selected start date."
+                        } else {
+                            "Runs once on the selected date and time."
+                        },
+                        color = TextMuted,
+                        fontSize = 11.sp,
+                        lineHeight = 15.sp
+                    )
+                }
+
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                        Text(dateLabel, color = TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                         OutlinedButton(
                             onClick = {
                                 DatePickerDialog(
                                     context,
-                                    { _, year, month, day -> scheduledDate = LocalDate.of(year, month + 1, day) },
+                                    { _, year, month, day ->
+                                        scheduledDate = LocalDate.of(year, month + 1, day)
+                                    },
                                     scheduledDate.year,
                                     scheduledDate.monthValue - 1,
                                     scheduledDate.dayOfMonth
@@ -935,61 +1087,73 @@ private fun CustomReminderDialog(
                                         .toInstant().toEpochMilli()
                                 }.show()
                             },
-                            modifier = Modifier.fillMaxWidth().height(44.dp),
-                            contentPadding = PaddingValues(horizontal = 7.dp, vertical = 0.dp),
-                            shape = RoundedCornerShape(12.dp)
+                            modifier = Modifier.fillMaxWidth().height(48.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                            shape = RoundedCornerShape(13.dp)
                         ) {
-                            Icon(Icons.Filled.Today, null, modifier = Modifier.size(15.dp))
-                            Spacer(Modifier.width(5.dp))
+                            Icon(Icons.Filled.Today, null, modifier = Modifier.size(17.dp), tint = PrimaryLight)
+                            Spacer(Modifier.width(6.dp))
                             Text(
-                                scheduledDate.format(DateTimeFormatter.ofPattern("d MMM yyyy", Locale.getDefault())),
-                                fontSize = 11.sp,
+                                scheduledDate.format(DateTimeFormatter.ofPattern("d MMM yy", Locale.getDefault())),
+                                fontSize = 12.sp,
                                 maxLines = 1
                             )
                         }
                     }
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("Time", color = TextSecondary, fontSize = 11.sp)
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                        Text("Time", color = TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                         OutlinedButton(
                             onClick = { showTimePicker(context, hour, minute) { h, m -> hour = h; minute = m } },
-                            modifier = Modifier.fillMaxWidth().height(44.dp),
-                            contentPadding = PaddingValues(horizontal = 7.dp, vertical = 0.dp),
-                            shape = RoundedCornerShape(12.dp)
+                            modifier = Modifier.fillMaxWidth().height(48.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                            shape = RoundedCornerShape(13.dp)
                         ) {
-                            Icon(Icons.Filled.Alarm, null, modifier = Modifier.size(15.dp))
-                            Spacer(Modifier.width(5.dp))
-                            Text(formatReminderTime(hour, minute), fontSize = 11.sp, maxLines = 1)
+                            Icon(Icons.Filled.Alarm, null, modifier = Modifier.size(17.dp), tint = PrimaryLight)
+                            Spacer(Modifier.width(6.dp))
+                            Text(formatReminderTime(hour, minute), fontSize = 12.sp, maxLines = 1)
                         }
                     }
                 }
 
                 if (!validSchedule) {
-                    Text("Choose a future time.", color = MaterialTheme.colorScheme.error, fontSize = 10.sp)
+                    Text("Choose a future date and time.", color = MaterialTheme.colorScheme.error, fontSize = 11.sp)
+                }
+
+                HorizontalDivider(color = BgDivider.copy(alpha = .5f))
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextButton(onClick = onDismiss) { Text("Cancel") }
+                    Spacer(Modifier.width(8.dp))
+                    Button(
+                        enabled = title.isNotBlank() && validSchedule,
+                        onClick = {
+                            onSave(
+                                CustomReminder(
+                                    id = existing?.id ?: java.util.UUID.randomUUID().toString(),
+                                    title = title.trim(),
+                                    message = message.trim(),
+                                    hour = hour,
+                                    minute = minute,
+                                    repeat = repeatMode,
+                                    enabled = existing?.enabled ?: true,
+                                    lastTriggered = existing?.lastTriggered ?: 0L,
+                                    scheduledDate = scheduledDate.toString()
+                                )
+                            )
+                        },
+                        shape = RoundedCornerShape(13.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = PrimaryLight,
+                            contentColor = BgAppBase
+                        )
+                    ) { Text("Save reminder", fontWeight = FontWeight.SemiBold) }
                 }
             }
-        },
-        confirmButton = {
-            TextButton(
-                enabled = title.isNotBlank() && validSchedule,
-                onClick = {
-                    onSave(
-                        CustomReminder(
-                            id = existing?.id ?: java.util.UUID.randomUUID().toString(),
-                            title = title.trim(),
-                            message = message.trim(),
-                            hour = hour,
-                            minute = minute,
-                            repeat = CustomReminder.REPEAT_ONCE,
-                            enabled = existing?.enabled ?: true,
-                            lastTriggered = existing?.lastTriggered ?: 0L,
-                            scheduledDate = scheduledDate.toString()
-                        )
-                    )
-                }
-            ) { Text("Save") }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
-    )
+        }
+    }
 }
 
 @Composable
