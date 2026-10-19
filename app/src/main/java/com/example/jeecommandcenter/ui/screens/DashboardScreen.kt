@@ -47,7 +47,6 @@ private data class DashboardSnapshot(
     val mistakesReviewed: Int,
     val priorities: List<DailyPriority>,
     val weak: WeakChapter?,
-    val unresolvedMistakes: Int,
     val questionsAttempted: Int
 )
 
@@ -85,7 +84,6 @@ fun DashboardScreen(
                 mistakesReviewed = learning.getMistakes().count { it.resolved },
                 priorities = intelligence.dailyPriorities(3),
                 weak = intelligence.weakChapters(1).firstOrNull(),
-                unresolvedMistakes = learning.getMistakes().count { !it.resolved },
                 questionsAttempted = learning.getQuestionAttempts().size
             )
         }
@@ -93,14 +91,13 @@ fun DashboardScreen(
     val tasks = snapshot?.tasks.orEmpty()
     val sessions = snapshot?.sessions.orEmpty()
     val today = LocalDate.now()
-    val todaySessions = sessions.filter { it.date == today.toString() }
+    val todaySessions = sessions.filter { it.date == today.toString() && it.minutes > 0 }
     val todayMinutes = snapshot?.todayMinutes ?: 0
     val goalMinutes = snapshot?.goalMinutes ?: repo.getDailyGoalMinutes()
     val totalTasksCompleted = tasks.count { it.done }
     val mistakesReviewed = snapshot?.mistakesReviewed ?: 0
     val priorities = snapshot?.priorities.orEmpty()
     val weak = snapshot?.weak
-    val unresolvedMistakes = snapshot?.unresolvedMistakes ?: 0
     val questionsAttempted = snapshot?.questionsAttempted ?: 0
     val todayTasks = tasks.filter { it.dueDay == "Today" }
     val dailyLog = remember { DailyLogRepository(context) }
