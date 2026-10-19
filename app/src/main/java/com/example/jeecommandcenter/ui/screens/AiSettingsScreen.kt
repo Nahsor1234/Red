@@ -20,6 +20,13 @@ import com.example.jeecommandcenter.ui.components.JeeTopBar
 import com.example.jeecommandcenter.ui.theme.*
 import kotlinx.coroutines.launch
 
+private fun isTrustedHttpsEndpoint(raw: String): Boolean = runCatching {
+    val uri = java.net.URI(raw.trim())
+    uri.scheme.equals("https", ignoreCase = true) &&
+        !uri.host.isNullOrBlank() &&
+        uri.userInfo.isNullOrBlank()
+}.getOrDefault(false)
+
 @Composable
 fun AiSettingsScreen(context: android.content.Context, onBack: () -> Unit) {
     val settings = remember { AiSettingsRepository(context) }
@@ -35,7 +42,7 @@ fun AiSettingsScreen(context: android.content.Context, onBack: () -> Unit) {
 
     fun save(): Boolean {
         if (model.isBlank()) { status = "Enter a model ID."; return false }
-        if (customEndpoint && !endpoint.trim().startsWith("https://")) { status = "Enter a valid HTTPS API endpoint."; return false }
+        if (customEndpoint && !isTrustedHttpsEndpoint(endpoint)) { status = "Enter a valid HTTPS URL with a host and no embedded credentials."; return false }
         settings.saveConfig(config.provider, model, endpoint)
         config = settings.getConfig()
         status = "AI configuration saved."
@@ -114,6 +121,7 @@ fun AiSettingsScreen(context: android.content.Context, onBack: () -> Unit) {
                         Column(Modifier.padding(16.dp)) {
                             Text("API endpoint", style = MaterialTheme.typography.titleLarge)
                             Text("Required for a custom OpenAI-compatible server.", color = TextMuted, fontSize = 11.sp)
+                            Text("The chosen host receives your API key and request content. Use only a server you trust.", color = AccentAmber, fontSize = 11.sp, lineHeight = 16.sp)
                             Spacer(Modifier.height(10.dp))
                             OutlinedTextField(value = endpoint, onValueChange = { endpoint = it }, modifier = Modifier.fillMaxWidth(), label = { Text("HTTPS endpoint") }, placeholder = { Text("https://your-host/v1/chat/completions") }, singleLine = true)
                         }
@@ -178,7 +186,7 @@ fun AiSettingsScreen(context: android.content.Context, onBack: () -> Unit) {
                         }
                     },
                     enabled = settings.hasApiKey() && !busy && model.isNotBlank() &&
-                        (!customEndpoint || endpoint.trim().startsWith("https://")),
+                        (!customEndpoint || isTrustedHttpsEndpoint(endpoint)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     if (busy) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)

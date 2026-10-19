@@ -14,6 +14,8 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      HAS_PERSISTENT_SIGNING_KEY: ${{ secrets.ANDROID_DEBUG_KEYSTORE_BASE64 != '' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -36,6 +38,31 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.7'
+
+      # GitHub-hosted runners are ephemeral. Reuse one stable debug keystore so
+      # subsequent debug APKs can update the installed app instead of conflicting.
+      # Debug keys are for development APKs only; production releases need a dedicated
+      # private release keystore managed separately.
+      - name: Restore stable debug signing key
+        if: ${{ env.HAS_PERSISTENT_SIGNING_KEY != 'true' }}
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: sigma-je-debug-keystore-v1-${{ runner.os }}
+
+      # For stability across branch/merge boundaries, optionally provide the same
+      # development keystore as a GitHub Actions secret. If unset, the cached
+      # branch-local debug key remains in use.
+      - name: Use persistent debug signing key when configured
+        env:
+          ANDROID_DEBUG_KEYSTORE_BASE64: ${{ secrets.ANDROID_DEBUG_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$ANDROID_DEBUG_KEYSTORE_BASE64" ]; then
+            mkdir -p "$HOME/.android"
+            printf '%s' "$ANDROID_DEBUG_KEYSTORE_BASE64" | base64 --decode > "$HOME/.android/debug.keystore"
+          else
+            echo "No persistent keystore secret configured; using the cached debug keystore."
+          fi
 
       - name: Build APK
         run: gradle assembleDebug

@@ -6,7 +6,16 @@ import org.json.JSONObject
 
 class BackupRepository(context: Context) {
     private val context = context.applicationContext
-    private val sources = listOf("jee_command_center", "jee_learning_engine", "jee_ai_settings")
+    // User-authored and progress stores are included. API keys remain in the
+    // separate encrypted keystore and are intentionally never exported.
+    private val sources = listOf(
+        "jee_command_center",
+        "jee_learning_engine",
+        "daily_log_v1",
+        "jee_revision_notes",
+        "custom_reminders_v1",
+        "reminder_settings_v1"
+    )
     private val recoveryPrefs = "jee_recovery"
     private val recoveryKey = "last_known_good_backup"
 
@@ -37,6 +46,7 @@ class BackupRepository(context: Context) {
             }
             check(editor.commit()) { "Could not restore $name" }
         }
+        ReminderScheduler(context).scheduleAll()
     }
 
     fun recoverLastKnownGood(): Result<Unit> = runCatching {
@@ -65,6 +75,7 @@ class BackupRepository(context: Context) {
             }
             check(editor.commit()) { "Could not recover $name" }
         }
+        ReminderScheduler(context).scheduleAll()
     }
 
     private fun validateBackup(json: String): JSONObject {
@@ -85,7 +96,17 @@ class BackupRepository(context: Context) {
             put("preferences", JSONObject())
         }
         val all = root.getJSONObject("preferences")
-        sources.forEach { name -> all.put(name, encode(context.getSharedPreferences(name, Context.MODE_PRIVATE).all)) }
+        sources.forEach { name ->
+            val values = context.getSharedPreferences(name, Context.MODE_PRIVATE).all
+                .filterNot { (key, _) ->
+                    (name == "jee_command_center" &&
+                        (key.startsWith("timer_") || key.startsWith("chapter_") ||
+                            key in setOf("daily_plan", "daily_plan_mistake_signature",
+                                "daily_goal", "data_schema_version"))) ||
+                    (name == "jee_learning_engine" && key == "analytics_cache")
+                }
+            all.put(name, encode(values))
+        }
         return root.toString(2)
     }
 

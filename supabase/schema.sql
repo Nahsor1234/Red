@@ -87,6 +87,21 @@ create index if not exists question_attempts_user_chapter_idx on public.question
 create index if not exists questions_chapter_idx on public.questions(chapter_id);
 create index if not exists topics_chapter_idx on public.topics(chapter_id);
 
+-- Key-level offline-first cloud backup for preference-backed user data such as
+-- daily progress, study sessions, notes, reminders, mistakes, and AI chat history.
+create table if not exists public.user_cloud_preference_records (
+  user_id uuid not null references auth.users(id) on delete cascade,
+  namespace text not null,
+  key text not null,
+  payload jsonb not null default '{}'::jsonb,
+  deleted boolean not null default false,
+  updated_at bigint not null,
+  primary key (user_id, namespace, key)
+);
+
+create index if not exists user_cloud_preference_records_user_updated_idx
+  on public.user_cloud_preference_records(user_id, updated_at desc);
+
 alter table public.profiles enable row level security;
 alter table public.subjects enable row level security;
 alter table public.chapters enable row level security;
@@ -95,6 +110,7 @@ alter table public.questions enable row level security;
 alter table public.chapter_progress enable row level security;
 alter table public.topic_progress enable row level security;
 alter table public.question_attempts enable row level security;
+alter table public.user_cloud_preference_records enable row level security;
 
 drop policy if exists "catalog subjects readable" on public.subjects;
 create policy "catalog subjects readable" on public.subjects for select to authenticated using (true);
@@ -118,6 +134,19 @@ drop policy if exists "own topic progress" on public.topic_progress;
 create policy "own topic progress" on public.topic_progress for all to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
 drop policy if exists "own attempts" on public.question_attempts;
 create policy "own attempts" on public.question_attempts for all to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+drop policy if exists "user_cloud_preference_records_select_own" on public.user_cloud_preference_records;
+create policy "user_cloud_preference_records_select_own" on public.user_cloud_preference_records
+  for select to authenticated using (user_id = auth.uid());
+drop policy if exists "user_cloud_preference_records_insert_own" on public.user_cloud_preference_records;
+create policy "user_cloud_preference_records_insert_own" on public.user_cloud_preference_records
+  for insert to authenticated with check (user_id = auth.uid());
+drop policy if exists "user_cloud_preference_records_update_own" on public.user_cloud_preference_records;
+create policy "user_cloud_preference_records_update_own" on public.user_cloud_preference_records
+  for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+drop policy if exists "user_cloud_preference_records_delete_own" on public.user_cloud_preference_records;
+create policy "user_cloud_preference_records_delete_own" on public.user_cloud_preference_records
+  for delete to authenticated using (user_id = auth.uid());
 
 -- Initial catalog roots. Chapters/topics/questions can be seeded from the app's
 -- canonical catalog/question bank after running this schema.

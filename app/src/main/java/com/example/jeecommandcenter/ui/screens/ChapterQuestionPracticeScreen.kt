@@ -32,6 +32,7 @@ import com.example.jeecommandcenter.data.MistakeType
 import com.example.jeecommandcenter.data.Question
 import com.example.jeecommandcenter.ui.components.JeeTopBar
 import com.example.jeecommandcenter.ui.components.SharedQuestionPromptCard
+import com.example.jeecommandcenter.ui.components.MathMarkdownText
 import com.example.jeecommandcenter.ui.components.SharedQuestionOptionRow
 import com.example.jeecommandcenter.ui.theme.*
 import kotlinx.coroutines.launch
@@ -406,8 +407,9 @@ fun ChapterQuestionPracticeScreen(
                                         }
                                     }
                                 }
-                                Text(
+                                MathMarkdownText(
                                     question.explanation,
+                                    modifier = Modifier.fillMaxWidth(),
                                     color = TextPrimary.copy(alpha = .94f),
                                     fontSize = 14.sp,
                                     lineHeight = 20.sp

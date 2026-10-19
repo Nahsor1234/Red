@@ -102,18 +102,34 @@ class AiSettingsRepository(context: android.content.Context) {
 }
 
 class AiEngine(private val settings: AiSettingsRepository) {
+    companion object {
+        const val DEFAULT_MAX_OUTPUT_TOKENS = 4_096
+        const val MAX_QUIZ_OUTPUT_TOKENS = 8_192
+    }
+
+    private fun requireValidHttpsEndpoint(raw: String) {
+        val uri = runCatching { java.net.URI(raw.trim()) }
+            .getOrElse { throw IllegalArgumentException("API endpoint must be a valid HTTPS URL.") }
+        require(uri.scheme.equals("https", ignoreCase = true) &&
+            !uri.host.isNullOrBlank() && uri.userInfo.isNullOrBlank()) {
+            "API endpoint must be HTTPS with a valid host and no embedded credentials."
+        }
+    }
 
     suspend fun ask(
         prompt: String,
-        systemInstruction: String? = null
+        systemInstruction: String? = null,
+        maxOutputTokens: Int = DEFAULT_MAX_OUTPUT_TOKENS
     ): AiResult = askConversation(
         messages = listOf(AiPromptMessage("user", prompt)),
-        systemInstruction = systemInstruction
+        systemInstruction = systemInstruction,
+        maxOutputTokens = maxOutputTokens
     )
 
     suspend fun askConversation(
         messages: List<AiPromptMessage>,
-        systemInstruction: String? = null
+        systemInstruction: String? = null,
+        maxOutputTokens: Int = DEFAULT_MAX_OUTPUT_TOKENS
     ): AiResult = withContext(Dispatchers.IO) {
         val key = settings.apiKey()
             ?: return@withContext AiResult(false, error = "Add an API key in Settings → AI Hub.")
@@ -122,14 +138,16 @@ class AiEngine(private val settings: AiSettingsRepository) {
         runCatching {
             when (config.provider) {
                 AiProvider.GEMINI ->
-                    callGemini(key, config.model, messages, systemInstruction)
+                    callGemini(key, config.model, messages, systemInstruction, maxOutputTokens.coerceIn(128, MAX_QUIZ_OUTPUT_TOKENS))
                 else ->
                     callOpenAiCompatible(
                         key,
                         config.endpoint.ifBlank { settings.defaultEndpoint(config.provider) },
                         config.model,
                         messages,
-                        systemInstruction
+                        systemInstruction,
+                        maxOutputTokens.coerceIn(128, MAX_QUIZ_OUTPUT_TOKENS),
+                        config.provider
                     )
             }
         }.getOrElse {
@@ -140,16 +158,19 @@ class AiEngine(private val settings: AiSettingsRepository) {
     suspend fun stream(
         prompt: String,
         systemInstruction: String? = null,
+        maxOutputTokens: Int = DEFAULT_MAX_OUTPUT_TOKENS,
         onChunk: suspend (String) -> Unit
     ): AiResult = streamConversation(
         messages = listOf(AiPromptMessage("user", prompt)),
         systemInstruction = systemInstruction,
+        maxOutputTokens = maxOutputTokens,
         onChunk = onChunk
     )
 
     suspend fun streamConversation(
         messages: List<AiPromptMessage>,
         systemInstruction: String? = null,
+        maxOutputTokens: Int = DEFAULT_MAX_OUTPUT_TOKENS,
         onChunk: suspend (String) -> Unit
     ): AiResult = withContext(Dispatchers.IO) {
         val key = settings.apiKey()
@@ -159,7 +180,7 @@ class AiEngine(private val settings: AiSettingsRepository) {
         runCatching {
             val text = when (config.provider) {
                 AiProvider.GEMINI ->
-                    streamGemini(key, config.model, messages, systemInstruction, onChunk)
+                    streamGemini(key, config.model, messages, systemInstruction, maxOutputTokens.coerceIn(128, MAX_QUIZ_OUTPUT_TOKENS), onChunk)
                 else ->
                     streamOpenAiCompatible(
                         key,
@@ -167,6 +188,8 @@ class AiEngine(private val settings: AiSettingsRepository) {
                         config.model,
                         messages,
                         systemInstruction,
+                        maxOutputTokens.coerceIn(128, MAX_QUIZ_OUTPUT_TOKENS),
+                        config.provider,
                         onChunk
                     )
             }
@@ -189,10 +212,13 @@ class AiEngine(private val settings: AiSettingsRepository) {
                 "Each object: {\"prompt\":string,\"options\":[4 strings],\"correctIndex\":0-3," +
                 "\"explanation\":string,\"topic\":string}. No markdown."
 
+        val quizTokenBudget = (count.coerceIn(1, 20) * 400)
+            .coerceIn(2_048, MAX_QUIZ_OUTPUT_TOKENS)
         val result = ask(
             prompt,
             "You generate accurate educational multiple-choice questions for JEE. " +
-                "Exactly one option must be correct. Never invent exam claims."
+                "Exactly one option must be correct. Never invent exam claims.",
+            maxOutputTokens = quizTokenBudget
         )
 
         if (!result.success) return emptyList()
@@ -243,7 +269,8 @@ class AiEngine(private val settings: AiSettingsRepository) {
         key: String,
         model: String,
         messages: List<AiPromptMessage>,
-        systemInstruction: String?
+        systemInstruction: String?,
+        maxOutputTokens: Int
     ): AiResult {
         val contents = JSONArray()
         messages.filter { it.content.isNotBlank() }.forEach { message ->
@@ -268,6 +295,7 @@ class AiEngine(private val settings: AiSettingsRepository) {
                 )
             }
             put("contents", contents)
+            put("generationConfig", JSONObject().put("maxOutputTokens", maxOutputTokens))
         }
 
         return postJson(
@@ -291,9 +319,11 @@ class AiEngine(private val settings: AiSettingsRepository) {
         endpoint: String,
         model: String,
         messages: List<AiPromptMessage>,
-        systemInstruction: String?
+        systemInstruction: String?,
+        maxOutputTokens: Int,
+        provider: AiProvider
     ): AiResult {
-        require(endpoint.startsWith("https://")) { "API endpoint must start with https://" }
+        requireValidHttpsEndpoint(endpoint)
         require(model.isNotBlank()) { "Model ID cannot be blank." }
 
         val requestMessages = JSONArray()
@@ -319,9 +349,11 @@ class AiEngine(private val settings: AiSettingsRepository) {
         return postJson(
             URL(endpoint),
             mapOf("Authorization" to "Bearer $key"),
-            JSONObject()
-                .put("model", model.trim())
-                .put("messages", requestMessages)
+            JSONObject().apply {
+                put("model", model.trim())
+                put("messages", requestMessages)
+                put(if (provider == AiProvider.OPENAI) "max_completion_tokens" else "max_tokens", maxOutputTokens)
+            }
         ) { response ->
             response.optJSONArray("choices")
                 ?.optJSONObject(0)
@@ -338,6 +370,8 @@ class AiEngine(private val settings: AiSettingsRepository) {
         model: String,
         messages: List<AiPromptMessage>,
         systemInstruction: String?,
+        maxOutputTokens: Int,
+        provider: AiProvider,
         onChunk: suspend (String) -> Unit
     ): String {
         require(endpoint.startsWith("https://")) { "API endpoint must start with https://" }
@@ -376,6 +410,7 @@ class AiEngine(private val settings: AiSettingsRepository) {
                 JSONObject()
                     .put("model", model)
                     .put("messages", requestMessages)
+                    .put(if (provider == AiProvider.OPENAI) "max_completion_tokens" else "max_tokens", maxOutputTokens)
                     .put("stream", true)
                     .toString()
                     .toByteArray()
@@ -420,6 +455,7 @@ class AiEngine(private val settings: AiSettingsRepository) {
         model: String,
         messages: List<AiPromptMessage>,
         systemInstruction: String?,
+        maxOutputTokens: Int,
         onChunk: suspend (String) -> Unit
     ): String {
         val contents = JSONArray()
@@ -445,6 +481,7 @@ class AiEngine(private val settings: AiSettingsRepository) {
                 )
             }
             put("contents", contents)
+            put("generationConfig", JSONObject().put("maxOutputTokens", maxOutputTokens))
         }
 
         val url = URL(
@@ -500,6 +537,8 @@ class AiEngine(private val settings: AiSettingsRepository) {
     ): HttpURLConnection =
         (url.openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"
+            // Do not forward Authorization headers to redirect targets chosen by a remote server.
+            instanceFollowRedirects = false
             connectTimeout = 15_000
             readTimeout = 120_000
             doOutput = true

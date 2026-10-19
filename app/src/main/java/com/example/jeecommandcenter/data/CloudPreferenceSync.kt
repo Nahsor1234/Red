@@ -42,18 +42,24 @@ class CloudPreferenceSync(
     private val db = cloud.postgrest
     private val state = context.getSharedPreferences("sigma_cloud_preference_sync", Context.MODE_PRIVATE)
 
+    // User-owned stores. Keep jee_secure_keys excluded: provider credentials remain local.
     private val namespaces = listOf(
         "jee_command_center",
         "jee_learning_engine",
-        "jee_ai_settings",
-        "ai_chat_history"
+        "daily_log_v1",
+        "jee_revision_notes",
+        "custom_reminders_v1",
+        "reminder_settings_v1"
     )
 
     suspend fun sync(userId: String): PreferenceSyncResult {
         val remote = db["user_cloud_preference_records"].select {
             filter { CloudPreferenceRecord::userId eq userId }
         }.decodeList<CloudPreferenceRecord>()
-        val remoteByKey = remote.associateBy { key(it.namespace, it.key) }
+        val allowedNamespaces = namespaces.toSet()
+        val remoteByKey = remote
+            .filter { it.namespace in allowedNamespaces }
+            .associateBy { key(it.namespace, it.key) }
         val local = currentLocalEntries()
         val allKeys = (local.keys + remoteByKey.keys).toSortedSet()
 
@@ -67,7 +73,7 @@ class CloudPreferenceSync(
             val prefKey = parts[1]
             val localEntry = local[compoundKey]
             val remoteEntry = remoteByKey[compoundKey]
-            val lastHash = state.getString(hashKey(namespace, prefKey), null)
+            val lastHash = state.getString(hashKey(userId, namespace, prefKey), null)
             val localHash = localEntry?.let(::hash)
             val remoteHash = remoteEntry?.takeUnless { it.deleted }?.let { hash(it.payload) }
 
@@ -76,15 +82,14 @@ class CloudPreferenceSync(
 
                 localEntry == null -> {
                     if (remoteEntry!!.deleted) {
-                        state.edit().putString(hashKey(namespace, prefKey), tombstoneHash(remoteEntry)).apply()
+                        state.edit().putString(hashKey(userId, namespace, prefKey), tombstoneHash(remoteEntry)).apply()
                     } else if (lastHash == null) {
                         restore(namespace, prefKey, remoteEntry.payload)
-                        state.edit().putString(hashKey(namespace, prefKey), remoteHash).apply()
+                        state.edit().putString(hashKey(userId, namespace, prefKey), remoteHash).apply()
                         restoredCount++
                     } else {
                         val record = tombstone(userId, namespace, prefKey)
                         uploads += record
-                        state.edit().putString(hashKey(namespace, prefKey), tombstoneHash(record)).apply()
                         uploadedCount++
                     }
                 }
@@ -99,7 +104,6 @@ class CloudPreferenceSync(
                         updatedAt = System.currentTimeMillis()
                     )
                     uploads += record
-                    state.edit().putString(hashKey(namespace, prefKey), localHash).apply()
                     uploadedCount++
                 }
 
@@ -108,7 +112,7 @@ class CloudPreferenceSync(
                         localHash == null && lastHash == tombstoneHash(remoteEntry) -> Unit
                         localHash == lastHash -> {
                             removeLocal(namespace, prefKey)
-                            state.edit().putString(hashKey(namespace, prefKey), tombstoneHash(remoteEntry)).apply()
+                            state.edit().putString(hashKey(userId, namespace, prefKey), tombstoneHash(remoteEntry)).apply()
                             restoredCount++
                         }
                         else -> {
@@ -121,19 +125,18 @@ class CloudPreferenceSync(
                                 updatedAt = System.currentTimeMillis()
                             )
                             uploads += record
-                            state.edit().putString(hashKey(namespace, prefKey), localHash).apply()
                             uploadedCount++
                         }
                     }
                 }
 
                 localHash == remoteHash -> {
-                    state.edit().putString(hashKey(namespace, prefKey), localHash).apply()
+                    state.edit().putString(hashKey(userId, namespace, prefKey), localHash).apply()
                 }
 
                 localHash == lastHash -> {
                     restore(namespace, prefKey, remoteEntry.payload)
-                    state.edit().putString(hashKey(namespace, prefKey), remoteHash).apply()
+                    state.edit().putString(hashKey(userId, namespace, prefKey), remoteHash).apply()
                     restoredCount++
                 }
 
@@ -147,7 +150,6 @@ class CloudPreferenceSync(
                         updatedAt = System.currentTimeMillis()
                     )
                     uploads += record
-                    state.edit().putString(hashKey(namespace, prefKey), localHash).apply()
                     uploadedCount++
                 }
 
@@ -164,17 +166,24 @@ class CloudPreferenceSync(
                         updatedAt = System.currentTimeMillis()
                     )
                     uploads += record
-                    state.edit().putString(hashKey(namespace, prefKey), localHash).apply()
                     uploadedCount++
                 }
             }
         }
 
         if (uploads.isNotEmpty()) {
+            // Do not mark records synced until the remote upsert succeeds.
+            // A network failure must never make a later sync overwrite newer local data.
             db["user_cloud_preference_records"].upsert(
                 uploads,
                 onConflict = "user_id,namespace,key"
             )
+            val editor = state.edit()
+            uploads.forEach { record ->
+                val syncedHash = if (record.deleted) tombstoneHash(record) else hash(record.payload)
+                editor.putString(hashKey(userId, record.namespace, record.key), syncedHash)
+            }
+            check(editor.commit()) { "Could not save cloud sync state" }
         }
 
         return PreferenceSyncResult(uploaded = uploadedCount, restored = restoredCount)
@@ -195,8 +204,12 @@ class CloudPreferenceSync(
     private fun shouldSync(namespace: String, prefKey: String): Boolean = when (namespace) {
         "jee_command_center" -> !prefKey.startsWith("chapter_") &&
             !prefKey.startsWith("timer_") &&
-            prefKey != "data_schema_version" &&
-            prefKey != "daily_plan"
+            prefKey !in setOf(
+                "data_schema_version",
+                "daily_plan",
+                "daily_plan_mistake_signature",
+                "daily_goal"
+            )
         "jee_learning_engine" -> prefKey != "question_attempts"
         else -> true
     }
@@ -265,7 +278,9 @@ class CloudPreferenceSync(
 
     private fun tombstoneHash(record: CloudPreferenceRecord): String = "deleted:" + record.updatedAt
 
-    private fun hashKey(namespace: String, prefKey: String): String = "hash_$namespace$KEY_SEPARATOR$prefKey"
+    // Account-scoped merge cursors prevent state from leaking across account switches.
+    private fun hashKey(userId: String, namespace: String, prefKey: String): String =
+        "hash_$userId$KEY_SEPARATOR$namespace$KEY_SEPARATOR$prefKey"
 
     private fun key(namespace: String, prefKey: String): String = namespace + KEY_SEPARATOR + prefKey
 

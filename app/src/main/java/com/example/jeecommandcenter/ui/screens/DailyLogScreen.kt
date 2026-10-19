@@ -26,8 +26,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.platform.LocalContext
+import com.example.jeecommandcenter.data.CloudJeeRepository
+import com.example.jeecommandcenter.data.CloudPreferenceSync
 import com.example.jeecommandcenter.data.DailyLogEntry
 import com.example.jeecommandcenter.data.DailyLogRepository
+import com.example.jeecommandcenter.data.ReminderScheduler
 import com.example.jeecommandcenter.ui.components.JeeCard
 import com.example.jeecommandcenter.ui.components.JeeTopBar
 import com.example.jeecommandcenter.ui.components.LinearStatBar
@@ -88,6 +91,35 @@ fun DailyLogScreen(onBack: () -> Unit) {
         }
     }
     val selectedIsToday = selectedDate == today
+    var cloudBackupStatus by remember { mutableStateOf<String?>(null) }
+
+    // Debounce typing, then sync the complete SharedPreferences state. This includes
+    // every dated daily-log key, not just the currently visible day.
+    LaunchedEffect(selectedDate, entry.notes, entry.completed, selectedIsToday) {
+        if (!selectedIsToday) {
+            cloudBackupStatus = null
+            return@LaunchedEffect
+        }
+
+        cloudBackupStatus = "Saved on this device · checking cloud backup"
+        delay(1_200)
+        val user = runCatching { CloudJeeRepository().currentUser() }.getOrNull()
+        if (user == null) {
+            cloudBackupStatus = "Saved on this device · sign in for cloud backup"
+            return@LaunchedEffect
+        }
+
+        cloudBackupStatus = "Backing up to your Sigma JE account…"
+        runCatching { CloudPreferenceSync(context).sync(user.id) }
+            .onSuccess {
+                runCatching { ReminderScheduler(context).scheduleAll() }
+                refresh++
+                cloudBackupStatus = "Backed up to your Sigma JE account"
+            }
+            .onFailure {
+                cloudBackupStatus = "Saved on device · cloud backup pending; retry from Cloud Account"
+            }
+    }
     Scaffold(
         containerColor = BgApp,
         topBar = { JeeTopBar(title = "Daily Progress", onBack = onBack) }
@@ -311,7 +343,7 @@ fun DailyLogScreen(onBack: () -> Unit) {
                 )
                 if (selectedIsToday) {
                     Spacer(Modifier.height(5.dp))
-                    Text("${entry.notes.length}/${DailyLogRepository.MAX_NOTE_LENGTH} characters · Saved automatically on this device", color = TextMuted, fontSize = 9.sp)
+                    Text("${entry.notes.length}/${DailyLogRepository.MAX_NOTE_LENGTH} characters · ${cloudBackupStatus ?: "Saved automatically on this device"}", color = if (cloudBackupStatus?.startsWith("Backed up") == true) AccentGreen else TextMuted, fontSize = 9.sp)
                 }
             }
             Spacer(Modifier.height(4.dp))
