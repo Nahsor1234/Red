@@ -50,6 +50,7 @@ data class RevisionItem(
 
 enum class PlannerItemType {
     REVISION,
+    MISTAKE_REVIEW,
     STUDY,
     PRACTICE
 }
