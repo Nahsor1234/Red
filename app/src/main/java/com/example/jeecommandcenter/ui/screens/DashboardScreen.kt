@@ -49,7 +49,6 @@ fun DashboardScreen(
     selectedTab: AppTab,
     onTabSelected: (AppTab) -> Unit,
     onAiClick: () -> Unit = {},
-    onOpenPlanner: () -> Unit = {},
     onOpenRevision: () -> Unit = {},
     onOpenSettings: () -> Unit = {},
     onOpenAssessment: () -> Unit = {},
