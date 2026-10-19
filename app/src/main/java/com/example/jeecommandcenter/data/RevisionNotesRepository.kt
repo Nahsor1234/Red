@@ -46,7 +46,7 @@ class RevisionNotesRepository(context: Context) {
             title = note.title.trim(),
             subject = note.subject.ifBlank { "General" },
             chapter = note.chapter.trim(),
-            content = note.content.trim(),
+            content = note.content,
             createdAt = existing?.createdAt?.takeIf { it > 0L } ?: note.createdAt.takeIf { it > 0L } ?: now,
             updatedAt = now
         )
