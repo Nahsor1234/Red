@@ -56,6 +56,16 @@ data class CloudQuestion(
 )
 
 @Serializable
+data class CloudQuestionAttempt(
+    val id: Long,
+    @SerialName("user_id") val userId: String,
+    @SerialName("question_id") val questionId: String,
+    @SerialName("chapter_id") val chapterId: String,
+    @SerialName("selected_index") val selectedIndex: Int,
+    val correct: Boolean
+)
+
+@Serializable
 data class CloudChapterProgress(
     @SerialName("user_id") val userId: String,
     @SerialName("chapter_id") val chapterId: String,
@@ -212,6 +222,24 @@ class CloudJeeRepository(
             },
             onConflict = "user_id,chapter_id"
         )
+    }
+
+    suspend fun questionAttemptsForUser(userId: String): List<CloudQuestionAttempt> =
+        runCatching {
+            db["question_attempts"].select {
+                filter { CloudQuestionAttempt::userId eq userId }
+            }.decodeList<CloudQuestionAttempt>().sortedBy { it.id }
+        }.getOrDefault(emptyList())
+
+    suspend fun questionsByIds(ids: Set<String>): List<CloudQuestion> {
+        if (ids.isEmpty()) return emptyList()
+        return ids.toList().distinct().chunked(100).flatMap { batch ->
+            runCatching {
+                db["questions"].select {
+                    filter { CloudQuestion::id isIn batch }
+                }.decodeList<CloudQuestion>()
+            }.getOrDefault(emptyList())
+        }.let(::orderedQuestions)
     }
 
     suspend fun recordQuestionAttempt(
