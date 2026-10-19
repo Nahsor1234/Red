@@ -16,6 +16,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.lifecycleScope
 import com.example.jeecommandcenter.data.SupabaseClientProvider
+import com.example.jeecommandcenter.data.ReminderScheduler
 import com.example.jeecommandcenter.ui.components.JeeBackground
 import com.example.jeecommandcenter.ui.navigation.AppRoot
 import com.example.jeecommandcenter.ui.theme.BgAppBase
@@ -31,6 +32,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Reconcile stored reminders with AlarmManager whenever the app starts.
+        ReminderScheduler(applicationContext).scheduleAll()
         enableEdgeToEdge()
         handleSupabaseAuthIntent(intent)
         launchTarget = intent?.getStringExtra(EXTRA_OPEN_TARGET)
