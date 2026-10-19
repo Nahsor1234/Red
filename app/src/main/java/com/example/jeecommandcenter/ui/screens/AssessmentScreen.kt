@@ -314,7 +314,7 @@ private fun QuestionContent(
                         fontSize = 12.sp
                     )
                     if (question.explanation.isNotBlank()) {
-                        Text(question.explanation, color = TextPrimary.copy(alpha = .94f), fontSize = 13.sp, lineHeight = 19.sp)
+                        MathMarkdownText(question.explanation, modifier = Modifier.fillMaxWidth(), color = TextPrimary.copy(alpha = .94f), fontSize = 13.sp, lineHeight = 19.sp)
                     } else {
                         Text("No explanation is available for this question.", color = TextMuted, fontSize = 12.sp)
                     }
