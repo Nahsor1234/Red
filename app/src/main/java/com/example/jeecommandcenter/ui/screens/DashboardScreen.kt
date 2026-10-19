@@ -1,10 +1,14 @@
 package com.example.jeecommandcenter.ui.screens
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
@@ -16,6 +20,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -24,21 +29,24 @@ import com.example.jeecommandcenter.ui.components.*
 import com.example.jeecommandcenter.ui.theme.*
 import java.time.LocalDate
 import java.time.LocalTime
+import java.time.Instant
+import java.time.ZoneId
 import java.time.YearMonth
 import java.time.format.TextStyle
 import java.util.Locale
 import java.time.temporal.ChronoUnit
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
 private data class DashboardSnapshot(
     val tasks: List<AppTask>,
     val todayMinutes: Int,
     val goalMinutes: Int,
-    val completedChapters: Int,
+    val sessions: List<StudySession>,
+    val mistakesReviewed: Int,
     val priorities: List<DailyPriority>,
     val weak: WeakChapter?,
-    val unresolvedMistakes: Int,
     val questionsAttempted: Int
 )
 
@@ -63,37 +71,49 @@ fun DashboardScreen(
     val context = androidx.compose.ui.platform.LocalContext.current.applicationContext
     val learning = remember { LearningRepository(context) }
     val intelligence = remember { JeeIntelligence(repo, learning) }
-    val totalChapters = JeeRepository.syllabus.values.sumOf { it.size }
     var snapshot by remember { mutableStateOf<DashboardSnapshot?>(null) }
     LaunchedEffect(refresh) {
         snapshot = withContext(Dispatchers.Default) {
+            val sessions = repo.getSessions()
+            val today = LocalDate.now().toString()
             DashboardSnapshot(
                 tasks = repo.getTasks(),
-                todayMinutes = repo.getTodayMinutes(),
+                sessions = sessions,
+                todayMinutes = sessions.filter { it.date == today }.sumOf { it.minutes },
                 goalMinutes = repo.getDailyGoalMinutes(),
-                completedChapters = JeeRepository.syllabus.keys.sumOf { subject ->
-                    repo.chapters(subject).count { it.progress >= 1f }
-                },
+                mistakesReviewed = learning.getMistakes().count { it.resolved },
                 priorities = intelligence.dailyPriorities(3),
                 weak = intelligence.weakChapters(1).firstOrNull(),
-                unresolvedMistakes = learning.getMistakes().count { !it.resolved },
                 questionsAttempted = learning.getQuestionAttempts().size
             )
         }
     }
     val tasks = snapshot?.tasks.orEmpty()
+    val sessions = snapshot?.sessions.orEmpty()
+    val today = LocalDate.now()
+    val todaySessions = sessions.filter { it.date == today.toString() && it.minutes > 0 }
     val todayMinutes = snapshot?.todayMinutes ?: 0
     val goalMinutes = snapshot?.goalMinutes ?: repo.getDailyGoalMinutes()
-    val completedChapters = snapshot?.completedChapters ?: 0
-    val coverage = if (totalChapters == 0) 0f else completedChapters.toFloat() / totalChapters
+    val totalTasksCompleted = tasks.count { it.done }
+    val mistakesReviewed = snapshot?.mistakesReviewed ?: 0
     val priorities = snapshot?.priorities.orEmpty()
     val weak = snapshot?.weak
-    val unresolvedMistakes = snapshot?.unresolvedMistakes ?: 0
     val questionsAttempted = snapshot?.questionsAttempted ?: 0
     val todayTasks = tasks.filter { it.dueDay == "Today" }
     val dailyLog = remember { DailyLogRepository(context) }
-    val currentMonth = YearMonth.now()
-    val dailyLogCompleted = remember(refresh, currentMonth) { dailyLog.completedCount(currentMonth) }
+    val currentMonth = YearMonth.from(today)
+    val studyDays = remember(refresh, currentMonth, sessions) {
+        buildSet {
+            dailyLog.entriesFor(currentMonth).filter { it.completed }.forEach { add(it.date) }
+            sessions.forEach { session ->
+                runCatching { LocalDate.parse(session.date) }.getOrNull()?.let { date ->
+                    if (YearMonth.from(date) == currentMonth) add(date)
+                }
+            }
+        }
+    }
+    val studyStreak = remember(refresh, sessions, today) { calculateStudyStreak(sessions, dailyLog, today) }
+    val hourlyMinutes = remember(sessions, today) { hourlyStudyMinutes(sessions, today) }
     val nextTask = todayTasks.firstOrNull { !it.done } ?: tasks.firstOrNull { !it.done }
     val autoFocus = priorities.firstOrNull()
     val selectedFocusChapter = selectedFocusId?.let { JeeCatalog.find(it) }
@@ -133,18 +153,20 @@ fun DashboardScreen(
                     }
                 }
 
-                JeeCard {
-                    Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
-                        Column {
-                            Text("JEE MAIN 2027 · SESSION 1", color = PrimaryLight, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = .8.sp)
-                            Spacer(Modifier.height(4.dp))
-                            Text(daysToJee.toString(), fontSize = 30.sp, fontWeight = FontWeight.SemiBold)
-                            Text("days to first scheduled exam day", color = TextSecondary, fontSize = 11.sp)
+                DashboardEntrance(Modifier.fillMaxWidth(), delayMillis = 40L) {
+                    JeeCard {
+                        Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+                            Column {
+                                Text("JEE MAIN 2027 · SESSION 1", color = PrimaryLight, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = .8.sp)
+                                Spacer(Modifier.height(4.dp))
+                                Text(daysToJee.toString(), fontSize = 30.sp, fontWeight = FontWeight.SemiBold)
+                                Text("days to first scheduled exam day", color = TextSecondary, fontSize = 11.sp)
+                            }
+                            Surface(shape = RoundedCornerShape(14.dp), color = PrimarySoft, border = BorderStroke(1.dp, BgCardBorder.copy(alpha = .75f))) { Icon(Icons.Filled.Event, "JEE Main 2027 countdown", tint = PrimaryLight, modifier = Modifier.padding(12.dp).size(22.dp)) }
                         }
-                        Surface(shape = RoundedCornerShape(14.dp), color = PrimarySoft, border = BorderStroke(1.dp, BgCardBorder.copy(alpha = .75f))) { Icon(Icons.Filled.Event, "JEE Main 2027 countdown", tint = PrimaryLight, modifier = Modifier.padding(12.dp).size(22.dp)) }
+                        Spacer(Modifier.height(7.dp))
+                        Text("Tentative NTA schedule · Jan 22–24 and Jan 28–30, 2027", color = TextMuted, fontSize = 9.sp)
                     }
-                    Spacer(Modifier.height(7.dp))
-                    Text("Tentative NTA schedule · Jan 22–24 and Jan 28–30, 2027", color = TextMuted, fontSize = 9.sp)
                 }
 
                 Spacer(Modifier.height(16.dp))
@@ -155,40 +177,99 @@ fun DashboardScreen(
                 }
                 Spacer(Modifier.height(10.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    QuickAction("Mistakes", unresolvedMistakes.toString() + " unresolved", Icons.Filled.ErrorOutline, Modifier.weight(1f), false, onOpenMistakes)
-                    QuickAction("Study", (todayMinutes / 60).toString() + "h " + (todayMinutes % 60).toString() + "m today", Icons.Filled.Timer, Modifier.weight(1f), false, onOpenStudyTimer)
+                    QuickAction("Mistakes", "Review queue", Icons.Filled.ErrorOutline, Modifier.weight(1f), false, onOpenMistakes)
+                    QuickAction("Study", "Open timer", Icons.Filled.Timer, Modifier.weight(1f), false, onOpenStudyTimer)
                 }
 
                 Spacer(Modifier.height(18.dp))
-                JeeCard(modifier = Modifier.premiumClick(onClick = onOpenDailyLog)) {
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Surface(shape = RoundedCornerShape(12.dp), color = PrimarySoft) {
-                            Icon(Icons.Filled.CalendarMonth, "Daily Progress", tint = PrimaryLight, modifier = Modifier.padding(10.dp).size(21.dp))
+                SectionHeader("Performance")
+                DashboardEntrance(Modifier.fillMaxWidth(), delayMillis = 80L) {
+                    JeeCard {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            HomeMetric(totalTasksCompleted.toString(), "Tasks completed", Modifier.weight(1f))
+                            HomeMetric(mistakesReviewed.toString(), "Mistakes reviewed", Modifier.weight(1f))
                         }
-                        Spacer(Modifier.width(11.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text("Daily Progress", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                            Text("${currentMonth.month.getDisplayName(TextStyle.SHORT, Locale.getDefault())} · $dailyLogCompleted/${currentMonth.lengthOfMonth()} days completed", color = TextSecondary, fontSize = 11.sp)
-                        }
-                        Icon(Icons.Filled.ChevronRight, "Open Daily Progress", tint = PrimaryLight)
                     }
-                    Spacer(Modifier.height(10.dp))
-                    LinearStatBar(dailyLogCompleted.toFloat() / currentMonth.lengthOfMonth().coerceAtLeast(1), height = 5.dp, fillColor = Primary)
+                }
+
+                Spacer(Modifier.height(18.dp))
+                SectionHeader("Study time")
+                DashboardEntrance(Modifier.fillMaxWidth(), delayMillis = 120L) {
+                    JeeCard {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Column {
+                                Text("Hourly activity", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                                Text("Swipe horizontally to explore all 24 hours", color = TextSecondary, fontSize = 10.sp)
+                            }
+                            Text((todayMinutes / 60).toString() + "h " + (todayMinutes % 60).toString() + "m", color = PrimaryLight, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        }
+                        Spacer(Modifier.height(13.dp))
+                        HourlyStudyTimeline(hourlyMinutes)
+                    }
+                }
+
+                Spacer(Modifier.height(18.dp))
+                DashboardEntrance(Modifier.fillMaxWidth(), delayMillis = 160L) {
+                    JeeCard(modifier = Modifier.premiumClick(onClick = onOpenDailyLog)) {
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Surface(shape = RoundedCornerShape(12.dp), color = PrimarySoft) {
+                                Icon(Icons.Filled.CalendarMonth, "Daily Progress", tint = PrimaryLight, modifier = Modifier.padding(10.dp).size(21.dp))
+                            }
+                            Spacer(Modifier.width(11.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text("Daily Progress", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                                Text("${currentMonth.month.getDisplayName(TextStyle.SHORT, Locale.getDefault())} · ${studyDays.size}/${currentMonth.lengthOfMonth()} study days", color = TextSecondary, fontSize = 11.sp)
+                            }
+                            Icon(Icons.Filled.ChevronRight, "Open Daily Progress", tint = PrimaryLight)
+                        }
+                        Spacer(Modifier.height(10.dp))
+                        val monthProgress by animateFloatAsState(
+                            targetValue = studyDays.size.toFloat() / currentMonth.lengthOfMonth().coerceAtLeast(1),
+                            animationSpec = tween(550),
+                            label = "monthStudyProgress"
+                        )
+                        LinearStatBar(monthProgress, height = 5.dp, fillColor = Primary)
+                        Spacer(Modifier.height(11.dp))
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                            (1..currentMonth.lengthOfMonth()).forEach { day ->
+                                val studied = currentMonth.atDay(day) in studyDays
+                                val markerAlpha by animateFloatAsState(
+                                    targetValue = if (studied) 1f else 0.42f,
+                                    animationSpec = tween(350),
+                                    label = "studyDayMarker$day"
+                                )
+                                Box(Modifier.weight(1f).height(12.dp), contentAlignment = Alignment.Center) {
+                                    Box(
+                                        Modifier.size(if (studied) 7.dp else 5.dp)
+                                            .graphicsLayer { alpha = markerAlpha }
+                                            .clip(CircleShape)
+                                            .background(if (studied) PrimaryLight else BgCardBorder.copy(alpha = .75f))
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
 
                 Spacer(Modifier.height(18.dp))
                 SectionHeader("Today at a glance")
-                JeeCard {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        HomeMetric((todayMinutes / 60).toString() + "h " + (todayMinutes % 60).toString() + "m", "Study", Modifier.weight(1f))
-                        HomeMetric(todayTasks.count { it.done }.toString() + "/" + todayTasks.size, "Tasks", Modifier.weight(1f))
-                        HomeMetric(unresolvedMistakes.toString(), "Mistakes", Modifier.weight(1f))
-                        HomeMetric((coverage * 100).toInt().toString() + "%", "Coverage", Modifier.weight(1f))
+                DashboardEntrance(Modifier.fillMaxWidth(), delayMillis = 200L) {
+                    JeeCard {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            HomeMetric(if (goalMinutes <= 0) "—" else "${(todayMinutes * 100 / goalMinutes).coerceIn(0, 100)}%", "Daily goal", Modifier.weight(1f))
+                            HomeMetric("${studyStreak}d", "Study streak", Modifier.weight(1f))
+                            HomeMetric(todaySessions.size.toString(), "Sessions", Modifier.weight(1f))
+                        }
+                        Spacer(Modifier.height(12.dp))
+                        val goalProgress by animateFloatAsState(
+                            targetValue = if (goalMinutes <= 0) 0f else (todayMinutes.toFloat() / goalMinutes).coerceIn(0f, 1f),
+                            animationSpec = tween(600),
+                            label = "dailyGoalProgress"
+                        )
+                        LinearStatBar(goalProgress, height = 6.dp, fillColor = Primary)
+                        Spacer(Modifier.height(6.dp))
+                        Text(if (goalMinutes <= 0) "Daily goal not set" else todayMinutes.coerceAtMost(goalMinutes).toString() + " / " + goalMinutes + " min daily goal", color = TextMuted, fontSize = 10.sp)
                     }
-                    Spacer(Modifier.height(12.dp))
-                    LinearStatBar(if (goalMinutes == 0) 0f else (todayMinutes.toFloat() / goalMinutes).coerceIn(0f, 1f), height = 6.dp, fillColor = Primary)
-                    Spacer(Modifier.height(6.dp))
-                    Text(if (goalMinutes == 0) "Daily goal not set" else todayMinutes.coerceAtMost(goalMinutes).toString() + " / " + goalMinutes + " min daily goal", color = TextMuted, fontSize = 10.sp)
                 }
 
                 Spacer(Modifier.height(18.dp))
@@ -272,6 +353,111 @@ fun DashboardScreen(
 }
 
 data class FocusDisplay(val title: String, val reason: String, val durationMin: Int, val subject: String)
+
+private fun calculateStudyStreak(
+    sessions: List<StudySession>,
+    dailyLog: DailyLogRepository,
+    today: LocalDate
+): Int {
+    val activeDates = sessions.mapNotNull { session ->
+        runCatching { LocalDate.parse(session.date) }.getOrNull()
+    }.toMutableSet()
+    for (daysAgo in 0L..365L) {
+        val date = today.minusDays(daysAgo)
+        if (dailyLog.getEntry(date).completed) activeDates.add(date)
+    }
+    var cursor = if (today in activeDates) today else today.minusDays(1)
+    var streak = 0
+    while (cursor in activeDates) {
+        streak++
+        cursor = cursor.minusDays(1)
+    }
+    return streak
+}
+
+private fun hourlyStudyMinutes(sessions: List<StudySession>, today: LocalDate): List<Int> {
+    val minutesByHour = MutableList(24) { 0 }
+    val zone = ZoneId.systemDefault()
+    val dayEnd = today.plusDays(1).atStartOfDay(zone)
+
+    sessions.asSequence()
+        .filter { it.date == today.toString() && it.minutes > 0 && it.startedAt > 0L }
+        .forEach { session ->
+            var cursor = runCatching { Instant.ofEpochMilli(session.startedAt).atZone(zone) }.getOrNull()
+                ?: return@forEach
+            if (cursor.toLocalDate() != today) return@forEach
+
+            val end = cursor.plusMinutes(session.minutes.toLong())
+            while (cursor.isBefore(end) && cursor.isBefore(dayEnd)) {
+                val nextHour = cursor.truncatedTo(ChronoUnit.HOURS).plusHours(1)
+                val segmentEnd = minOf(end, nextHour, dayEnd)
+                val segmentMinutes = ChronoUnit.MINUTES.between(cursor, segmentEnd).toInt()
+                if (segmentMinutes > 0) minutesByHour[cursor.hour] += segmentMinutes
+                cursor = if (segmentEnd.isAfter(cursor)) segmentEnd else cursor.plusMinutes(1)
+            }
+        }
+    return minutesByHour
+}
+
+@Composable
+private fun HourlyStudyTimeline(minutesByHour: List<Int>) {
+    val maximumMinutes = (minutesByHour.maxOrNull() ?: 0).coerceAtLeast(15)
+    Row(
+        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(5.dp),
+        verticalAlignment = Alignment.Bottom
+    ) {
+        (0 until 24).forEach { hour ->
+            val minutes = minutesByHour.getOrElse(hour) { 0 }
+            val targetHeight = if (minutes == 0) 0.06f else (minutes.toFloat() / maximumMinutes).coerceIn(0.12f, 1f)
+            val barProgress by animateFloatAsState(
+                targetValue = targetHeight,
+                animationSpec = tween(550),
+                label = "hourlyStudyBar$hour"
+            )
+            Column(Modifier.width(21.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(
+                    Modifier.fillMaxWidth().height(44.dp),
+                    contentAlignment = Alignment.BottomCenter
+                ) {
+                    Box(
+                        Modifier.width(11.dp).fillMaxHeight(barProgress)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (minutes > 0) Primary else BgCardBorder.copy(alpha = .5f))
+                    )
+                }
+                Spacer(Modifier.height(5.dp))
+                Text(hour.toString().padStart(2, '0'), color = TextMuted, fontSize = 9.sp)
+            }
+        }
+    }
+}
+
+@Composable
+private fun DashboardEntrance(
+    modifier: Modifier = Modifier,
+    delayMillis: Long = 0L,
+    content: @Composable () -> Unit
+) {
+    var entered by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        if (delayMillis > 0L) delay(delayMillis)
+        entered = true
+    }
+    val progress by animateFloatAsState(
+        targetValue = if (entered) 1f else 0f,
+        animationSpec = tween(340),
+        label = "dashboardCardEntrance"
+    )
+    Box(
+        modifier.graphicsLayer {
+            alpha = progress
+            translationY = (1f - progress) * 12.dp.toPx()
+        }
+    ) {
+        content()
+    }
+}
 
 @Composable
 private fun QuickAction(title: String, metric: String, icon: androidx.compose.ui.graphics.vector.ImageVector, modifier: Modifier = Modifier, primary: Boolean = false, onClick: () -> Unit) {
