@@ -735,8 +735,12 @@ private fun nextScheduledDateTime(
         val date = scheduledDate?.let { runCatching { LocalDate.parse(it) }.getOrNull() } ?: return null
         return date.atTime(time).takeIf { it.isAfter(now) }
     }
+    val selectedStartDate = scheduledDate
+        ?.let { raw -> runCatching { LocalDate.parse(raw) }.getOrNull() }
+        ?: now.toLocalDate()
+    val firstDate = if (selectedStartDate.isAfter(now.toLocalDate())) selectedStartDate else now.toLocalDate()
     for (offset in 0L..7L) {
-        val date = now.toLocalDate().plusDays(offset)
+        val date = firstDate.plusDays(offset)
         if (repeat == CustomReminder.REPEAT_WEEKDAYS &&
             (date.dayOfWeek == java.time.DayOfWeek.SATURDAY || date.dayOfWeek == java.time.DayOfWeek.SUNDAY)
         ) continue
