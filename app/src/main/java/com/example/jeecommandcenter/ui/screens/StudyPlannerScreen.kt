@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -26,7 +27,8 @@ import com.example.jeecommandcenter.ui.theme.*
 fun StudyPlannerScreen(
     repo: JeeRepository,
     onBack: () -> Unit,
-    onOpenRevision: () -> Unit
+    onOpenRevision: () -> Unit,
+    onOpenChapter: (String) -> Unit
 ) {
     var refresh by remember { mutableIntStateOf(0) }
     var revisionToRate by remember { mutableStateOf<PlannerItem?>(null) }
@@ -54,7 +56,7 @@ fun StudyPlannerScreen(
             }
             item {
                 Text(
-                    "The plan prioritizes unfinished work, due chapter reviews and chapters with unresolved question mistakes. Use Regenerate after your learning state changes.",
+                    "The plan prioritizes unfinished tasks, due chapter reviews and up to three repeated or recent mistakes. Open a block to study it; use Regenerate after your learning state changes.",
                     color = TextSecondary,
                     fontSize = 11.sp
                 )
@@ -86,14 +88,26 @@ fun StudyPlannerScreen(
                 }
             } else {
                 items(plan.items, key = { it.id }) { item ->
-                    PlannerItemCard(item) {
-                        if (item.completed) return@PlannerItemCard
-                        if (item.type == PlannerItemType.REVISION) revisionToRate = item
-                        else {
-                            repo.completePlannerItem(item.id)
-                            refresh++
+                    PlannerItemCard(
+                        item = item,
+                        onOpen = {
+                            if (item.type == PlannerItemType.MISTAKE_REVIEW) {
+                                onOpenRevision()
+                            } else {
+                                val chapterId = item.chapterId
+                                if (chapterId != null) onOpenChapter(chapterId) else onOpenRevision()
+                            }
+                        },
+                        onComplete = {
+                            if (item.completed) return@PlannerItemCard
+                            if (item.type == PlannerItemType.REVISION) {
+                                revisionToRate = item
+                            } else {
+                                repo.completePlannerItem(item.id, learningRepository = learning)
+                                refresh++
+                            }
                         }
-                    }
+                    )
                 }
             }
             item { Spacer(Modifier.height(24.dp)) }
@@ -109,7 +123,7 @@ fun StudyPlannerScreen(
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     RevisionRating.values().forEach { rating ->
                         TextButton(onClick = {
-                            repo.completePlannerItem(item.id, rating)
+                            repo.completePlannerItem(item.id, rating, learning)
                             revisionToRate = null
                             refresh++
                         }) { Text(rating.name.lowercase().replaceFirstChar { it.uppercase() }) }
@@ -159,14 +173,15 @@ private fun PlannerSummary(goalMinutes: Int, doneMinutes: Int, remainingMinutes:
 }
 
 @Composable
-private fun PlannerItemCard(item: PlannerItem, onComplete: () -> Unit) {
+private fun PlannerItemCard(item: PlannerItem, onOpen: () -> Unit, onComplete: () -> Unit) {
     val typeLabel = when (item.type) {
         PlannerItemType.REVISION -> "REVISION"
+        PlannerItemType.MISTAKE_REVIEW -> "MISTAKE"
         PlannerItemType.STUDY -> "STUDY"
         PlannerItemType.PRACTICE -> "PRACTICE"
     }
     val typeColor = when (item.type) {
-        PlannerItemType.REVISION -> AccentAmber
+        PlannerItemType.REVISION, PlannerItemType.MISTAKE_REVIEW -> AccentAmber
         PlannerItemType.STUDY -> AccentBlueLight
         PlannerItemType.PRACTICE -> AccentGreen
     }
@@ -178,6 +193,9 @@ private fun PlannerItemCard(item: PlannerItem, onComplete: () -> Unit) {
         Column(Modifier.weight(1f)) {
             Text(item.title, color = if (item.completed) TextMuted else TextOnCard, fontSize = 13.sp)
             Text("${item.subject} · ${item.durationMin}m", color = TextMuted, fontSize = 11.sp)
+        }
+        IconButton(onClick = onOpen) {
+            Icon(Icons.Filled.ChevronRight, "Open material", tint = if (item.completed) TextMuted else AccentBlueLight)
         }
         IconButton(onClick = onComplete, enabled = !item.completed) {
             Icon(Icons.Filled.CheckCircle, "Complete", tint = if (item.completed) AccentGreen else TextSecondary)
