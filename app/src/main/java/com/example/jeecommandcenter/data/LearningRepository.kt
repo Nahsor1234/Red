@@ -200,6 +200,49 @@ class LearningRepository(private val context: Context) {
         }.getOrDefault(emptyList())
     }
 
+    fun isCloudMistakeImported(userId: String, attemptId: Long): Boolean =
+        prefs.getStringSet("cloud_mistake_attempt_ids_$userId", emptySet())
+            .orEmpty()
+            .contains(attemptId.toString())
+
+    /**
+     * Imports a previously recorded cloud mistake once. Existing local practice
+     * attempts are recognised so the same newly submitted answer is not counted twice.
+     */
+    fun importCloudMistake(
+        userId: String,
+        attemptId: Long,
+        question: Question,
+        selectedIndex: Int
+    ): Boolean {
+        if (selectedIndex !in question.options.indices || selectedIndex == question.correctIndex) return false
+
+        val key = "cloud_mistake_attempt_ids_$userId"
+        val imported = prefs.getStringSet(key, emptySet()).orEmpty().toMutableSet()
+        val attemptKey = attemptId.toString()
+        if (attemptKey in imported) return false
+
+        val localPracticeAttempts = getQuestionAttempts().filter {
+            it.testId.startsWith("practice_") && it.questionId == question.id
+        }
+        val alreadyRecordedLocally = localPracticeAttempts.any {
+            it.testId == "practice_${JeeCatalog.normalizeChapterId(question.chapterId)}" &&
+                it.selectedIndex == selectedIndex
+        }
+        if (!alreadyRecordedLocally) {
+            registerMistake(
+                question = question,
+                selectedIndex = selectedIndex,
+                source = "practice",
+                preserveLatestAnswer = localPracticeAttempts.isNotEmpty()
+            )
+        }
+
+        imported += attemptKey
+        prefs.edit().putStringSet(key, imported.toSet()).apply()
+        return !alreadyRecordedLocally
+    }
+
     fun updateMistakeType(id: String, type: MistakeType) {
         saveMistakes(getMistakes().map { if (it.id == id) it.copy(mistakeType = type) else it })
     }
@@ -258,7 +301,12 @@ class LearningRepository(private val context: Context) {
             .sortedByDescending { it.count }
     }
 
-    private fun registerMistake(question: Question, selectedIndex: Int, source: String) {
+    private fun registerMistake(
+        question: Question,
+        selectedIndex: Int,
+        source: String,
+        preserveLatestAnswer: Boolean = false
+    ) {
         val selected = question.options.getOrNull(selectedIndex) ?: "No answer"
         val correct = question.options.getOrNull(question.correctIndex) ?: "Unknown"
         val chapterId = JeeCatalog.normalizeChapterId(question.chapterId)
@@ -279,7 +327,7 @@ class LearningRepository(private val context: Context) {
             )
         } else {
             existing.copy(
-                lastSelectedAnswer = selected,
+                lastSelectedAnswer = if (preserveLatestAnswer) existing.lastSelectedAnswer else selected,
                 chapterId = chapterId,
                 count = existing.count + 1,
                 source = source,
