@@ -31,6 +31,8 @@ import com.example.jeecommandcenter.data.LearningRepository
 import com.example.jeecommandcenter.data.MistakeType
 import com.example.jeecommandcenter.data.Question
 import com.example.jeecommandcenter.ui.components.JeeTopBar
+import com.example.jeecommandcenter.ui.components.SharedQuestionPromptCard
+import com.example.jeecommandcenter.ui.components.SharedQuestionOptionRow
 import com.example.jeecommandcenter.ui.theme.*
 import kotlinx.coroutines.launch
 import org.json.JSONArray
@@ -343,68 +345,16 @@ fun ChapterQuestionPracticeScreen(
                     )
                 }
 
-                item {
-                    Surface(
-                        Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(18.dp),
-                        color = BgCardAlt,
-                        border = BorderStroke(1.dp, BgCardBorder.copy(alpha = .85f))
-                    ) {
-                        Text(
-                            question.prompt,
-                            Modifier.padding(18.dp),
-                            style = MaterialTheme.typography.titleLarge,
-                            color = TextPrimary
-                        )
-                    }
-                }
+                item { SharedQuestionPromptCard(question.prompt) }
 
                 listItems(question.options.indices.toList(), key = { it }) { option ->
-                    val chosen = selectedIndex == option
-                    val isCorrectOption = submitted && option == question.correctIndex
-                    val isWrongSelection = submitted && chosen && !isCorrectOption
-                    val borderColor = when {
-                        isCorrectOption -> Primary
-                        isWrongSelection -> Danger
-                        chosen -> Primary
-                        else -> BgCardBorder.copy(alpha = .8f)
-                    }
-                    Row(
-                        Modifier.fillMaxWidth()
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(if (chosen || isCorrectOption) PrimarySoft else BgCard)
-                            .border(
-                                BorderStroke(if (chosen || isCorrectOption) 1.5.dp else 1.dp, borderColor),
-                                RoundedCornerShape(16.dp)
-                            )
-                            .clickable(enabled = !submitted) {
-                                selectedByQuestion = selectedByQuestion + (question.id to option)
-                            }
-                            .padding(horizontal = 14.dp, vertical = 13.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = chosen,
-                            onClick = null,
-                            enabled = !submitted,
-                            colors = RadioButtonDefaults.colors(
-                                selectedColor = Primary,
-                                unselectedColor = TextMuted,
-                                disabledSelectedColor = Primary
-                            )
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            question.options[option],
-                            color = TextPrimary,
-                            modifier = Modifier.weight(1f)
-                        )
-                        if (isCorrectOption) {
-                            Icon(Icons.Filled.CheckCircle, null, tint = PrimaryLight, modifier = Modifier.size(19.dp))
-                        } else if (isWrongSelection) {
-                            Icon(Icons.Filled.ErrorOutline, null, tint = Danger, modifier = Modifier.size(19.dp))
-                        }
-                    }
+                    SharedQuestionOptionRow(
+                        optionText = question.options[option],
+                        selected = selectedIndex == option,
+                        submitted = submitted,
+                        isCorrectOption = option == question.correctIndex,
+                        onClick = { selectedByQuestion = selectedByQuestion + (question.id to option) }
+                    )
                 }
 
                 if (submitted) {

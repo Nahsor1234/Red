@@ -13,7 +13,7 @@ import com.example.jeecommandcenter.data.TestAttemptRecord
 import com.example.jeecommandcenter.ui.components.AppTab
 import com.example.jeecommandcenter.ui.screens.*
 
-private enum class SecondaryPage { PLANNER, REVISION, SETTINGS, CLOUD_ACCOUNT, AUTH, AI_SETTINGS, AI_HUB, AI_TUTOR, AI_HISTORY, ANALYTICS, ASSESSMENT, ASSESSMENT_HISTORY, ASSESSMENT_RESULT, MISTAKES, CHAPTER_DETAIL, CHAPTER_QUESTIONS, DAILY_LOG, NOTIFICATIONS, NOTIFICATION_SETTINGS }
+private enum class SecondaryPage { REVISION, SETTINGS, CLOUD_ACCOUNT, AUTH, AI_SETTINGS, AI_HUB, AI_TUTOR, AI_HISTORY, ANALYTICS, ASSESSMENT, ASSESSMENT_HISTORY, ASSESSMENT_RESULT, MISTAKES, CHAPTER_DETAIL, CHAPTER_QUESTIONS, DAILY_LOG, NOTIFICATIONS, NOTIFICATION_SETTINGS }
 
 @Composable
 fun AppRoot(initialTarget: String? = null, launchRequestId: Int = 0) {
@@ -74,18 +74,7 @@ fun AppRoot(initialTarget: String? = null, launchRequestId: Int = 0) {
             val targetSecondary = if (key.startsWith("secondary:")) SecondaryPage.valueOf(key.removePrefix("secondary:")) else null
             val targetTab = if (key.startsWith("tab:")) AppTab.valueOf(key.removePrefix("tab:")) else null
             when (targetSecondary) {
-                SecondaryPage.PLANNER -> StudyPlannerScreen(
-                    repo = repo,
-                    onBack = ::popPage,
-                    onOpenRevision = { openPage(SecondaryPage.REVISION) },
-                    onOpenChapter = { chapterId ->
-                        JeeCatalog.find(chapterId)?.let { chapter ->
-                            selectedChapter = chapter
-                            openPage(SecondaryPage.CHAPTER_DETAIL)
-                        } ?: openPage(SecondaryPage.REVISION)
-                    }
-                )
-                SecondaryPage.REVISION -> RevisionScreen(repo, ::popPage) { openPage(SecondaryPage.PLANNER) }
+                SecondaryPage.REVISION -> RevisionScreen(::popPage)
                 SecondaryPage.SETTINGS -> SettingsScreen(onBack = ::popPage, onOpenAnalytics = { openPage(SecondaryPage.ANALYTICS) }, onOpenAiSettings = { openPage(SecondaryPage.AI_SETTINGS) }, onOpenCloudAccount = { openPage(SecondaryPage.CLOUD_ACCOUNT) }, onOpenNotifications = { openPage(SecondaryPage.NOTIFICATION_SETTINGS) })
                 SecondaryPage.CLOUD_ACCOUNT -> CloudAccountScreen(context, ::popPage, ::openAuth)
                 SecondaryPage.AUTH -> AuthScreen(authMode, ::popPage) { popPage() }
@@ -124,8 +113,8 @@ fun AppRoot(initialTarget: String? = null, launchRequestId: Int = 0) {
                 SecondaryPage.NOTIFICATIONS -> NotificationCenterScreen(::popPage) { openPage(SecondaryPage.NOTIFICATION_SETTINGS) }
                 SecondaryPage.NOTIFICATION_SETTINGS -> NotificationSettingsScreen(::popPage)
                 null -> when (targetTab ?: AppTab.HOME) {
-                    AppTab.HOME -> DashboardScreen(repo, selectedTab, ::selectTab, { openPage(SecondaryPage.AI_TUTOR) }, { openPage(SecondaryPage.PLANNER) }, { openPage(SecondaryPage.REVISION) }, { openPage(SecondaryPage.SETTINGS) }, { openPage(SecondaryPage.ASSESSMENT) }, { openPage(SecondaryPage.MISTAKES) }, { selectTab(AppTab.STATS) }, { openPage(SecondaryPage.DAILY_LOG) }, { openPage(SecondaryPage.NOTIFICATIONS) })
-                    AppTab.SYLLABUS -> SyllabusScreen(repo, selectedTab, ::selectTab, { openPage(SecondaryPage.AI_TUTOR) }, { openPage(SecondaryPage.PLANNER) }, { openPage(SecondaryPage.REVISION) }) { chapter -> selectedChapter = chapter; openPage(SecondaryPage.CHAPTER_DETAIL) }
+                    AppTab.HOME -> DashboardScreen(repo = repo, selectedTab = selectedTab, onTabSelected = ::selectTab, onAiClick = { openPage(SecondaryPage.AI_TUTOR) }, onOpenRevision = { openPage(SecondaryPage.REVISION) }, onOpenSettings = { openPage(SecondaryPage.SETTINGS) }, onOpenAssessment = { openPage(SecondaryPage.ASSESSMENT) }, onOpenMistakes = { openPage(SecondaryPage.MISTAKES) }, onOpenStudyTimer = { selectTab(AppTab.STATS) }, onOpenDailyLog = { openPage(SecondaryPage.DAILY_LOG) }, onOpenNotifications = { openPage(SecondaryPage.NOTIFICATIONS) })
+                    AppTab.SYLLABUS -> SyllabusScreen(repo = repo, selectedTab = selectedTab, onTabSelected = ::selectTab, onAiClick = { openPage(SecondaryPage.AI_TUTOR) }, onOpenRevision = { openPage(SecondaryPage.REVISION) }, onOpenChapter = { chapter -> selectedChapter = chapter; openPage(SecondaryPage.CHAPTER_DETAIL) })
                     AppTab.AI -> AiTutorScreen(
                         context = context,
                         jee = repo,

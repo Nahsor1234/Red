@@ -31,7 +31,6 @@ fun SyllabusScreen(
     selectedTab: AppTab,
     onTabSelected: (AppTab) -> Unit,
     onAiClick: () -> Unit = {},
-    onOpenPlanner: () -> Unit = {},
     onOpenRevision: () -> Unit = {},
     onOpenChapter: (JeeChapter) -> Unit = {}
 ) {
@@ -158,7 +157,7 @@ fun SyllabusScreen(
                         }
                     }
                     TextButton(onClick = onOpenRevision) {
-                        Text("Review", fontSize = 12.sp)
+                        Text("Notes", fontSize = 12.sp)
                     }
                 }
 
