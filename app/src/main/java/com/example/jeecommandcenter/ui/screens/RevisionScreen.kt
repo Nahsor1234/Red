@@ -2,340 +2,244 @@ package com.example.jeecommandcenter.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Replay
-import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.NoteAdd
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.jeecommandcenter.data.*
-import com.example.jeecommandcenter.ui.components.*
+import com.example.jeecommandcenter.data.RevisionNote
+import com.example.jeecommandcenter.data.RevisionNotesRepository
+import com.example.jeecommandcenter.ui.components.JeeTopBar
 import com.example.jeecommandcenter.ui.theme.*
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Composable
-fun RevisionScreen(
-    repo: JeeRepository,
-    onBack: () -> Unit,
-    onOpenPlanner: () -> Unit
-) {
-    var refresh by remember { mutableIntStateOf(0) }
+fun RevisionScreen(onBack: () -> Unit) {
     val context = LocalContext.current.applicationContext
-    val learning = remember(context) { LearningRepository(context) }
-    val cloud = remember { CloudJeeRepository() }
-    var syncingCloudMistakes by remember { mutableStateOf(false) }
-    val queue = remember(refresh) { repo.getRevisionQueue() }
-    val mistakes = remember(refresh) { learning.getMistakes().filterNot { it.resolved } }
-    val dueCount = queue.size
+    val notesRepository = remember(context) { RevisionNotesRepository(context) }
+    var refresh by remember { mutableIntStateOf(0) }
+    val notes = remember(refresh) { notesRepository.getNotes() }
+    var showEditor by remember { mutableStateOf(false) }
+    var editingNote by remember { mutableStateOf<RevisionNote?>(null) }
+    var deleteCandidate by remember { mutableStateOf<RevisionNote?>(null) }
 
-    LaunchedEffect(cloud, learning) {
-        syncingCloudMistakes = true
-        runCatching {
-            val user = cloud.ensureSession()
-            val remoteAttempts = cloud.questionAttemptsForUser(user.id)
-            val pending = remoteAttempts.filter { attempt ->
-                !attempt.correct && attempt.selectedIndex >= 0 &&
-                    !learning.isCloudMistakeImported(user.id, attempt.id)
-            }
-            val questionsById = cloud.questionsByIds(pending.map { it.questionId }.toSet()).associateBy { it.id }
-            var imported = 0
-            pending.forEach { attempt ->
-                val cloudQuestion = questionsById[attempt.questionId] ?: return@forEach
-                if (learning.importCloudMistake(
-                        userId = user.id,
-                        attemptId = attempt.id,
-                        question = cloudQuestion.toMistakeQuestion(),
-                        selectedIndex = attempt.selectedIndex
-                    )
-                ) {
-                    imported++
-                }
-            }
-            if (imported > 0) refresh++
-        }
-        syncingCloudMistakes = false
+    var draftTitle by remember { mutableStateOf("") }
+    var draftSubject by remember { mutableStateOf("General") }
+    var draftChapter by remember { mutableStateOf("") }
+    var draftContent by remember { mutableStateOf("") }
+
+    fun openEditor(note: RevisionNote?) {
+        editingNote = note
+        draftTitle = note?.title.orEmpty()
+        draftSubject = note?.subject?.takeIf { it in listOf("General", "Physics", "Chemistry", "Mathematics") } ?: "General"
+        draftChapter = note?.chapter.orEmpty()
+        draftContent = note?.content.orEmpty()
+        showEditor = true
     }
 
     Scaffold(
         containerColor = BgApp,
         topBar = {
             JeeTopBar(
-                title = "Revision engine",
-                subtitle = when {
-                    mistakes.isNotEmpty() && dueCount > 0 -> "${mistakes.size} mistakes · $dueCount chapter reviews due"
-                    mistakes.isNotEmpty() -> "${mistakes.size} question mistakes to review"
-                    syncingCloudMistakes -> "Checking saved practice attempts…"
-                    dueCount > 0 -> "$dueCount chapter reviews due"
-                    else -> "Nothing due right now"
-                },
-                onBack = onBack
+                title = "Notes & Revision",
+                subtitle = if (notes.isEmpty()) "Your personal JEE revision library" else "${notes.size} saved notes",
+                onBack = onBack,
+                trailing = {
+                    IconButton(onClick = { openEditor(null) }) {
+                        Icon(Icons.Filled.Add, contentDescription = "Create revision note", tint = PrimaryLight)
+                    }
+                }
             )
         }
     ) { padding ->
         LazyColumn(
-            Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+            contentPadding = PaddingValues(top = 12.dp, bottom = 24.dp)
         ) {
             item {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("Question mistakes", style = MaterialTheme.typography.titleLarge)
+                Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                    Text("Your revision library", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
                     Text(
-                        "${mistakes.size} questions to revisit · Practice and assessment errors",
+                        "Save formulas, tricky concepts, derivations, exceptions and reminders in one place.",
                         color = TextSecondary,
-                        fontSize = 12.sp
+                        fontSize = 12.sp,
+                        lineHeight = 17.sp
                     )
                 }
             }
-            if (mistakes.isEmpty()) {
+            if (notes.isEmpty()) {
                 item {
                     Column(
-                        Modifier.fillMaxWidth()
-                            .clip(RoundedCornerShape(16.dp))
+                        Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp))
+                            .background(BgCardAlt)
+                            .border(JeeSurfaceTokens.borderWidth, BgCardBorder.copy(alpha = JeeSurfaceTokens.cardBorderAlpha), JeeShapes.medium)
+                            .padding(20.dp),
+                        horizontalAlignment = Alignment.Start,
+                        verticalArrangement = Arrangement.spacedBy(9.dp)
+                    ) {
+                        Icon(Icons.Filled.NoteAdd, null, tint = PrimaryLight, modifier = Modifier.size(28.dp))
+                        Text("Create your first revision note", style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            "For example, create “Revise Electrostatics” and keep important formulas or doubts inside it.",
+                            color = TextSecondary,
+                            fontSize = 12.sp,
+                            lineHeight = 18.sp
+                        )
+                        Button(onClick = { openEditor(null) }) {
+                            Icon(Icons.Filled.Add, null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("Add a note")
+                        }
+                    }
+                }
+            } else {
+                items(notes, key = { it.id }) { note ->
+                    Column(
+                        Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
                             .background(BgCard)
                             .border(JeeSurfaceTokens.borderWidth, BgCardBorder.copy(alpha = JeeSurfaceTokens.cardBorderAlpha), JeeShapes.medium)
-                            .padding(16.dp)
+                            .clickable { openEditor(note) }
+                            .padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text("No question mistakes waiting", style = MaterialTheme.typography.titleMedium)
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            "When you submit an incorrect answer in practice or assessment, it will appear here with its saved solution.",
-                            color = TextSecondary,
-                            fontSize = 12.sp
-                        )
+                        Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Surface(shape = RoundedCornerShape(11.dp), color = PrimarySoft) {
+                                Icon(Icons.Filled.Description, null, tint = PrimaryLight, modifier = Modifier.padding(10.dp).size(20.dp))
+                            }
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text(note.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium)
+                                val metadata = listOf(note.subject, note.chapter).filter { it.isNotBlank() }.joinToString(" · ")
+                                if (metadata.isNotBlank()) Text(metadata, color = PrimaryLight, fontSize = 11.sp)
+                                if (note.content.isNotBlank()) {
+                                    Text(note.content, color = TextSecondary, fontSize = 12.sp, lineHeight = 17.sp, maxLines = 3)
+                                } else {
+                                    Text("No note content yet · Tap to add", color = TextMuted, fontSize = 12.sp)
+                                }
+                            }
+                            IconButton(onClick = { deleteCandidate = note }) {
+                                Icon(Icons.Filled.DeleteOutline, contentDescription = "Delete note", tint = TextMuted)
+                            }
+                        }
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Text("Updated " + SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date(note.updatedAt)), color = TextMuted, fontSize = 10.sp)
+                            Spacer(Modifier.weight(1f))
+                            TextButton(onClick = { openEditor(note) }, contentPadding = PaddingValues(horizontal = 8.dp)) {
+                                Icon(Icons.Filled.Edit, null, modifier = Modifier.size(14.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text("Edit", fontSize = 11.sp)
+                            }
+                        }
                     }
                 }
-            } else {
-                items(mistakes, key = { "mistake_${it.id}" }) { mistake ->
-                    RevisionMistakeCard(mistake) {
-                        learning.resolveMistake(mistake.id)
+            }
+        }
+    }
+
+    if (showEditor) {
+        AlertDialog(
+            onDismissRequest = { showEditor = false },
+            title = { Text(if (editingNote == null) "New revision note" else "Edit revision note") },
+            text = {
+                Column(
+                    Modifier.fillMaxWidth().heightIn(max = 520.dp).verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    OutlinedTextField(
+                        value = draftTitle,
+                        onValueChange = { draftTitle = it },
+                        label = { Text("Title") },
+                        placeholder = { Text("e.g. Revise Electrostatics") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Text("Subject", color = TextSecondary, fontSize = 12.sp)
+                    Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                        listOf("General", "Physics", "Chemistry", "Mathematics").forEach { value ->
+                            FilterChip(
+                                selected = draftSubject == value,
+                                onClick = { draftSubject = value },
+                                label = { Text(value, fontSize = 10.sp) }
+                            )
+                        }
+                    }
+                    OutlinedTextField(
+                        value = draftChapter,
+                        onValueChange = { draftChapter = it },
+                        label = { Text("Chapter (optional)") },
+                        placeholder = { Text("e.g. Electrostatic Potential") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = draftContent,
+                        onValueChange = { draftContent = it },
+                        label = { Text("Notes") },
+                        placeholder = { Text("Write formulas, concepts, derivations, exceptions or reminders…") },
+                        minLines = 5,
+                        maxLines = 10,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = draftTitle.isNotBlank(),
+                    onClick = {
+                        val now = System.currentTimeMillis()
+                        notesRepository.saveNote(
+                            RevisionNote(
+                                id = editingNote?.id.orEmpty(),
+                                title = draftTitle,
+                                subject = draftSubject,
+                                chapter = draftChapter,
+                                content = draftContent,
+                                createdAt = editingNote?.createdAt ?: now,
+                                updatedAt = now
+                            )
+                        )
+                        showEditor = false
+                        editingNote = null
                         refresh++
                     }
-                }
-            }
-
-            item {
-                Text("Chapter spaced revision", style = MaterialTheme.typography.titleLarge)
-            }
-            item {
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    RevisionMetric("Due", dueCount.toString(), Modifier.weight(1f))
-                    RevisionMetric(
-                        "Mastery",
-                        repo.getMasteredChapterCount().toString(),
-                        Modifier.weight(1f)
-                    )
-                    RevisionMetric(
-                        "Active",
-                        repo.getActiveRevisionCount().toString(),
-                        Modifier.weight(1f)
-                    )
-                }
-            }
-
-            if (queue.isEmpty()) {
-                item {
-                    Column(
-                        Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(BgCard).border(JeeSurfaceTokens.borderWidth, BgCardBorder.copy(alpha = JeeSurfaceTokens.cardBorderAlpha), JeeShapes.medium)
-                            .padding(18.dp)
-                    ) {
-                        Text("No chapter review due", style = MaterialTheme.typography.titleMedium)
-                        Spacer(Modifier.height(6.dp))
-                        Text(
-                            "Chapter-level spaced reviews appear here after a chapter is flagged as weak or its review becomes due.",
-                            color = TextMuted,
-                            fontSize = 12.sp
-                        )
-                        Spacer(Modifier.height(12.dp))
-                        OutlinedButton(onClick = onOpenPlanner) {
-                            Icon(Icons.Filled.Timer, null, modifier = Modifier.size(16.dp))
-                            Spacer(Modifier.width(6.dp))
-                            Text("Open planner")
-                        }
-                    }
-                }
-            } else {
-                items(queue, key = { it.revision.id }) { item ->
-                    RevisionCard(
-                        item = item,
-                        onRate = { rating ->
-                            repo.reviewChapter(item.chapter.id, rating)
-                            refresh++
-                        }
-                    )
-                }
-            }
-            item { Spacer(Modifier.height(24.dp)) }
-        }
+                ) { Text("Save note") }
+            },
+            dismissButton = { TextButton(onClick = { showEditor = false }) { Text("Cancel") } }
+        )
     }
-}
 
-@Composable
-private fun RevisionMetric(label: String, value: String, modifier: Modifier) {
-    Column(
-        modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(BgCard).border(JeeSurfaceTokens.borderWidth, BgCardBorder.copy(alpha = JeeSurfaceTokens.cardBorderAlpha), JeeShapes.medium)
-            .padding(12.dp)
-    ) {
-        Text(value, style = MaterialTheme.typography.titleLarge)
-        Text(label, color = TextMuted, fontSize = 10.sp)
-    }
-}
-
-@Composable
-private fun RevisionCard(
-    item: RevisionQueueItem,
-    onRate: (RevisionRating) -> Unit
-) {
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(BgCard).border(JeeSurfaceTokens.borderWidth, BgCardBorder.copy(alpha = JeeSurfaceTokens.cardBorderAlpha), JeeShapes.medium)
-            .padding(14.dp)
-    ) {
-        Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
-            Column(Modifier.weight(1f)) {
-                Text(item.chapter.name, style = MaterialTheme.typography.titleMedium)
-                Text(
-                    item.chapter.subject + " · " + (item.progress * 100).toInt() + "% mastered",
-                    color = TextMuted,
-                    fontSize = 11.sp
-                )
-            }
-            Text(
-                "C" + item.chapter.number,
-                color = AccentBlueLight,
-                fontSize = 11.sp
-            )
-        }
-
-        Spacer(Modifier.height(12.dp))
-        Text("How did this feel?", color = TextSecondary, fontSize = 11.sp)
-        Spacer(Modifier.height(8.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            ReviewButton("Again", RevisionRating.AGAIN, onRate, Modifier.weight(1f))
-            ReviewButton("Hard", RevisionRating.HARD, onRate, Modifier.weight(1f))
-            ReviewButton("Good", RevisionRating.GOOD, onRate, Modifier.weight(1f))
-            ReviewButton("Easy", RevisionRating.EASY, onRate, Modifier.weight(1f))
-        }
-        Spacer(Modifier.height(8.dp))
-        Text(
-            "Confidence: " + item.confidence + "/5",
-            color = TextMuted,
-            fontSize = 10.sp
+    deleteCandidate?.let { note ->
+        AlertDialog(
+            onDismissRequest = { deleteCandidate = null },
+            title = { Text("Delete note?") },
+            text = { Text("“${note.title}” will be removed from your revision library.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    notesRepository.deleteNote(note.id)
+                    deleteCandidate = null
+                    refresh++
+                }) { Text("Delete") }
+            },
+            dismissButton = { TextButton(onClick = { deleteCandidate = null }) { Text("Cancel") } }
         )
     }
 }
-
-@Composable
-private fun ReviewButton(
-    label: String,
-    rating: RevisionRating,
-    onRate: (RevisionRating) -> Unit,
-    modifier: Modifier
-) {
-    OutlinedButton(
-        onClick = { onRate(rating) },
-        modifier = modifier.height(40.dp),
-        contentPadding = PaddingValues(horizontal = 4.dp),
-        shape = RoundedCornerShape(10.dp)
-    ) {
-        Text(label, fontSize = 10.sp)
-    }
-}
-
-@Composable
-private fun RevisionMistakeCard(mistake: MistakeRecord, onResolve: () -> Unit) {
-    var expanded by remember(mistake.id) { mutableStateOf(false) }
-    val chapterName = JeeCatalog.find(mistake.chapterId)?.name ?: mistake.chapterId
-    val category = when (mistake.mistakeType) {
-        MistakeType.CONCEPT -> "Conceptual mistake"
-        MistakeType.FORMULA -> "Formula mistake"
-        MistakeType.CALCULATION -> "Calculation error"
-        MistakeType.SILLY -> "Silly mistake"
-        MistakeType.MISREAD -> "Misread question"
-        MistakeType.TIME_PRESSURE -> "Time pressure"
-        MistakeType.GUESS -> "Guessing"
-        MistakeType.METHOD -> "Wrong method"
-        MistakeType.UNCLASSIFIED -> "Not tagged yet"
-    }
-
-    Column(
-        Modifier.fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(BgCard)
-            .border(JeeSurfaceTokens.borderWidth, BgCardBorder.copy(alpha = JeeSurfaceTokens.cardBorderAlpha), JeeShapes.medium)
-            .padding(14.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Text("$chapterName · $category", color = AccentBlueLight, fontSize = 11.sp)
-                Text(mistake.questionPrompt, style = MaterialTheme.typography.titleSmall, color = TextPrimary)
-            }
-            if (mistake.count > 1) {
-                Text("×${mistake.count}", color = AccentAmber, fontWeight = FontWeight.SemiBold)
-            }
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(
-                onClick = { expanded = !expanded },
-                modifier = Modifier.weight(1f),
-                contentPadding = PaddingValues(horizontal = 8.dp)
-            ) { Text(if (expanded) "Hide solution" else "Review solution", fontSize = 12.sp) }
-            Button(
-                onClick = onResolve,
-                modifier = Modifier.weight(1f),
-                contentPadding = PaddingValues(horizontal = 8.dp)
-            ) { Text("Mark reviewed", fontSize = 12.sp) }
-        }
-        if (expanded) {
-            HorizontalDivider(color = BgDivider)
-            Text("Your answer: ${mistake.lastSelectedAnswer}", color = TextSecondary, fontSize = 12.sp)
-            Text("Correct answer: ${mistake.correctAnswer}", color = PrimaryLight, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-            if (mistake.correction.isNotBlank()) {
-                Text(mistake.correction, color = TextPrimary.copy(alpha = .94f), fontSize = 13.sp, lineHeight = 19.sp)
-            }
-            Text("Mark reviewed only after you understand why the answer was wrong.", color = TextMuted, fontSize = 11.sp)
-        }
-    }
-}
-
-private fun CloudQuestion.toMistakeQuestion() = Question(
-    id = id,
-    subject = when (subjectId.lowercase()) {
-        "physics" -> "Physics"
-        "chemistry" -> "Chemistry"
-        "mathematics" -> "Mathematics"
-        else -> subjectId.replace('_', ' ').replaceFirstChar { it.uppercase() }
-    },
-    chapterId = JeeCatalog.normalizeChapterId(chapterId),
-    chapter = chapterName,
-    topic = topic,
-    prompt = prompt,
-    options = options,
-    correctIndex = correctIndex,
-    explanation = explanation,
-    difficulty = difficulty,
-    source = source,
-    year = year,
-    marks = marks,
-    negativeMarks = negativeMarks
-)
