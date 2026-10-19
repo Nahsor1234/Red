@@ -15,6 +15,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.jeecommandcenter.data.*
@@ -28,7 +30,10 @@ fun RevisionScreen(
     onOpenPlanner: () -> Unit
 ) {
     var refresh by remember { mutableIntStateOf(0) }
+    val context = LocalContext.current.applicationContext
+    val learning = remember(context) { LearningRepository(context) }
     val queue = remember(refresh) { repo.getRevisionQueue() }
+    val mistakes = remember(refresh) { learning.getMistakes().filterNot { it.resolved } }
     val dueCount = queue.size
 
     Scaffold(
@@ -48,6 +53,46 @@ fun RevisionScreen(
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("Question mistakes", style = MaterialTheme.typography.titleLarge)
+                    Text(
+                        "${mistakes.size} questions to revisit · Practice and assessment errors",
+                        color = TextSecondary,
+                        fontSize = 12.sp
+                    )
+                }
+            }
+            if (mistakes.isEmpty()) {
+                item {
+                    Column(
+                        Modifier.fillMaxWidth()
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(BgCard)
+                            .border(JeeSurfaceTokens.borderWidth, BgCardBorder.copy(alpha = JeeSurfaceTokens.cardBorderAlpha), JeeShapes.medium)
+                            .padding(16.dp)
+                    ) {
+                        Text("No question mistakes waiting", style = MaterialTheme.typography.titleMedium)
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            "When you submit an incorrect answer in practice or assessment, it will appear here with its saved solution.",
+                            color = TextSecondary,
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+            } else {
+                items(mistakes, key = { "mistake_${it.id}" }) { mistake ->
+                    RevisionMistakeCard(mistake) {
+                        learning.resolveMistake(mistake.id)
+                        refresh++
+                    }
+                }
+            }
+
+            item {
+                Text("Chapter spaced revision", style = MaterialTheme.typography.titleLarge)
+            }
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     RevisionMetric("Due", dueCount.toString(), Modifier.weight(1f))
@@ -73,10 +118,10 @@ fun RevisionScreen(
                             .background(BgCard).border(JeeSurfaceTokens.borderWidth, BgCardBorder.copy(alpha = JeeSurfaceTokens.cardBorderAlpha), JeeShapes.medium)
                             .padding(18.dp)
                     ) {
-                        Text("Revision queue is clear", style = MaterialTheme.typography.titleMedium)
+                        Text("No chapter review due", style = MaterialTheme.typography.titleMedium)
                         Spacer(Modifier.height(6.dp))
                         Text(
-                            "Study a chapter in Syllabus and it will automatically enter spaced revision.",
+                            "Chapter-level spaced reviews appear here after a chapter is flagged as weak or its review becomes due.",
                             color = TextMuted,
                             fontSize = 12.sp
                         )
@@ -177,5 +222,62 @@ private fun ReviewButton(
         shape = RoundedCornerShape(10.dp)
     ) {
         Text(label, fontSize = 10.sp)
+    }
+}
+
+@Composable
+private fun RevisionMistakeCard(mistake: MistakeRecord, onResolve: () -> Unit) {
+    var expanded by remember(mistake.id) { mutableStateOf(false) }
+    val chapterName = JeeCatalog.find(mistake.chapterId)?.name ?: mistake.chapterId
+    val category = when (mistake.mistakeType) {
+        MistakeType.CONCEPT -> "Conceptual mistake"
+        MistakeType.FORMULA -> "Formula mistake"
+        MistakeType.CALCULATION -> "Calculation error"
+        MistakeType.SILLY -> "Silly mistake"
+        MistakeType.MISREAD -> "Misread question"
+        MistakeType.TIME_PRESSURE -> "Time pressure"
+        MistakeType.GUESS -> "Guessing"
+        MistakeType.METHOD -> "Wrong method"
+        MistakeType.UNCLASSIFIED -> "Not tagged yet"
+    }
+
+    Column(
+        Modifier.fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(BgCard)
+            .border(JeeSurfaceTokens.borderWidth, BgCardBorder.copy(alpha = JeeSurfaceTokens.cardBorderAlpha), JeeShapes.medium)
+            .padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text("$chapterName · $category", color = AccentBlueLight, fontSize = 11.sp)
+                Text(mistake.questionPrompt, style = MaterialTheme.typography.titleSmall, color = TextPrimary)
+            }
+            if (mistake.count > 1) {
+                Text("×${mistake.count}", color = AccentAmber, fontWeight = FontWeight.SemiBold)
+            }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(
+                onClick = { expanded = !expanded },
+                modifier = Modifier.weight(1f),
+                contentPadding = PaddingValues(horizontal = 8.dp)
+            ) { Text(if (expanded) "Hide solution" else "Review solution", fontSize = 12.sp) }
+            Button(
+                onClick = onResolve,
+                modifier = Modifier.weight(1f),
+                contentPadding = PaddingValues(horizontal = 8.dp)
+            ) { Text("Mark reviewed", fontSize = 12.sp) }
+        }
+        if (expanded) {
+            HorizontalDivider(color = BgDivider)
+            Text("Your answer: ${mistake.lastSelectedAnswer}", color = TextSecondary, fontSize = 12.sp)
+            Text("Correct answer: ${mistake.correctAnswer}", color = PrimaryLight, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+            if (mistake.correction.isNotBlank()) {
+                Text(mistake.correction, color = TextPrimary.copy(alpha = .94f), fontSize = 13.sp, lineHeight = 19.sp)
+            }
+            Text("Mark reviewed only after you understand why the answer was wrong.", color = TextMuted, fontSize = 11.sp)
+        }
     }
 }
