@@ -110,29 +110,66 @@ class CloudJeeRepository(
             }.decodeList<CloudQuestion>()
         }.getOrDefault(emptyList())
 
-        if (remote.isNotEmpty()) return remote
+        if (remote.isNotEmpty()) return orderedQuestions(remote)
 
-        return (StarterQuestionBank.fallback + CuratedQuestionBank.questions)
-            .filter { JeeCatalog.normalizeChapterId(it.chapterId) == canonicalId }
-            .map { question ->
-                CloudQuestion(
-                    id = question.id,
-                    subjectId = question.subject.lowercase(),
-                    chapterId = canonicalId,
-                    topicId = null,
-                    chapterName = question.chapter,
-                    topic = question.topic,
-                    prompt = question.prompt,
-                    options = question.options,
-                    correctIndex = question.correctIndex,
-                    explanation = question.explanation,
-                    difficulty = question.difficulty,
-                    source = question.source,
-                    year = question.year,
-                    marks = question.marks,
-                    negativeMarks = question.negativeMarks
-                )
-            }
+        return orderedQuestions(localFallbackQuestions().filter {
+            JeeCatalog.normalizeChapterId(it.chapterId) == canonicalId
+        }.map { it.toCloudQuestion(canonicalId) })
+    }
+
+    /**
+     * Loads a subject's question bank in stable ID order. This keeps assessment
+     * generation on the same source as chapter practice when cloud data exists.
+     */
+    suspend fun questionsForSubject(subjectId: String): List<CloudQuestion> {
+        val canonicalSubject = subjectId.trim().lowercase()
+        val remote = runCatching {
+            db["questions"].select {
+                filter { CloudQuestion::subjectId eq canonicalSubject }
+            }.decodeList<CloudQuestion>()
+        }.getOrDefault(emptyList())
+
+        if (remote.isNotEmpty()) return orderedQuestions(remote)
+
+        return orderedQuestions(localFallbackQuestions()
+            .filter { it.subjectId == canonicalSubject }
+            .map { it.toCloudQuestion(JeeCatalog.normalizeChapterId(it.chapterId)) })
+    }
+
+    suspend fun allQuestions(): List<CloudQuestion> =
+        listOf("physics", "chemistry", "mathematics")
+            .flatMap { questionsForSubject(it) }
+            .distinctBy { it.id }
+            .sortedWith(questionIdComparator)
+
+    private fun orderedQuestions(questions: List<CloudQuestion>): List<CloudQuestion> =
+        questions.sortedWith(questionIdComparator)
+
+    private fun localFallbackQuestions(): List<Question> =
+        (StarterQuestionBank.fallback + CuratedQuestionBank.questions).distinctBy { it.id }
+
+    private fun Question.toCloudQuestion(canonicalChapterId: String) = CloudQuestion(
+        id = id,
+        subjectId = subject.lowercase(),
+        chapterId = canonicalChapterId,
+        topicId = null,
+        chapterName = chapter,
+        topic = topic,
+        prompt = prompt,
+        options = options,
+        correctIndex = correctIndex,
+        explanation = explanation,
+        difficulty = difficulty,
+        source = source,
+        year = year,
+        marks = marks,
+        negativeMarks = negativeMarks
+    )
+
+    private companion object {
+        val questionIdComparator = compareBy<CloudQuestion> {
+            it.id.substringAfterLast('_').toIntOrNull() ?: Int.MAX_VALUE
+        }.thenBy { it.id }
     }
 
     suspend fun chapterProgressForUser(userId: String): List<CloudChapterProgress> =
