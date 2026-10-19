@@ -100,7 +100,7 @@ fun CloudAccountScreen(
 
             if (connected) {
                 Text(
-                    "Your local progress stays available offline. Sync covers chapter/topic progress, question attempts, study sessions, tasks, revisions, mistakes, assessment history, AI chat history, and other persistent user data.",
+                    "Your local progress stays available offline. Sync covers chapter/topic progress, question attempts, daily progress notes and checked days, study sessions, tasks, revision notes, reminders, mistakes, assessment history, AI chat history, and other persistent user data.",
                     color = TextMuted,
                     fontSize = 11.sp
                 )
