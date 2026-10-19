@@ -84,7 +84,7 @@ fun RevisionScreen(onBack: () -> Unit) {
     }
 
     fun persistDraft() {
-        if (draftTitle.isBlank() && draftContent.isBlank()) {
+        if (draftTitle.isBlank() && draftContent.isBlank() && editingNote == null) {
             saveStatus = "Draft"
             return
         }
@@ -170,6 +170,7 @@ fun RevisionScreen(onBack: () -> Unit) {
                     tagPickerOpen = tagPickerOpen,
                     onTagSelected = { draftTag = it; tagPickerOpen = false; saveStatus = "Draft" },
                     saveStatus = saveStatus,
+                    onBack = { persistDraft(); showEditor = false; tagPickerOpen = false },
                     onSave = { persistDraft(); tagPickerOpen = false }
                 )
             } else {
@@ -345,6 +346,7 @@ private fun NoteEditor(
     tagPickerOpen: Boolean,
     onTagSelected: (String) -> Unit,
     saveStatus: String,
+    onBack: () -> Unit,
     onSave: () -> Unit
 ) {
     Column(
@@ -355,7 +357,7 @@ private fun NoteEditor(
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
                 Icon(Icons.Filled.ArrowBack, contentDescription = null, tint = PrimaryLight, modifier = Modifier.size(19.dp))
                 Spacer(Modifier.width(8.dp))
-                TextButton(onClick = onSave, contentPadding = PaddingValues(0.dp)) { Text("All notes", color = PrimaryLight) }
+                TextButton(onClick = onBack, contentPadding = PaddingValues(0.dp)) { Text("All notes", color = PrimaryLight) }
             }
             Text(saveStatus, color = TextMuted, fontSize = 11.sp)
         }
