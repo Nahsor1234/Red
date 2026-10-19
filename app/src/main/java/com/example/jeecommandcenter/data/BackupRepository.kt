@@ -11,13 +11,10 @@ class BackupRepository(context: Context) {
     private val sources = listOf(
         "jee_command_center",
         "jee_learning_engine",
-        "jee_ai_settings",
-        "ai_chat_history",
         "daily_log_v1",
         "jee_revision_notes",
         "custom_reminders_v1",
-        "reminder_settings_v1",
-        "jee_topics"
+        "reminder_settings_v1"
     )
     private val recoveryPrefs = "jee_recovery"
     private val recoveryKey = "last_known_good_backup"
@@ -99,7 +96,17 @@ class BackupRepository(context: Context) {
             put("preferences", JSONObject())
         }
         val all = root.getJSONObject("preferences")
-        sources.forEach { name -> all.put(name, encode(context.getSharedPreferences(name, Context.MODE_PRIVATE).all)) }
+        sources.forEach { name ->
+            val values = context.getSharedPreferences(name, Context.MODE_PRIVATE).all
+                .filterNot { (key, _) ->
+                    (name == "jee_command_center" &&
+                        (key.startsWith("timer_") || key.startsWith("chapter_") ||
+                            key in setOf("daily_plan", "daily_plan_mistake_signature",
+                                "daily_goal", "data_schema_version"))) ||
+                    (name == "jee_learning_engine" && key == "analytics_cache")
+                }
+            all.put(name, encode(values))
+        }
         return root.toString(2)
     }
 
