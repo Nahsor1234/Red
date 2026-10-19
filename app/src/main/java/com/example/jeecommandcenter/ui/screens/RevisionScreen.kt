@@ -173,13 +173,24 @@ fun RevisionScreen(onBack: () -> Unit) {
                         modifier = Modifier.fillMaxWidth()
                     )
                     Text("Subject", color = TextSecondary, fontSize = 12.sp)
-                    Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                        listOf("General", "Physics", "Chemistry", "Mathematics").forEach { value ->
-                            FilterChip(
-                                selected = draftSubject == value,
-                                onClick = { draftSubject = value },
-                                label = { Text(value, fontSize = 10.sp) }
-                            )
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                            listOf("General", "Physics").forEach { value ->
+                                FilterChip(
+                                    selected = draftSubject == value,
+                                    onClick = { draftSubject = value },
+                                    label = { Text(value, fontSize = 11.sp) }
+                                )
+                            }
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                            listOf("Chemistry", "Mathematics").forEach { value ->
+                                FilterChip(
+                                    selected = draftSubject == value,
+                                    onClick = { draftSubject = value },
+                                    label = { Text(value, fontSize = 11.sp) }
+                                )
+                            }
                         }
                     }
                     OutlinedTextField(
