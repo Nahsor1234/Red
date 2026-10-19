@@ -56,7 +56,10 @@ class CloudPreferenceSync(
         val remote = db["user_cloud_preference_records"].select {
             filter { CloudPreferenceRecord::userId eq userId }
         }.decodeList<CloudPreferenceRecord>()
-        val remoteByKey = remote.associateBy { key(it.namespace, it.key) }
+        val allowedNamespaces = namespaces.toSet()
+        val remoteByKey = remote
+            .filter { it.namespace in allowedNamespaces }
+            .associateBy { key(it.namespace, it.key) }
         val local = currentLocalEntries()
         val allKeys = (local.keys + remoteByKey.keys).toSortedSet()
 
