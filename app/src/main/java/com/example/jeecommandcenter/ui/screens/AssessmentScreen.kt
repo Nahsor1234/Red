@@ -43,6 +43,8 @@ fun AssessmentScreen(learning: LearningRepository, jee: JeeRepository, onBack: (
     var startedAt by remember { mutableLongStateOf(0L) }
     var questionStartedAt by remember { mutableLongStateOf(0L) }
     var testId by remember { mutableStateOf("") }
+    var loadingQuestions by remember { mutableStateOf(false) }
+    var loadMessage by remember { mutableStateOf<String?>(null) }
     var showAiDialog by remember { mutableStateOf(false) }
     var aiBusy by remember { mutableStateOf(false) }
     var aiDifficulty by remember { mutableStateOf("Mixed") }
@@ -52,22 +54,94 @@ fun AssessmentScreen(learning: LearningRepository, jee: JeeRepository, onBack: (
         if (list.isEmpty()) return
         testId = UUID.randomUUID().toString(); questions = list; index = 0; selected = -1; answered = false; correct = 0; startedAt = System.currentTimeMillis(); questionStartedAt = startedAt; state = AssessmentState.RUNNING
     }
-    fun start() { startWith(learning.selectQuestions(mode, if (mode == TestMode.PRACTICE) subject else null, if (mode == TestMode.MOCK) 10 else 5)) }
-    fun finish() {
-        val duration = ((System.currentTimeMillis() - startedAt) / 1000L).toInt()
-        val attempts = learning.getQuestionAttempts().filter { it.testId == testId }
-        val questionById = questions.associateBy { it.id }
-        val marks = attempts.sumOf { attempt ->
-            val question = questionById[attempt.questionId]
-            when {
-                attempt.correct -> question?.marks ?: 4
-                attempt.selectedIndex >= 0 -> -(question?.negativeMarks ?: 1f).roundToInt()
-                else -> 0
+    fun start() {
+        if (loadingQuestions) return
+        scope.launch {
+            loadingQuestions = true
+            loadMessage = null
+            val requestedCount = if (mode == TestMode.MOCK) 10 else 5
+            val cloudQuestions = runCatching {
+                val cloud = CloudJeeRepository()
+                if (mode == TestMode.MOCK) cloud.allQuestions()
+                else cloud.questionsForSubject(subject.lowercase())
+            }.getOrDefault(emptyList())
+
+            val localQuestions = if (mode == TestMode.PRACTICE) {
+                learning.getQuestions().filter { it.subject.equals(subject, ignoreCase = true) }
+            } else {
+                learning.getQuestions()
+            }
+            val pool = if (cloudQuestions.isNotEmpty()) {
+                cloudQuestions.map { it.toAssessmentQuestion() }
+            } else {
+                loadMessage = "Using the local question bank because cloud questions were unavailable."
+                localQuestions
+            }
+            val filteredPool = if (mode == TestMode.PRACTICE) {
+                pool.filter { it.subject.equals(subject, ignoreCase = true) }
+            } else pool
+            val selectedQuestions = filteredPool.shuffled().take(requestedCount)
+            loadingQuestions = false
+            if (selectedQuestions.isEmpty()) {
+                loadMessage = "No questions are available for this assessment. Check the question bank and try again."
+            } else {
+                startWith(selectedQuestions)
             }
         }
-        val totalMarks = attempts.sumOf { questionById[it.questionId]?.marks ?: 4 }
-        val breakdown = attempts.groupBy { it.subject }.mapValues { (_, list) -> list.count { it.correct } to list.count { it.selectedIndex >= 0 } }
-        learning.saveTestAttempt(TestAttemptRecord(testId, mode, startedAt, System.currentTimeMillis(), attempts.size, attempts.count { it.correct }, marks, totalMarks, duration, breakdown))
+    }
+
+    fun finish() {
+        if (state != AssessmentState.RUNNING || questions.isEmpty()) return
+        val duration = ((System.currentTimeMillis() - startedAt) / 1000L).toInt()
+        val attemptsByQuestion = learning.getQuestionAttempts()
+            .filter { it.testId == testId }
+            .associateBy { it.questionId }
+
+        val correctCount = questions.count { question ->
+            attemptsByQuestion[question.id]?.correct == true
+        }
+        val attemptedCount = questions.count { question ->
+            (attemptsByQuestion[question.id]?.selectedIndex ?: -1) >= 0
+        }
+        val incorrectCount = questions.count { question ->
+            val attempt = attemptsByQuestion[question.id]
+            attempt != null && attempt.selectedIndex >= 0 && !attempt.correct
+        }
+        val skippedCount = (questions.size - attemptedCount).coerceAtLeast(0)
+        val scoreValue = questions.sumOf { question ->
+            when (val attempt = attemptsByQuestion[question.id]) {
+                null -> 0.0
+                else -> when {
+                    attempt.selectedIndex < 0 -> 0.0
+                    attempt.correct -> question.marks.toDouble()
+                    else -> -question.negativeMarks.toDouble()
+                }
+            }
+        }
+        val totalMarks = questions.sumOf { it.marks }
+        val breakdown = questions.groupBy { it.subject }.mapValues { (_, subjectQuestions) ->
+            val subjectCorrect = subjectQuestions.count { attemptsByQuestion[it.id]?.correct == true }
+            val subjectAttempted = subjectQuestions.count { (attemptsByQuestion[it.id]?.selectedIndex ?: -1) >= 0 }
+            subjectCorrect to subjectAttempted
+        }
+        learning.saveTestAttempt(
+            TestAttemptRecord(
+                id = testId,
+                mode = mode,
+                startedAt = startedAt,
+                completedAt = System.currentTimeMillis(),
+                questionCount = questions.size,
+                correctCount = correctCount,
+                score = scoreValue.roundToInt(),
+                totalMarks = totalMarks,
+                durationSec = duration,
+                subjectBreakdown = breakdown,
+                attemptedCount = attemptedCount,
+                incorrectCount = incorrectCount,
+                skippedCount = skippedCount
+            )
+        )
+        correct = correctCount
         state = AssessmentState.RESULT
     }
 
@@ -79,7 +153,11 @@ fun AssessmentScreen(learning: LearningRepository, jee: JeeRepository, onBack: (
         )
     }) { padding ->
         when (state) {
-            AssessmentState.SETUP -> SetupContent(mode, subject, { mode = it }, { subject = it }, ::start, onOpenMistakes, Modifier.padding(padding), settings.hasApiKey(), { showAiDialog = true })
+            AssessmentState.SETUP -> SetupContent(
+                mode, subject, { mode = it }, { subject = it }, ::start, onOpenMistakes,
+                Modifier.padding(padding), settings.hasApiKey(), { showAiDialog = true },
+                loadingQuestions, loadMessage
+            )
             AssessmentState.RUNNING -> {
                 val question = questions.getOrNull(index)
                 if (question != null) {
@@ -108,12 +186,44 @@ fun AssessmentScreen(learning: LearningRepository, jee: JeeRepository, onBack: (
 }
 
 @Composable
-private fun SetupContent(mode: TestMode, subject: String, onMode: (TestMode) -> Unit, onSubject: (String) -> Unit, onStart: () -> Unit, onOpenMistakes: () -> Unit, modifier: Modifier, aiAvailable: Boolean, onCreateAi: () -> Unit) {
+private fun SetupContent(
+    mode: TestMode,
+    subject: String,
+    onMode: (TestMode) -> Unit,
+    onSubject: (String) -> Unit,
+    onStart: () -> Unit,
+    onOpenMistakes: () -> Unit,
+    modifier: Modifier,
+    aiAvailable: Boolean,
+    onCreateAi: () -> Unit,
+    loadingQuestions: Boolean,
+    loadMessage: String?
+) {
     LazyColumn(modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item { Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(BgCardAlt).border(JeeSurfaceTokens.borderWidth,BgCardBorder.copy(alpha=JeeSurfaceTokens.cardBorderAlpha),JeeShapes.medium).padding(16.dp)) { Text("Assessment engine", style = MaterialTheme.typography.titleLarge); Spacer(Modifier.height(6.dp)); Text("Practice tests and AI-generated quizzes create real question attempts, mistakes and analytics.", color = TextMuted, fontSize = 11.sp) } }
         item { Text("Mode", color = TextSecondary, fontSize = 12.sp); Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { JeeFilterChip("Practice", mode == TestMode.PRACTICE) { onMode(TestMode.PRACTICE) }; JeeFilterChip("Starter mock", mode == TestMode.MOCK) { onMode(TestMode.MOCK) } } }
         if (mode == TestMode.PRACTICE) item { Text("Subject", color = TextSecondary, fontSize = 12.sp); Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { listOf("Physics", "Chemistry", "Mathematics").forEach { JeeFilterChip(it, subject == it) { onSubject(it) } } } }
-        item { Button(onClick = onStart, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = AccentBlue)) { Icon(Icons.Filled.PlayArrow, null); Spacer(Modifier.width(7.dp)); Text(if (mode == TestMode.MOCK) "Start 10-question mock" else "Start 5-question practice") } }
+        item {
+            Button(
+                onClick = onStart,
+                enabled = !loadingQuestions,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = AccentBlue)
+            ) {
+                if (loadingQuestions) {
+                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Loading questions…")
+                } else {
+                    Icon(Icons.Filled.PlayArrow, null)
+                    Spacer(Modifier.width(7.dp))
+                    Text(if (mode == TestMode.MOCK) "Start 10-question mock" else "Start 5-question practice")
+                }
+            }
+            if (!loadingQuestions && !loadMessage.isNullOrBlank()) {
+                Text(loadMessage, color = TextSecondary, fontSize = 11.sp)
+            }
+        }
         item { OutlinedButton(onClick = onCreateAi, enabled = aiAvailable, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Filled.AutoAwesome, null); Spacer(Modifier.width(7.dp)); Text(if (aiAvailable) "Create quiz with AI" else "Configure AI to create quiz") } }
         item { OutlinedButton(onClick = onOpenMistakes, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Filled.ErrorOutline, null); Spacer(Modifier.width(7.dp)); Text("Open mistake bank") } }
         item { Text("AI quiz generation uses the configured provider and returns structured questions for the existing assessment flow.", color = TextMuted, fontSize = 10.sp) }
@@ -135,3 +245,25 @@ private fun QuestionContent(modifier: Modifier, question: Question, questionInde
 private fun ResultContent(modifier: Modifier, correct: Int, total: Int, onRestart: () -> Unit, onMistakes: () -> Unit) {
     Column(modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) { Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(BgCardAlt).border(JeeSurfaceTokens.borderWidth,BgCardBorder.copy(alpha=JeeSurfaceTokens.cardBorderAlpha),JeeShapes.medium).padding(18.dp)) { Text("Assessment complete", style = MaterialTheme.typography.titleLarge); Spacer(Modifier.height(8.dp)); Text("$correct / $total correct", style = MaterialTheme.typography.headlineMedium); Text(if (total == 0) "No questions recorded" else "${(correct * 100) / total}% accuracy", color = TextSecondary, fontSize = 12.sp) }; Button(onClick = onMistakes, modifier = Modifier.fillMaxWidth()) { Text("Review mistakes") }; OutlinedButton(onClick = onRestart, modifier = Modifier.fillMaxWidth()) { Text("Take another test") } }
 }
+
+private fun CloudQuestion.toAssessmentQuestion() = Question(
+    id = id,
+    subject = when (subjectId.lowercase()) {
+        "physics" -> "Physics"
+        "chemistry" -> "Chemistry"
+        "mathematics" -> "Mathematics"
+        else -> subjectId.replace('_', ' ').replaceFirstChar { it.uppercase() }
+    },
+    chapterId = JeeCatalog.normalizeChapterId(chapterId),
+    chapter = chapterName,
+    topic = topic,
+    prompt = prompt,
+    options = options,
+    correctIndex = correctIndex,
+    explanation = explanation,
+    difficulty = difficulty,
+    source = source,
+    year = year,
+    marks = marks,
+    negativeMarks = negativeMarks
+)
