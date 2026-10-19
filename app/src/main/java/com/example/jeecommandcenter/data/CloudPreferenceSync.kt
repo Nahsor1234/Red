@@ -131,6 +131,7 @@ class CloudPreferenceSync(
                 }
 
                 localHash == remoteHash -> {
+                    state.edit().putString(hashKey(userId, namespace, prefKey), localHash).apply()
                 }
 
                 localHash == lastHash -> {
