@@ -41,6 +41,7 @@ fun AppRoot(initialTarget: String? = null, launchRequestId: Int = 0) {
     val saveableStateHolder = rememberSaveableStateHolder()
 
     LaunchedEffect(initialTarget, launchRequestId) {
+        navigationDirection = 1
         when (initialTarget) {
             "daily_log", "daily_progress" -> secondaryStack = listOf(SecondaryPage.DAILY_LOG)
             "notifications" -> secondaryStack = listOf(SecondaryPage.NOTIFICATIONS)
