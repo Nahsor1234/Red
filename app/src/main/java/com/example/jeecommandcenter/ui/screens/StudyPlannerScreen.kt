@@ -56,7 +56,7 @@ fun StudyPlannerScreen(
             }
             item {
                 Text(
-                    "The plan prioritizes unfinished tasks, due chapter reviews and up to three repeated or recent mistakes. Open a block to study it; use Regenerate after your learning state changes.",
+                    "After today's tasks, the plan prioritizes up to three repeated or recent question mistakes before broader chapter reviews. Open a block to study it; use Regenerate after your learning state changes.",
                     color = TextSecondary,
                     fontSize = 11.sp
                 )
