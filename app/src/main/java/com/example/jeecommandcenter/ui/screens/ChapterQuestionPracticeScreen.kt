@@ -94,7 +94,8 @@ fun ChapterQuestionPracticeScreen(
                 while (keys.hasNext()) {
                     val id = keys.next()
                     val option = answersObject.optInt(id, -1)
-                    if (id in validIds && option in 0..3) restoredAnswers[id] = option
+                    val optionCount = loadedQuestions.firstOrNull { it.id == id }?.options?.size ?: 0
+                    if (id in validIds && option in 0 until optionCount) restoredAnswers[id] = option
                 }
             }
             selectedByQuestion = restoredAnswers
@@ -444,7 +445,7 @@ fun ChapterQuestionPracticeScreen(
                                                 verticalAlignment = Alignment.CenterVertically,
                                                 horizontalArrangement = Arrangement.spacedBy(4.dp)
                                             ) {
-                                                Icon(Icons.Filled.Sell, null, tint = PrimaryLight, modifier = Modifier.size(14.dp))
+                                                Icon(Icons.Filled.Flag, null, tint = PrimaryLight, modifier = Modifier.size(14.dp))
                                                 Text(
                                                     selectedMistakeType?.let(::mistakeTypeLabel) ?: "Tag mistake",
                                                     color = TextPrimary,
