@@ -157,7 +157,7 @@ fun SyllabusScreen(
                         }
                     }
                     TextButton(onClick = onOpenRevision) {
-                        Text("Review", fontSize = 12.sp)
+                        Text("Notes", fontSize = 12.sp)
                     }
                 }
 
