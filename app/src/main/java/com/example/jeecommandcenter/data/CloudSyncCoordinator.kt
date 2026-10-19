@@ -77,7 +77,7 @@ class CloudSyncCoordinator(
         // authoritative for chapter/topic/question state and are excluded by the helper.
         val preferenceResult = preferenceSync.sync(user.id)
         // Reminder definitions/settings are preference-backed; re-register alarms after restore.
-        ReminderScheduler(context).scheduleAll()
+        runCatching { ReminderScheduler(context).scheduleAll() }
 
         syncPrefs.edit()
             .putStringSet(attemptKey, syncedIds)
