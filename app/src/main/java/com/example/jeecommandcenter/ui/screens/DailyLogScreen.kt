@@ -30,6 +30,7 @@ import com.example.jeecommandcenter.data.CloudJeeRepository
 import com.example.jeecommandcenter.data.CloudPreferenceSync
 import com.example.jeecommandcenter.data.DailyLogEntry
 import com.example.jeecommandcenter.data.DailyLogRepository
+import com.example.jeecommandcenter.data.ReminderScheduler
 import com.example.jeecommandcenter.ui.components.JeeCard
 import com.example.jeecommandcenter.ui.components.JeeTopBar
 import com.example.jeecommandcenter.ui.components.LinearStatBar
@@ -111,6 +112,7 @@ fun DailyLogScreen(onBack: () -> Unit) {
         cloudBackupStatus = "Backing up to your Sigma JE account…"
         runCatching { CloudPreferenceSync(context).sync(user.id) }
             .onSuccess {
+                runCatching { ReminderScheduler(context).scheduleAll() }
                 refresh++
                 cloudBackupStatus = "Backed up to your Sigma JE account"
             }
