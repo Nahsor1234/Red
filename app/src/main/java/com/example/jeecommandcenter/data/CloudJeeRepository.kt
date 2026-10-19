@@ -168,6 +168,10 @@ class CloudJeeRepository(
 
     private companion object {
         val questionIdComparator = compareBy<CloudQuestion> {
+            // IDs ending in "_new_NN" reuse sequence numbers from the original bank.
+            // Keep the original sequence first, then append the newer batch in its own order.
+            if ("_new_" in it.id) 1 else 0
+        }.thenBy {
             it.id.substringAfterLast('_').toIntOrNull() ?: Int.MAX_VALUE
         }.thenBy { it.id }
     }
