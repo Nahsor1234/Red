@@ -1,7 +1,6 @@
 package com.example.jeecommandcenter.ui.screens
 
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -155,7 +154,7 @@ fun RevisionScreen(onBack: () -> Unit) {
                     (slideInHorizontally(initialOffsetX = { -it / 5 }) + fadeIn()).togetherWith(
                         slideOutHorizontally(targetOffsetX = { it / 3 }) + fadeOut()
                     )
-                }.using(androidx.compose.animation.SizeTransform(clip = false))
+                }
             },
             label = "notesHorizontalSlide"
         ) { editorVisible ->
