@@ -159,7 +159,7 @@ fun DashboardScreen(
                 Spacer(Modifier.height(10.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     QuickAction("Mistakes", unresolvedMistakes.toString() + " unresolved", Icons.Filled.ErrorOutline, Modifier.weight(1f), false, onOpenMistakes)
-                    QuickAction("Planner", "Plan today", Icons.Filled.AutoAwesome, Modifier.weight(1f), false, onOpenPlanner)
+                    QuickAction("Study", (todayMinutes / 60).toString() + "h " + (todayMinutes % 60).toString() + "m today", Icons.Filled.Timer, Modifier.weight(1f), false, onOpenStudyTimer)
                 }
 
                 Spacer(Modifier.height(18.dp))
