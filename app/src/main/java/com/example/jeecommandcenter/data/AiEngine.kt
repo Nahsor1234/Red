@@ -103,7 +103,7 @@ class AiSettingsRepository(context: android.content.Context) {
 
 class AiEngine(private val settings: AiSettingsRepository) {
     companion object {
-        const val DEFAULT_MAX_OUTPUT_TOKENS = 1_800
+        const val DEFAULT_MAX_OUTPUT_TOKENS = 4_096
         const val MAX_QUIZ_OUTPUT_TOKENS = 8_192
     }
 
