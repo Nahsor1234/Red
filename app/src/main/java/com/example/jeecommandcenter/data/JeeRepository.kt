@@ -393,14 +393,6 @@ class JeeRepository(context: Context) {
             remaining -= duration
         }
 
-        getRevisionQueue().take(3).forEach { due ->
-            if (remaining <= 0) return@forEach
-            val duration = minOf(30, remaining)
-            if (duration < 15) return@forEach
-            selected += PlannerItem("revplan_" + due.chapter.id, today, PlannerItemType.REVISION, "Revise " + due.chapter.name, due.chapter.subject, due.chapter.id, duration, 90)
-            remaining -= duration
-        }
-
         // Reserve a small, bounded part of the day for actual incorrect questions.
         unresolvedMistakes
             .sortedWith(compareByDescending<MistakeRecord> { it.count }.thenByDescending { it.lastSeenAt })
@@ -422,6 +414,14 @@ class JeeRepository(context: Context) {
                 )
                 remaining -= duration
             }
+
+        getRevisionQueue().take(3).forEach { due ->
+            if (remaining <= 0) return@forEach
+            val duration = minOf(30, remaining)
+            if (duration < 15) return@forEach
+            selected += PlannerItem("revplan_" + due.chapter.id, today, PlannerItemType.REVISION, "Revise " + due.chapter.name, due.chapter.subject, due.chapter.id, duration, 90)
+            remaining -= duration
+        }
 
         val candidates = JeeCatalog.chapters.map { chapter ->
             val state = getChapterState(chapter.id)
