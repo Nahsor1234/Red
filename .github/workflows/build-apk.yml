@@ -47,6 +47,20 @@ jobs:
           path: ~/.android/debug.keystore
           key: sigma-je-debug-keystore-v1-${{ runner.os }}
 
+      # For stability across branch/merge boundaries, optionally provide the same
+      # development keystore as a GitHub Actions secret. If unset, the cached
+      # branch-local debug key remains in use.
+      - name: Use persistent debug signing key when configured
+        env:
+          ANDROID_DEBUG_KEYSTORE_BASE64: ${{ secrets.ANDROID_DEBUG_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$ANDROID_DEBUG_KEYSTORE_BASE64" ]; then
+            mkdir -p "$HOME/.android"
+            printf '%s' "$ANDROID_DEBUG_KEYSTORE_BASE64" | base64 --decode > "$HOME/.android/debug.keystore"
+          else
+            echo "No persistent keystore secret configured; using the cached debug keystore."
+          fi
+
       - name: Build APK
         run: gradle assembleDebug
 
