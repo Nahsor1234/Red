@@ -27,7 +27,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.GridView
-import androidx.compose.material.icons.filled.LabelOutline
+import androidx.compose.material.icons.filled.LocalOffer
 import androidx.compose.material.icons.filled.NoteAdd
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
@@ -332,7 +332,7 @@ private fun NoteCard(note: RevisionNote, onClick: () -> Unit, onDelete: () -> Un
         val tag = note.subject.takeIf { it.isNotBlank() && it != "General" }
         if (tag != null) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                Icon(Icons.Filled.LabelOutline, contentDescription = null, tint = PrimaryLight, modifier = Modifier.size(13.dp))
+                Icon(Icons.Filled.LocalOffer, contentDescription = null, tint = PrimaryLight, modifier = Modifier.size(13.dp))
                 Text(tag, color = PrimaryLight, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         } else {
@@ -417,7 +417,7 @@ private fun NoteEditor(
 
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             OutlinedButton(onClick = onTagClick, shape = RoundedCornerShape(28.dp)) {
-                Icon(Icons.Filled.LabelOutline, contentDescription = null, tint = PrimaryLight, modifier = Modifier.size(17.dp))
+                Icon(Icons.Filled.LocalOffer, contentDescription = null, tint = PrimaryLight, modifier = Modifier.size(17.dp))
                 Spacer(Modifier.width(6.dp))
                 Text(if (tag == "No tag") "Add tag" else "# $tag")
             }
