@@ -1,5 +1,6 @@
 package com.example.jeecommandcenter.ui.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -105,6 +106,12 @@ fun RevisionScreen(onBack: () -> Unit) {
         editingNote = saved
         saveStatus = "Saved"
         refresh++
+    }
+
+    BackHandler(enabled = showEditor) {
+        persistDraft()
+        showEditor = false
+        tagPickerOpen = false
     }
 
     LaunchedEffect(showEditor, draftId, draftTitle, draftTag, draftContent) {
