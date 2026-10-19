@@ -1,6 +1,13 @@
 package com.example.jeecommandcenter.ui.navigation
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.platform.LocalContext
@@ -22,6 +29,7 @@ fun AppRoot(initialTarget: String? = null, launchRequestId: Int = 0) {
     val learning = remember { LearningRepository(context) }
     val aiHistory = remember { AiChatHistoryRepository(context) }
     var selectedTab by remember { mutableStateOf(AppTab.HOME) }
+    var navigationDirection by remember { mutableIntStateOf(1) }
     var secondaryStack by remember { mutableStateOf<List<SecondaryPage>>(emptyList()) }
     var selectedChapter by remember { mutableStateOf<JeeChapter?>(null) }
     var selectedAttempt by remember { mutableStateOf<TestAttemptRecord?>(null) }
@@ -41,9 +49,9 @@ fun AppRoot(initialTarget: String? = null, launchRequestId: Int = 0) {
         }
     }
 
-    fun selectTab(tab: AppTab) { secondaryStack = emptyList(); selectedTab = tab }
-    fun openPage(page: SecondaryPage) { secondaryStack = secondaryStack + page }
-    fun popPage() { if (secondaryStack.isNotEmpty()) { secondaryStack = secondaryStack.dropLast(1) } }
+    fun selectTab(tab: AppTab) { navigationDirection = 0; secondaryStack = emptyList(); selectedTab = tab }
+    fun openPage(page: SecondaryPage) { navigationDirection = 1; secondaryStack = secondaryStack + page }
+    fun popPage() { if (secondaryStack.isNotEmpty()) { navigationDirection = -1; secondaryStack = secondaryStack.dropLast(1) } }
     fun openAiTutorForQuestion(questionContext: String) {
         pendingAiQuestionContext = questionContext
         aiQuestionRequestId += 1
@@ -51,6 +59,7 @@ fun AppRoot(initialTarget: String? = null, launchRequestId: Int = 0) {
     }
     fun openAuth(mode: CloudAuthMode) { authMode = mode; openPage(SecondaryPage.AUTH) }
     fun openAiConversation(id: Long) {
+        navigationDirection = 1
         activeAiConversationId = id
         aiHistory.setActiveConversationId(id)
         secondaryStack = when (secondaryStack.lastOrNull()) {
@@ -67,9 +76,24 @@ fun AppRoot(initialTarget: String? = null, launchRequestId: Int = 0) {
     BackHandler(enabled = secondaryStack.isNotEmpty()) { popPage() }
     val screenKey = secondaryPage?.let { "secondary:" + it.name } ?: ("tab:" + selectedTab.name)
 
-    key(screenKey) {
-        saveableStateHolder.SaveableStateProvider(screenKey) {
-            val key = screenKey
+    AnimatedContent(
+        targetState = screenKey,
+        transitionSpec = {
+            when {
+                navigationDirection > 0 ->
+                    (slideInHorizontally(initialOffsetX = { width -> width / 5 }, animationSpec = tween(240)) + fadeIn(animationSpec = tween(220))) togetherWith
+                        (slideOutHorizontally(targetOffsetX = { width -> -width / 8 }, animationSpec = tween(200)) + fadeOut(animationSpec = tween(160)))
+                navigationDirection < 0 ->
+                    (slideInHorizontally(initialOffsetX = { width -> -width / 8 }, animationSpec = tween(240)) + fadeIn(animationSpec = tween(220))) togetherWith
+                        (slideOutHorizontally(targetOffsetX = { width -> width / 5 }, animationSpec = tween(200)) + fadeOut(animationSpec = tween(160)))
+                else -> fadeIn(animationSpec = tween(180)) togetherWith fadeOut(animationSpec = tween(140))
+            }
+        },
+        label = "app_screen_transition"
+    ) { targetScreenKey ->
+        key(targetScreenKey) {
+            saveableStateHolder.SaveableStateProvider(targetScreenKey) {
+            val key = targetScreenKey
 
             val targetSecondary = if (key.startsWith("secondary:")) SecondaryPage.valueOf(key.removePrefix("secondary:")) else null
             val targetTab = if (key.startsWith("tab:")) AppTab.valueOf(key.removePrefix("tab:")) else null
@@ -133,6 +157,7 @@ fun AppRoot(initialTarget: String? = null, launchRequestId: Int = 0) {
                     AppTab.STATS -> StudyTimerScreen(repo, selectedTab, ::selectTab) { openPage(SecondaryPage.AI_TUTOR) }
                 }
             }
+        }
         }
     }
 }
