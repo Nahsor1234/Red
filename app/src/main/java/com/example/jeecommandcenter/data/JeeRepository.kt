@@ -401,6 +401,28 @@ class JeeRepository(context: Context) {
             remaining -= duration
         }
 
+        // Reserve a small, bounded part of the day for actual incorrect questions.
+        unresolvedMistakes
+            .sortedWith(compareByDescending<MistakeRecord> { it.count }.thenByDescending { it.lastSeenAt })
+            .take(3)
+            .forEach { mistake ->
+                if (remaining <= 0) return@forEach
+                val duration = minOf(15, remaining)
+                if (duration < 10) return@forEach
+                val chapter = JeeCatalog.find(mistake.chapterId)
+                selected += PlannerItem(
+                    id = "mistake_task_" + mistake.id,
+                    date = today,
+                    type = PlannerItemType.MISTAKE_REVIEW,
+                    title = "Fix: " + mistake.questionPrompt.take(52).trim(),
+                    subject = chapter?.subject ?: mistake.subject,
+                    chapterId = mistake.chapterId,
+                    durationMin = duration,
+                    priority = 110
+                )
+                remaining -= duration
+            }
+
         val candidates = JeeCatalog.chapters.map { chapter ->
             val state = getChapterState(chapter.id)
             val daysSinceStudy = if (state.lastStudiedAt == 0L) 999 else ((System.currentTimeMillis() - state.lastStudiedAt) / 86_400_000L).toInt()
@@ -448,12 +470,21 @@ class JeeRepository(context: Context) {
         return plan
     }
 
-    fun completePlannerItem(id: String, revisionRating: RevisionRating? = null) {
+    fun completePlannerItem(
+        id: String,
+        revisionRating: RevisionRating? = null,
+        learningRepository: LearningRepository? = null
+    ) {
         val plan = getDailyPlan() ?: return
         val item = plan.items.firstOrNull { it.id == id } ?: return
         if (item.completed) return
 
-        if (item.id.startsWith("task_")) {
+        if (item.type == PlannerItemType.MISTAKE_REVIEW) {
+            val learning = learningRepository ?: return
+            val mistakeId = item.id.removePrefix("mistake_task_")
+            if (learning.getMistakes().none { it.id == mistakeId && !it.resolved }) return
+            learning.resolveMistake(mistakeId)
+        } else if (item.id.startsWith("task_")) {
             item.id.removePrefix("task_").toLongOrNull()?.let { taskId ->
                 val task = getTasks().firstOrNull { it.id == taskId }
                 if (task != null && !task.done) toggleTask(taskId)
