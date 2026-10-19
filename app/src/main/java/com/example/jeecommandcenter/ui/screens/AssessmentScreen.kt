@@ -303,15 +303,19 @@ private fun QuestionContent(
                         color = if (isCorrect) PrimaryLight else AccentAmber,
                         style = MaterialTheme.typography.titleMedium
                     )
-                    Text(
+                    MathMarkdownText(
                         "Your answer: " + (question.options.getOrNull(selected) ?: "Not answered"),
+                        modifier = Modifier.fillMaxWidth(),
                         color = TextSecondary,
-                        fontSize = 12.sp
+                        fontSize = 12.sp,
+                        lineHeight = 17.sp
                     )
-                    Text(
+                    MathMarkdownText(
                         "Correct answer: " + (question.options.getOrNull(question.correctIndex) ?: "Unavailable"),
+                        modifier = Modifier.fillMaxWidth(),
                         color = PrimaryLight,
-                        fontSize = 12.sp
+                        fontSize = 12.sp,
+                        lineHeight = 17.sp
                     )
                     if (question.explanation.isNotBlank()) {
                         MathMarkdownText(question.explanation, modifier = Modifier.fillMaxWidth(), color = TextPrimary.copy(alpha = .94f), fontSize = 13.sp, lineHeight = 19.sp)
