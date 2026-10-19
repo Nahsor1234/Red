@@ -66,20 +66,26 @@ fun AssessmentScreen(learning: LearningRepository, jee: JeeRepository, onBack: (
                 else cloud.questionsForSubject(subject.lowercase())
             }.getOrDefault(emptyList())
 
-            val localQuestions = if (mode == TestMode.PRACTICE) {
-                learning.getQuestions().filter { it.subject.equals(subject, ignoreCase = true) }
-            } else {
-                learning.getQuestions()
+            val localQuestions = learning.getQuestions()
+            val cloudPool = cloudQuestions.map { it.toAssessmentQuestion() }
+            val filterForMode: (Question) -> Boolean = { question ->
+                mode != TestMode.PRACTICE || question.subject.equals(subject, ignoreCase = true)
             }
-            val pool = if (cloudQuestions.isNotEmpty()) {
-                cloudQuestions.map { it.toAssessmentQuestion() }
+            val cloudFiltered = cloudPool.filter(filterForMode)
+                .filter { it.prompt.isNotBlank() && it.options.size >= 2 && it.correctIndex in it.options.indices }
+            val localFiltered = localQuestions.filter(filterForMode)
+                .filter { it.prompt.isNotBlank() && it.options.size >= 2 && it.correctIndex in it.options.indices }
+            val filteredPool = if (cloudFiltered.size >= requestedCount) {
+                cloudFiltered
             } else {
-                loadMessage = "Using the local question bank because cloud questions were unavailable."
-                localQuestions
+                // Prefer cloud content, but use valid local questions to fill a short cloud pool.
+                if (cloudFiltered.isEmpty()) {
+                    loadMessage = "Cloud questions are unavailable; using the local question bank."
+                } else {
+                    loadMessage = "Combining cloud and local questions to fill the requested test."
+                }
+                (cloudFiltered + localFiltered).distinctBy { it.id }
             }
-            val filteredPool = if (mode == TestMode.PRACTICE) {
-                pool.filter { it.subject.equals(subject, ignoreCase = true) }
-            } else pool
             val selectedQuestions = filteredPool.shuffled().take(requestedCount)
             loadingQuestions = false
             if (selectedQuestions.isEmpty()) {
@@ -147,7 +153,7 @@ fun AssessmentScreen(learning: LearningRepository, jee: JeeRepository, onBack: (
 
     Scaffold(containerColor = BgApp, topBar = {
         JeeTopBar(
-            title = when (state) { AssessmentState.SETUP -> "Assessment"; AssessmentState.RUNNING -> if (mode == TestMode.MOCK) "Starter mock" else "Practice test"; AssessmentState.RESULT -> "Result" },
+            title = when (state) { AssessmentState.SETUP -> "Tests & Mocks"; AssessmentState.RUNNING -> if (mode == TestMode.MOCK) "Starter mock" else "Practice test"; AssessmentState.RESULT -> "Test results" },
             onBack = onBack,
             trailing = { if (state == AssessmentState.SETUP) TextButton(onClick = onOpenHistory) { Icon(Icons.Filled.History, null, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(4.dp)); Text("History", fontSize = 12.sp) } }
         )
@@ -200,7 +206,7 @@ private fun SetupContent(
     loadMessage: String?
 ) {
     LazyColumn(modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        item { Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(BgCardAlt).border(JeeSurfaceTokens.borderWidth,BgCardBorder.copy(alpha=JeeSurfaceTokens.cardBorderAlpha),JeeShapes.medium).padding(16.dp)) { Text("Assessment engine", style = MaterialTheme.typography.titleLarge); Spacer(Modifier.height(6.dp)); Text("Practice tests and AI-generated quizzes create real question attempts, mistakes and analytics.", color = TextMuted, fontSize = 11.sp) } }
+        item { Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(BgCardAlt).border(JeeSurfaceTokens.borderWidth,BgCardBorder.copy(alpha=JeeSurfaceTokens.cardBorderAlpha),JeeShapes.medium).padding(16.dp)) { Text("Tests & Mocks", style = MaterialTheme.typography.titleLarge); Spacer(Modifier.height(6.dp)); Text("Build a short practice test, take a starter mock, or create a quiz with AI. Your attempts feed your progress and Mistake Bank.", color = TextMuted, fontSize = 11.sp) } }
         item { Text("Mode", color = TextSecondary, fontSize = 12.sp); Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { JeeFilterChip("Practice", mode == TestMode.PRACTICE) { onMode(TestMode.PRACTICE) }; JeeFilterChip("Starter mock", mode == TestMode.MOCK) { onMode(TestMode.MOCK) } } }
         if (mode == TestMode.PRACTICE) item { Text("Subject", color = TextSecondary, fontSize = 12.sp); Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { listOf("Physics", "Chemistry", "Mathematics").forEach { JeeFilterChip(it, subject == it) { onSubject(it) } } } }
         item {
@@ -225,19 +231,107 @@ private fun SetupContent(
             }
         }
         item { OutlinedButton(onClick = onCreateAi, enabled = aiAvailable, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Filled.AutoAwesome, null); Spacer(Modifier.width(7.dp)); Text(if (aiAvailable) "Create quiz with AI" else "Configure AI to create quiz") } }
-        item { OutlinedButton(onClick = onOpenMistakes, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Filled.ErrorOutline, null); Spacer(Modifier.width(7.dp)); Text("Open mistake bank") } }
+        item { OutlinedButton(onClick = onOpenMistakes, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Filled.ErrorOutline, null); Spacer(Modifier.width(7.dp)); Text("Open Mistake Bank") } }
         item { Text("AI quiz generation uses the configured provider and returns structured questions for the existing assessment flow.", color = TextMuted, fontSize = 10.sp) }
     }
 }
 
 @Composable
-private fun QuestionContent(modifier: Modifier, question: Question, questionIndex: Int, total: Int, selected: Int, answered: Boolean, remaining: Int, onSelect: (Int) -> Unit, onSubmit: () -> Unit, onNext: () -> Unit) {
-    LazyColumn(modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        item { Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text("Question ${questionIndex + 1} / $total", color = TextSecondary, fontSize = 12.sp); Text("${remaining}s", color = if (remaining <= 10) AccentAmber else TextSecondary) } }
-        item { Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(BgCard).border(JeeSurfaceTokens.borderWidth,BgCardBorder.copy(alpha=JeeSurfaceTokens.cardBorderAlpha),JeeShapes.medium).padding(16.dp)) { Text(question.chapter, color = AccentBlueLight, fontSize = 10.sp); Spacer(Modifier.height(7.dp)); Text(question.prompt, style = MaterialTheme.typography.titleMedium) } }
-        items(question.options.indices.toList()) { optionIndex -> val chosen = selected == optionIndex; Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(if (chosen) AccentBlueSoft else BgCard).selectable(selected = chosen, enabled = !answered, role = Role.RadioButton, onClick = { onSelect(optionIndex) }).padding(14.dp)) { RadioButton(chosen, onClick = null, enabled = !answered); Spacer(Modifier.width(7.dp)); Text(question.options[optionIndex], modifier = Modifier.padding(top = 12.dp), color = TextOnCard) } }
-        item { if (answered) { Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(BgCardAlt).border(JeeSurfaceTokens.borderWidth,BgCardBorder.copy(alpha=JeeSurfaceTokens.cardBorderAlpha),JeeShapes.medium).padding(14.dp)) { Text(if (selected == question.correctIndex) "Correct" else "Review", color = if (selected == question.correctIndex) AccentGreen else AccentAmber, style = MaterialTheme.typography.titleMedium); Spacer(Modifier.height(5.dp)); Text(question.explanation, color = TextSecondary, fontSize = 12.sp) }; Button(onClick = onNext, modifier = Modifier.fillMaxWidth()) { Text(if (questionIndex + 1 == total) "Finish test" else "Next") } } else Button(onClick = onSubmit, enabled = selected >= 0, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = AccentBlue)) { Text("Submit answer") } }
-        item { Spacer(Modifier.height(24.dp)) }
+private fun QuestionContent(
+    modifier: Modifier,
+    question: Question,
+    questionIndex: Int,
+    total: Int,
+    selected: Int,
+    answered: Boolean,
+    remaining: Int,
+    onSelect: (Int) -> Unit,
+    onSubmit: () -> Unit,
+    onNext: () -> Unit
+) {
+    LazyColumn(
+        modifier.fillMaxSize().padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+        contentPadding = PaddingValues(top = 12.dp, bottom = 24.dp)
+    ) {
+        item {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+            ) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text(question.chapter, color = PrimaryLight, fontSize = 13.sp, maxLines = 1)
+                    Text("Question ${questionIndex + 1}/$total", color = TextSecondary, fontSize = 13.sp)
+                }
+                Text(
+                    "${remaining}s",
+                    color = if (remaining <= 10) AccentAmber else TextSecondary,
+                    fontSize = 13.sp
+                )
+            }
+            LinearProgressIndicator(
+                progress = { (questionIndex + 1).toFloat() / total.coerceAtLeast(1) },
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp).height(4.dp).clip(RoundedCornerShape(99.dp)),
+                color = Primary,
+                trackColor = BgDivider
+            )
+        }
+        item { SharedQuestionPromptCard(question.prompt) }
+        items(question.options.indices.toList(), key = { it }) { optionIndex ->
+            SharedQuestionOptionRow(
+                optionText = question.options[optionIndex],
+                selected = selected == optionIndex,
+                submitted = answered,
+                isCorrectOption = optionIndex == question.correctIndex,
+                onClick = { onSelect(optionIndex) }
+            )
+        }
+        if (answered) {
+            item {
+                val isCorrect = selected == question.correctIndex
+                Column(
+                    Modifier.fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(BgCardAlt)
+                        .border(1.dp, if (isCorrect) Primary.copy(alpha = .85f) else Danger.copy(alpha = .85f), RoundedCornerShape(16.dp))
+                        .padding(15.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        if (isCorrect) "Correct answer" else "Answer Review",
+                        color = if (isCorrect) PrimaryLight else AccentAmber,
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text(
+                        "Your answer: " + (question.options.getOrNull(selected) ?: "Not answered"),
+                        color = TextSecondary,
+                        fontSize = 12.sp
+                    )
+                    Text(
+                        "Correct answer: " + (question.options.getOrNull(question.correctIndex) ?: "Unavailable"),
+                        color = PrimaryLight,
+                        fontSize = 12.sp
+                    )
+                    if (question.explanation.isNotBlank()) {
+                        Text(question.explanation, color = TextPrimary.copy(alpha = .94f), fontSize = 13.sp, lineHeight = 19.sp)
+                    } else {
+                        Text("No explanation is available for this question.", color = TextMuted, fontSize = 12.sp)
+                    }
+                    Button(onClick = onNext, modifier = Modifier.fillMaxWidth()) {
+                        Text(if (questionIndex + 1 == total) "Finish test" else "Next question")
+                    }
+                }
+            }
+        } else {
+            item {
+                Button(
+                    onClick = onSubmit,
+                    enabled = selected >= 0,
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp)
+                ) { Text("Check answer") }
+            }
+        }
     }
 }
 
