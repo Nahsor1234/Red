@@ -46,8 +46,6 @@ class CloudPreferenceSync(
     private val namespaces = listOf(
         "jee_command_center",
         "jee_learning_engine",
-        "jee_ai_settings",
-        "ai_chat_history",
         "daily_log_v1",
         "jee_revision_notes",
         "custom_reminders_v1",
@@ -203,8 +201,12 @@ class CloudPreferenceSync(
     private fun shouldSync(namespace: String, prefKey: String): Boolean = when (namespace) {
         "jee_command_center" -> !prefKey.startsWith("chapter_") &&
             !prefKey.startsWith("timer_") &&
-            prefKey != "data_schema_version" &&
-            prefKey != "daily_plan"
+            prefKey !in setOf(
+                "data_schema_version",
+                "daily_plan",
+                "daily_plan_mistake_signature",
+                "daily_goal"
+            )
         "jee_learning_engine" -> prefKey != "question_attempts"
         else -> true
     }
