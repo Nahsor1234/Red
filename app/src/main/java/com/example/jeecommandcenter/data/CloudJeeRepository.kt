@@ -145,7 +145,7 @@ class CloudJeeRepository(
         if (remote.isNotEmpty()) return orderedQuestions(remote)
 
         return orderedQuestions(localFallbackQuestions()
-            .filter { it.subjectId == canonicalSubject }
+            .filter { it.subject.equals(canonicalSubject, ignoreCase = true) }
             .map { it.toCloudQuestion(JeeCatalog.normalizeChapterId(it.chapterId)) })
     }
 
