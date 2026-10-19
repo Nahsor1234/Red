@@ -52,6 +52,13 @@ dependencies {
     // which conflicts with the AndroidX Core version used by this app.
     implementation('com.github.gregcockroft:AndroidMath:v1.0.0') {
         exclude group: 'com.android.support'
+        // Guava 18 already contains ListenableFuture; remove the duplicate standalone class jar.
+        exclude group: 'com.google.guava', module: 'listenablefuture'
+    }
+
+    // Resolve the duplicate class if listenablefuture enters through another transitive dependency.
+    configurations.configureEach {
+        exclude group: 'com.google.guava', module: 'listenablefuture'
     }
     debugImplementation 'androidx.compose.ui:ui-tooling'
 
