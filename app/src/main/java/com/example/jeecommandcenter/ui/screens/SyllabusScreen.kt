@@ -31,7 +31,6 @@ fun SyllabusScreen(
     selectedTab: AppTab,
     onTabSelected: (AppTab) -> Unit,
     onAiClick: () -> Unit = {},
-    onOpenPlanner: () -> Unit = {},
     onOpenRevision: () -> Unit = {},
     onOpenChapter: (JeeChapter) -> Unit = {}
 ) {
