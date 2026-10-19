@@ -43,8 +43,8 @@ class AiOrchestrator(context: android.content.Context) {
             appendLine("Analyze these recurring JEE mistakes.")
             mistakes.forEach {
                 appendLine(
-                    "- ${it.subject} / ${it.questionPrompt}: " +
-                        "type=${it.mistakeType}, repeats=${it.count}, correction=${it.correction}"
+                    "- ${it.subject} / ${it.questionPrompt.take(500)}: " +
+                        "type=${it.mistakeType}, repeats=${it.count}, correction=${it.correction.take(800)}"
                 )
             }
             appendLine("Return recurring patterns, root causes, and the next practice action.")
