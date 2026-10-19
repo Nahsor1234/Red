@@ -42,7 +42,7 @@ fun StudyPlannerScreen(
     Scaffold(
         containerColor = BgApp,
         topBar = {
-            JeeTopBar(title = "Study planner", subtitle = "Generated from your actual study state", onBack = onBack)
+            JeeTopBar(title = "Study planner", subtitle = "Daily work from goals, due reviews and learning gaps", onBack = onBack)
         }
     ) { padding ->
         LazyColumn(
@@ -51,6 +51,13 @@ fun StudyPlannerScreen(
         ) {
             item {
                 PlannerSummary(plan.goalMinutes, doneMinutes, remainingMinutes, completed, plan.items.size, progress)
+            }
+            item {
+                Text(
+                    "The plan prioritizes unfinished work, due chapter reviews and chapters with unresolved question mistakes. Use Regenerate after your learning state changes.",
+                    color = TextSecondary,
+                    fontSize = 11.sp
+                )
             }
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
