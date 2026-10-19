@@ -29,11 +29,12 @@ fun SharedQuestionPromptCard(prompt: String) {
         color = BgCardAlt,
         border = BorderStroke(1.dp, BgCardBorder.copy(alpha = .85f))
     ) {
-        Text(
-            prompt,
-            Modifier.padding(18.dp),
-            style = MaterialTheme.typography.titleLarge,
-            color = TextPrimary
+        MathMarkdownText(
+            text = prompt,
+            modifier = Modifier.padding(18.dp),
+            color = TextPrimary,
+            fontSize = MaterialTheme.typography.titleLarge.fontSize,
+            lineHeight = MaterialTheme.typography.titleLarge.lineHeight
         )
     }
 }
@@ -78,7 +79,13 @@ fun SharedQuestionOptionRow(
             )
         )
         Spacer(Modifier.width(8.dp))
-        Text(optionText, color = TextPrimary, modifier = Modifier.weight(1f))
+        MathMarkdownText(
+            text = optionText,
+            color = TextPrimary,
+            modifier = Modifier.weight(1f),
+            fontSize = MaterialTheme.typography.bodyLarge.fontSize,
+            lineHeight = MaterialTheme.typography.bodyLarge.lineHeight
+        )
         if (correctVisible) {
             androidx.compose.material3.Icon(Icons.Filled.CheckCircle, null, tint = PrimaryLight, modifier = Modifier.size(19.dp))
         } else if (wrongSelection) {
