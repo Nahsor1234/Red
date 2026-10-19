@@ -61,8 +61,11 @@ data class CloudQuestionAttempt(
     @SerialName("user_id") val userId: String,
     @SerialName("question_id") val questionId: String,
     @SerialName("chapter_id") val chapterId: String,
+    @SerialName("topic_id") val topicId: String? = null,
     @SerialName("selected_index") val selectedIndex: Int,
-    val correct: Boolean
+    val correct: Boolean,
+    @SerialName("response_time_sec") val responseTimeSec: Int = 0,
+    @SerialName("created_at") val createdAt: String? = null
 )
 
 @Serializable
