@@ -102,18 +102,25 @@ class AiSettingsRepository(context: android.content.Context) {
 }
 
 class AiEngine(private val settings: AiSettingsRepository) {
+    companion object {
+        const val DEFAULT_MAX_OUTPUT_TOKENS = 1_800
+        const val MAX_QUIZ_OUTPUT_TOKENS = 8_192
+    }
 
     suspend fun ask(
         prompt: String,
-        systemInstruction: String? = null
+        systemInstruction: String? = null,
+        maxOutputTokens: Int = DEFAULT_MAX_OUTPUT_TOKENS
     ): AiResult = askConversation(
         messages = listOf(AiPromptMessage("user", prompt)),
-        systemInstruction = systemInstruction
+        systemInstruction = systemInstruction,
+        maxOutputTokens = maxOutputTokens
     )
 
     suspend fun askConversation(
         messages: List<AiPromptMessage>,
-        systemInstruction: String? = null
+        systemInstruction: String? = null,
+        maxOutputTokens: Int = DEFAULT_MAX_OUTPUT_TOKENS
     ): AiResult = withContext(Dispatchers.IO) {
         val key = settings.apiKey()
             ?: return@withContext AiResult(false, error = "Add an API key in Settings → AI Hub.")
@@ -122,14 +129,16 @@ class AiEngine(private val settings: AiSettingsRepository) {
         runCatching {
             when (config.provider) {
                 AiProvider.GEMINI ->
-                    callGemini(key, config.model, messages, systemInstruction)
+                    callGemini(key, config.model, messages, systemInstruction, maxOutputTokens.coerceIn(128, MAX_QUIZ_OUTPUT_TOKENS))
                 else ->
                     callOpenAiCompatible(
                         key,
                         config.endpoint.ifBlank { settings.defaultEndpoint(config.provider) },
                         config.model,
                         messages,
-                        systemInstruction
+                        systemInstruction,
+                        maxOutputTokens.coerceIn(128, MAX_QUIZ_OUTPUT_TOKENS),
+                        config.provider
                     )
             }
         }.getOrElse {
@@ -140,16 +149,19 @@ class AiEngine(private val settings: AiSettingsRepository) {
     suspend fun stream(
         prompt: String,
         systemInstruction: String? = null,
+        maxOutputTokens: Int = DEFAULT_MAX_OUTPUT_TOKENS,
         onChunk: suspend (String) -> Unit
     ): AiResult = streamConversation(
         messages = listOf(AiPromptMessage("user", prompt)),
         systemInstruction = systemInstruction,
+        maxOutputTokens = maxOutputTokens,
         onChunk = onChunk
     )
 
     suspend fun streamConversation(
         messages: List<AiPromptMessage>,
         systemInstruction: String? = null,
+        maxOutputTokens: Int = DEFAULT_MAX_OUTPUT_TOKENS,
         onChunk: suspend (String) -> Unit
     ): AiResult = withContext(Dispatchers.IO) {
         val key = settings.apiKey()
@@ -159,7 +171,7 @@ class AiEngine(private val settings: AiSettingsRepository) {
         runCatching {
             val text = when (config.provider) {
                 AiProvider.GEMINI ->
-                    streamGemini(key, config.model, messages, systemInstruction, onChunk)
+                    streamGemini(key, config.model, messages, systemInstruction, maxOutputTokens.coerceIn(128, MAX_QUIZ_OUTPUT_TOKENS), onChunk)
                 else ->
                     streamOpenAiCompatible(
                         key,
@@ -167,6 +179,8 @@ class AiEngine(private val settings: AiSettingsRepository) {
                         config.model,
                         messages,
                         systemInstruction,
+                        maxOutputTokens.coerceIn(128, MAX_QUIZ_OUTPUT_TOKENS),
+                        config.provider,
                         onChunk
                     )
             }
