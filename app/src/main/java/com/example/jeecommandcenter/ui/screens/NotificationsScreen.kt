@@ -275,6 +275,7 @@ private fun NotificationManagementScreen(onBack: () -> Unit) {
     val notificationsAllowed = Build.VERSION.SDK_INT < 33 ||
         ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
     val appNotificationsEnabled = NotificationManagerCompat.from(context).areNotificationsEnabled()
+    val reminderChannelEnabled = ReminderNotificationPublisher.isReminderChannelEnabled(context)
     val exactAlarmsAllowed = Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
         (context.getSystemService(Context.ALARM_SERVICE) as AlarmManager).canScheduleExactAlarms()
 
@@ -472,14 +473,14 @@ private fun NotificationManagementScreen(onBack: () -> Unit) {
                 onSystemTimeClick = ::changeSystemReminderTime
             )
 
-            if (!notificationsAllowed || !appNotificationsEnabled) {
+            if (!notificationsAllowed || !appNotificationsEnabled || !reminderChannelEnabled) {
                 JeeCard {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Filled.Notifications, null, tint = PrimaryLight, modifier = Modifier.size(22.dp))
                         Spacer(Modifier.width(10.dp))
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                            Text("Notifications are blocked by Android", fontWeight = FontWeight.SemiBold)
-                            Text("Allow notifications so reminders can reach you.", color = TextSecondary, fontSize = 11.sp, lineHeight = 15.sp)
+                            Text("Notification delivery is blocked", fontWeight = FontWeight.SemiBold)
+                            Text("Enable app notifications and the Sigma JEE reminders channel in Android settings.", color = TextSecondary, fontSize = 11.sp, lineHeight = 15.sp)
                         }
                     }
                     Spacer(Modifier.height(9.dp))
@@ -879,7 +880,13 @@ private fun ReminderTimeline(
                         }
                         Surface(
                             modifier = Modifier.weight(1f).clickable {
-                                item.customReminder?.let { onCustomToggle(it, !it.enabled) }
+                                item.customReminder?.let {
+                                    if (it.repeat == CustomReminder.REPEAT_ONCE && item.at.isBefore(LocalDateTime.now())) {
+                                        onCustomEdit(it)
+                                    } else {
+                                        onCustomToggle(it, !it.enabled)
+                                    }
+                                }
                                 item.systemType?.let { onSystemToggle(it, !item.enabled) }
                             },
                             shape = RoundedCornerShape(14.dp),
@@ -910,8 +917,8 @@ private fun ReminderTimeline(
                                     Text(
                                         when {
                                             !masterEnabled && item.enabled -> "PAUSED"
-                                            !item.enabled -> "OFF"
                                             item.repeatLabel == CustomReminder.REPEAT_ONCE && item.at.isBefore(LocalDateTime.now()) -> "PAST DUE · EDIT TO RESCHEDULE"
+                                            !item.enabled -> "OFF · TAP TO TURN ON"
                                             item.repeatLabel == CustomReminder.REPEAT_ONCE -> "ONCE · TAP TO TURN OFF"
                                             else -> "DAILY · TAP TO TURN OFF"
                                         },
