@@ -145,7 +145,7 @@ fun AiTutorScreen(
                         messages = turns,
                         systemInstruction = JeeAiPrompt.taskInstruction("multi-turn JEE study coaching") +
                             "\n\nCurrent student context:\n" + freshStudentContext,
-                        maxOutputTokens = 1_800,
+                        maxOutputTokens = 4_096,
                         onChunk = { chunk ->
                             withContext(Dispatchers.Main.immediate) {
                                 streamingText += chunk
@@ -236,14 +236,14 @@ fun AiTutorScreen(
                     Surface(Modifier.fillMaxWidth(), color = if (isUser) BgCardAlt else BgCard, shape = RoundedCornerShape(18.dp), border = androidx.compose.foundation.BorderStroke(1.dp, BgCardBorder.copy(alpha = .75f))) {
                         Column(Modifier.padding(15.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(if (isUser) "YOU" else "COACH", color = PrimaryLight, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = .9.sp)
+                                Text(if (isUser) "YOU" else "COACH", color = PrimaryLight, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = .9.sp)
                                 if (isStreamingMessage && busy && message.text.isBlank()) { Spacer(Modifier.width(9.dp)); CircularProgressIndicator(Modifier.size(13.dp), strokeWidth = 2.dp, color = Primary) }
                             }
                             Spacer(Modifier.height(7.dp))
                             when {
-                                isUser -> MathMarkdownText(message.text, modifier = Modifier.fillMaxWidth(), color = TextPrimary, fontSize = 13.sp, lineHeight = 18.sp, fontWeight = FontWeight.Medium)
+                                isUser -> MathMarkdownText(message.text, modifier = Modifier.fillMaxWidth(), color = TextPrimary, fontSize = 14.sp, lineHeight = 21.sp, fontWeight = FontWeight.Medium)
                                 isStreamingMessage && busy && message.text.isBlank() -> Text("Coach is thinking…", color = TextSecondary, fontSize = 12.sp)
-                                else -> MathMarkdownText(message.text, modifier = Modifier.fillMaxWidth(), color = TextOnCard, fontSize = 13.sp, lineHeight = 19.sp)
+                                else -> MathMarkdownText(message.text, modifier = Modifier.fillMaxWidth(), color = TextOnCard, fontSize = 14.sp, lineHeight = 21.sp)
                             }
                         }
                     }
