@@ -32,16 +32,52 @@ fun RevisionScreen(
     var refresh by remember { mutableIntStateOf(0) }
     val context = LocalContext.current.applicationContext
     val learning = remember(context) { LearningRepository(context) }
+    val cloud = remember { CloudJeeRepository() }
+    var syncingCloudMistakes by remember { mutableStateOf(false) }
     val queue = remember(refresh) { repo.getRevisionQueue() }
     val mistakes = remember(refresh) { learning.getMistakes().filterNot { it.resolved } }
     val dueCount = queue.size
+
+    LaunchedEffect(cloud, learning) {
+        syncingCloudMistakes = true
+        runCatching {
+            val user = cloud.ensureSession()
+            val remoteAttempts = cloud.questionAttemptsForUser(user.id)
+            val pending = remoteAttempts.filter { attempt ->
+                !attempt.correct && attempt.selectedIndex >= 0 &&
+                    !learning.isCloudMistakeImported(user.id, attempt.id)
+            }
+            val questionsById = cloud.questionsByIds(pending.map { it.questionId }.toSet()).associateBy { it.id }
+            var imported = 0
+            pending.forEach { attempt ->
+                val cloudQuestion = questionsById[attempt.questionId] ?: return@forEach
+                if (learning.importCloudMistake(
+                        userId = user.id,
+                        attemptId = attempt.id,
+                        question = cloudQuestion.toMistakeQuestion(),
+                        selectedIndex = attempt.selectedIndex
+                    )
+                ) {
+                    imported++
+                }
+            }
+            if (imported > 0) refresh++
+        }
+        syncingCloudMistakes = false
+    }
 
     Scaffold(
         containerColor = BgApp,
         topBar = {
             JeeTopBar(
                 title = "Revision engine",
-                subtitle = if (dueCount == 0) "Nothing due right now" else dueCount.toString() + " reviews due",
+                subtitle = when {
+                    mistakes.isNotEmpty() && dueCount > 0 -> "${mistakes.size} mistakes · $dueCount chapter reviews due"
+                    mistakes.isNotEmpty() -> "${mistakes.size} question mistakes to review"
+                    syncingCloudMistakes -> "Checking saved practice attempts…"
+                    dueCount > 0 -> "$dueCount chapter reviews due"
+                    else -> "Nothing due right now"
+                },
                 onBack = onBack
             )
         }
@@ -281,3 +317,25 @@ private fun RevisionMistakeCard(mistake: MistakeRecord, onResolve: () -> Unit) {
         }
     }
 }
+
+private fun CloudQuestion.toMistakeQuestion() = Question(
+    id = id,
+    subject = when (subjectId.lowercase()) {
+        "physics" -> "Physics"
+        "chemistry" -> "Chemistry"
+        "mathematics" -> "Mathematics"
+        else -> subjectId.replace('_', ' ').replaceFirstChar { it.uppercase() }
+    },
+    chapterId = JeeCatalog.normalizeChapterId(chapterId),
+    chapter = chapterName,
+    topic = topic,
+    prompt = prompt,
+    options = options,
+    correctIndex = correctIndex,
+    explanation = explanation,
+    difficulty = difficulty,
+    source = source,
+    year = year,
+    marks = marks,
+    negativeMarks = negativeMarks
+)
