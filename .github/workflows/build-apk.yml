@@ -14,6 +14,8 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      HAS_PERSISTENT_SIGNING_KEY: ${{ secrets.ANDROID_DEBUG_KEYSTORE_BASE64 != '' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -42,6 +44,7 @@ jobs:
       # Debug keys are for development APKs only; production releases need a dedicated
       # private release keystore managed separately.
       - name: Restore stable debug signing key
+        if: ${{ env.HAS_PERSISTENT_SIGNING_KEY != 'true' }}
         uses: actions/cache@v4
         with:
           path: ~/.android/debug.keystore
