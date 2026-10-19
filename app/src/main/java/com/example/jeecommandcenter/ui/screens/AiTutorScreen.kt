@@ -259,10 +259,7 @@ private fun buildBoundedAiTurns(history: List<AiChatMessage>): List<AiPromptMess
     // Keep the active practice context once in history, but not in the visible transcript.
     val questionContext = history.lastOrNull { it.role == "CONTEXT" }?.text?.take(4_500)
     var remainingChars = 11_500 - (questionContext?.length ?: 0)
-    val recentMessages = history.asSequence()
-        .filterNot { it.role == "CONTEXT" }
-        .takeLast(16)
-        .toList()
+    val recentMessages = history.filterNot { it.role == "CONTEXT" }.takeLast(16)
     val selected = mutableListOf<AiPromptMessage>()
     for (message in recentMessages.asReversed()) {
         if (remainingChars <= 0) break
