@@ -75,7 +75,7 @@ private fun MistakeCard(mistake: MistakeRecord, learning: LearningRepository, on
     var typeMenu by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(BgCard).border(JeeSurfaceTokens.borderWidth,BgCardBorder.copy(alpha=JeeSurfaceTokens.cardBorderAlpha),JeeShapes.medium).padding(14.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Column(Modifier.weight(1f)) { Text(mistake.subject + " · " + chapterName + " · " + sourceLabel, color = AccentBlueLight, fontSize = 10.sp); Spacer(Modifier.height(4.dp)); Text(mistake.questionPrompt, style = MaterialTheme.typography.titleMedium) }
+            Column(Modifier.weight(1f)) { Text(mistake.subject + " · " + chapterName + " · " + sourceLabel, color = AccentBlueLight, fontSize = 10.sp); Spacer(Modifier.height(4.dp)); MathMarkdownText(mistake.questionPrompt, modifier = Modifier.fillMaxWidth(), color = TextPrimary, fontSize = MaterialTheme.typography.titleMedium.fontSize, lineHeight = MaterialTheme.typography.titleMedium.lineHeight) }
             Text("×" + mistake.count, color = if (mistake.count >= 2) AccentAmber else TextMuted)
         }
         Spacer(Modifier.height(8.dp))
@@ -87,11 +87,11 @@ private fun MistakeCard(mistake: MistakeRecord, learning: LearningRepository, on
         }
         if (expanded) {
             Spacer(Modifier.height(8.dp))
-            Text("Your answer: " + mistake.lastSelectedAnswer, color = TextSecondary, fontSize = 12.sp)
-            Text("Correct answer: " + mistake.correctAnswer, color = AccentGreen, fontSize = 12.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) { Text("Your answer:", color = TextSecondary, fontSize = 12.sp); MathMarkdownText(mistake.lastSelectedAnswer, modifier = Modifier.fillMaxWidth(), color = TextSecondary, fontSize = 12.sp, lineHeight = 17.sp) }
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) { Text("Correct answer:", color = AccentGreen, fontSize = 12.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium); MathMarkdownText(mistake.correctAnswer, modifier = Modifier.fillMaxWidth(), color = AccentGreen, fontSize = 12.sp, lineHeight = 17.sp) }
             if (mistake.correction.isNotBlank()) {
                 Text("Solution", color = TextPrimary, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, fontSize = 12.sp)
-                Text(mistake.correction, color = TextSecondary, fontSize = 12.sp, lineHeight = 18.sp)
+                MathMarkdownText(mistake.correction, modifier = Modifier.fillMaxWidth(), color = TextSecondary, fontSize = 12.sp, lineHeight = 18.sp)
             } else {
                 Text("No explanation was saved for this question.", color = TextMuted, fontSize = 11.sp)
             }
