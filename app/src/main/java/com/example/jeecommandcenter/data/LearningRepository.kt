@@ -68,7 +68,8 @@ class LearningRepository(private val context: Context) {
         testId: String,
         question: Question,
         selectedIndex: Int,
-        responseTimeSec: Int
+        responseTimeSec: Int,
+        source: String = "assessment"
     ): QuestionAttemptRecord {
         val record = QuestionAttemptRecord(
             id = System.currentTimeMillis(),
@@ -82,7 +83,7 @@ class LearningRepository(private val context: Context) {
         )
         val all = getQuestionAttempts().toMutableList().apply { add(record) }
         saveQuestionAttempts(all.takeLast(1000))
-        if (!record.correct && selectedIndex >= 0) registerMistake(question, selectedIndex)
+        if (!record.correct && selectedIndex >= 0) registerMistake(question, selectedIndex, source)
         return record
     }
 
@@ -257,7 +258,7 @@ class LearningRepository(private val context: Context) {
             .sortedByDescending { it.count }
     }
 
-    private fun registerMistake(question: Question, selectedIndex: Int) {
+    private fun registerMistake(question: Question, selectedIndex: Int, source: String) {
         val selected = question.options.getOrNull(selectedIndex) ?: "No answer"
         val correct = question.options.getOrNull(question.correctIndex) ?: "Unknown"
         val chapterId = JeeCatalog.normalizeChapterId(question.chapterId)
@@ -273,7 +274,7 @@ class LearningRepository(private val context: Context) {
                 lastSelectedAnswer = selected,
                 count = 1,
                 mistakeType = MistakeType.UNCLASSIFIED,
-                source = "assessment",
+                source = source,
                 correction = question.explanation
             )
         } else {
@@ -281,6 +282,7 @@ class LearningRepository(private val context: Context) {
                 lastSelectedAnswer = selected,
                 chapterId = chapterId,
                 count = existing.count + 1,
+                source = source,
                 resolved = false,
                 lastSeenAt = System.currentTimeMillis()
             )
