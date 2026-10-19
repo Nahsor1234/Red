@@ -36,7 +36,6 @@ private data class DashboardSnapshot(
     val todayMinutes: Int,
     val goalMinutes: Int,
     val completedChapters: Int,
-    val revisionDue: Int,
     val priorities: List<DailyPriority>,
     val weak: WeakChapter?,
     val unresolvedMistakes: Int,
@@ -75,7 +74,6 @@ fun DashboardScreen(
                 completedChapters = JeeRepository.syllabus.keys.sumOf { subject ->
                     repo.chapters(subject).count { it.progress >= 1f }
                 },
-                revisionDue = repo.getRevisionQueue().size,
                 priorities = intelligence.dailyPriorities(3),
                 weak = intelligence.weakChapters(1).firstOrNull(),
                 unresolvedMistakes = learning.getMistakes().count { !it.resolved },
@@ -88,7 +86,6 @@ fun DashboardScreen(
     val goalMinutes = snapshot?.goalMinutes ?: repo.getDailyGoalMinutes()
     val completedChapters = snapshot?.completedChapters ?: 0
     val coverage = if (totalChapters == 0) 0f else completedChapters.toFloat() / totalChapters
-    val revisionDue = snapshot?.revisionDue ?: 0
     val priorities = snapshot?.priorities.orEmpty()
     val weak = snapshot?.weak
     val unresolvedMistakes = snapshot?.unresolvedMistakes ?: 0
@@ -154,7 +151,7 @@ fun DashboardScreen(
                 SectionHeader("Quick actions")
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     QuickAction("Practice", questionsAttempted.toString() + " questions", Icons.Filled.Quiz, Modifier.weight(1f), true, onOpenAssessment)
-                    QuickAction("Revision", revisionDue.toString() + " due", Icons.Filled.Replay, Modifier.weight(1f), false, onOpenRevision)
+                    QuickAction("Notes", "Your library", Icons.Filled.Description, Modifier.weight(1f), false, onOpenRevision)
                 }
                 Spacer(Modifier.height(10.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -185,7 +182,7 @@ fun DashboardScreen(
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         HomeMetric((todayMinutes / 60).toString() + "h " + (todayMinutes % 60).toString() + "m", "Study", Modifier.weight(1f))
                         HomeMetric(todayTasks.count { it.done }.toString() + "/" + todayTasks.size, "Tasks", Modifier.weight(1f))
-                        HomeMetric(revisionDue.toString(), "Due", Modifier.weight(1f))
+                        HomeMetric(unresolvedMistakes.toString(), "Mistakes", Modifier.weight(1f))
                         HomeMetric((coverage * 100).toInt().toString() + "%", "Coverage", Modifier.weight(1f))
                     }
                     Spacer(Modifier.height(12.dp))
