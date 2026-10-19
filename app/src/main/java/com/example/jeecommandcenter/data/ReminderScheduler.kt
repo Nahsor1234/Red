@@ -310,6 +310,13 @@ object ReminderNotificationPublisher {
         return post(context, notificationId(reminder.id), title, body, "home", "Open Sigma JEE")
     }
 
+    fun isReminderChannelEnabled(context: Context): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return true
+        val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val channel = manager.getNotificationChannel(CHANNEL_ID) ?: return true
+        return channel.importance != NotificationManager.IMPORTANCE_NONE
+    }
+
     fun showTest(context: Context): Boolean = post(
         context,
         TEST_NOTIFICATION_ID,
