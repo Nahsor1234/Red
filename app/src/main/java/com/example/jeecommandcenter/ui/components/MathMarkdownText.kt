@@ -1,7 +1,6 @@
 package com.example.jeecommandcenter.ui.components
 
 import android.graphics.Color as AndroidColor
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -13,7 +12,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -33,7 +31,6 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.compose.foundation.shape.RoundedCornerShape
 import com.agog.mathdisplay.MTMathView
 import com.agog.mathdisplay.parse.MTParseErrors
 
@@ -130,7 +127,7 @@ private fun InlineMathText(
                     Modifier.align(Alignment.CenterVertically)
                 )
             } else if (!segment.text.isNullOrEmpty()) {
-                val tokens = remember(segment.text) { tokenizeText(segment.text) }
+                val tokens = tokenizeText(segment.text)
                 tokens.forEach { token ->
                     if (token.isNotEmpty()) {
                         val bold = token.startsWith("**") && token.endsWith("**") && token.length > 4
