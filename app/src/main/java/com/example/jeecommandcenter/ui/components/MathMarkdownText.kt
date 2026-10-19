@@ -45,7 +45,8 @@ fun MathMarkdownText(
     modifier: Modifier = Modifier,
     color: Color = MaterialTheme.colorScheme.onSurface,
     fontSize: TextUnit = MaterialTheme.typography.bodyMedium.fontSize,
-    lineHeight: TextUnit = fontSize * 1.45f
+    lineHeight: TextUnit = fontSize * 1.45f,
+    fontWeight: FontWeight = FontWeight.Normal
 ) {
     val blocks = remember(text) { parseMathBlocks(text) }
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -57,7 +58,7 @@ fun MathMarkdownText(
                     color,
                     block.fontSize ?: fontSize,
                     lineHeight,
-                    block.weight
+                    if (block.weight == FontWeight.Normal) fontWeight else block.weight
                 )
                 is MathBlock.Bullet -> Row(
                     Modifier.fillMaxWidth(),
@@ -65,7 +66,7 @@ fun MathMarkdownText(
                     verticalAlignment = Alignment.Top
                 ) {
                     Text("•", color = color, fontSize = fontSize, lineHeight = lineHeight)
-                    InlineMathText(block.text, Modifier.weight(1f), color, fontSize, lineHeight)
+                    InlineMathText(block.text, Modifier.weight(1f), color, fontSize, lineHeight, fontWeight)
                 }
                 is MathBlock.Numbered -> Row(
                     Modifier.fillMaxWidth(),
