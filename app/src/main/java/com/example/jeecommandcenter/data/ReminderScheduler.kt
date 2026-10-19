@@ -118,7 +118,7 @@ class ReminderScheduler(context: Context) {
             set(Calendar.MILLISECOND, 0)
             if (timeInMillis <= System.currentTimeMillis()) add(Calendar.DAY_OF_YEAR, 1)
         }.timeInMillis
-        alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, trigger, pendingIntent)
+        setReminderAlarm(alarmManager, trigger, pendingIntent)
     }
 
     fun scheduleCustom(id: String) {
@@ -130,58 +130,76 @@ class ReminderScheduler(context: Context) {
             return
         }
 
+        val nowMillis = System.currentTimeMillis()
+        val today = LocalDate.now()
         val configuredTime = LocalTime.of(reminder.hour, reminder.minute)
         val quiet = settings.getQuietHours()
         val useQuietEnd = settings.isQuietAt(configuredTime)
-        val scheduledDate = if (reminder.repeat == CustomReminder.REPEAT_ONCE) {
-            reminder.scheduledDate?.let { raw -> runCatching { LocalDate.parse(raw) }.getOrNull() }
-        } else null
-        if (reminder.repeat == CustomReminder.REPEAT_ONCE && !reminder.scheduledDate.isNullOrBlank() && scheduledDate == null) {
+        val quietEnd = LocalTime.of(quiet.endHour, quiet.endMinute)
+        val scheduledDate = reminder.scheduledDate
+            ?.let { raw -> runCatching { LocalDate.parse(raw) }.getOrNull() }
+
+        if (reminder.repeat == CustomReminder.REPEAT_ONCE && scheduledDate == null) {
             alarmManager.cancel(pendingIntent)
             return
         }
 
+        // For repeating reminders, scheduledDate is the first eligible date. Older records
+        // without a date start today. Once reminders always use their selected date.
+        val baseDate = if (reminder.repeat == CustomReminder.REPEAT_ONCE) {
+            scheduledDate!!
+        } else {
+            val startDate = scheduledDate ?: today
+            if (startDate.isBefore(today)) today else startDate
+        }
+
         val trigger = Calendar.getInstance().apply {
-            if (scheduledDate != null) {
-                set(Calendar.YEAR, scheduledDate.year)
-                set(Calendar.MONTH, scheduledDate.monthValue - 1)
-                set(Calendar.DAY_OF_MONTH, scheduledDate.dayOfMonth)
-                if (useQuietEnd) {
-                    val quietEnd = LocalTime.of(quiet.endHour, quiet.endMinute)
-                    if (!quietEnd.isAfter(configuredTime)) add(Calendar.DAY_OF_YEAR, 1)
-                    set(Calendar.HOUR_OF_DAY, quiet.endHour)
-                    set(Calendar.MINUTE, quiet.endMinute)
-                } else {
-                    set(Calendar.HOUR_OF_DAY, reminder.hour)
-                    set(Calendar.MINUTE, reminder.minute)
-                }
-            } else {
-                if (useQuietEnd) {
-                    set(Calendar.HOUR_OF_DAY, quiet.endHour)
-                    set(Calendar.MINUTE, quiet.endMinute)
-                } else {
-                    set(Calendar.HOUR_OF_DAY, reminder.hour)
-                    set(Calendar.MINUTE, reminder.minute)
-                }
-            }
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-            if (scheduledDate == null && timeInMillis <= System.currentTimeMillis()) {
+            set(Calendar.YEAR, baseDate.year)
+            set(Calendar.MONTH, baseDate.monthValue - 1)
+            set(Calendar.DAY_OF_MONTH, baseDate.dayOfMonth)
+
+            // If the chosen time falls in quiet hours, move delivery to quiet-hours end.
+            // If that end is earlier than the configured time, delivery belongs to the next day.
+            if (useQuietEnd && !quietEnd.isAfter(configuredTime)) {
                 add(Calendar.DAY_OF_YEAR, 1)
             }
-            if (scheduledDate == null && reminder.repeat == CustomReminder.REPEAT_WEEKDAYS) {
-                while (get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY || get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY) {
+            set(Calendar.HOUR_OF_DAY, if (useQuietEnd) quiet.endHour else reminder.hour)
+            set(Calendar.MINUTE, if (useQuietEnd) quiet.endMinute else reminder.minute)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+
+            if (reminder.repeat != CustomReminder.REPEAT_ONCE) {
+                while (
+                    timeInMillis <= nowMillis ||
+                    (reminder.repeat == CustomReminder.REPEAT_WEEKDAYS &&
+                        (get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY ||
+                            get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY))
+                ) {
                     add(Calendar.DAY_OF_YEAR, 1)
                 }
             }
         }.timeInMillis
 
-        // A date-specific reminder never silently rolls over to another date if its time has passed.
-        if (scheduledDate != null && trigger <= System.currentTimeMillis()) {
+        // A one-time reminder that is already due or past due must not roll into tomorrow.
+        if (reminder.repeat == CustomReminder.REPEAT_ONCE && trigger <= nowMillis) {
             alarmManager.cancel(pendingIntent)
             return
         }
-        alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, trigger, pendingIntent)
+        setReminderAlarm(alarmManager, trigger, pendingIntent)
+    }
+
+    private fun setReminderAlarm(alarmManager: AlarmManager, triggerAtMillis: Long, pendingIntent: PendingIntent) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && alarmManager.canScheduleExactAlarms()) {
+            try {
+                alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
+                return
+            } catch (_: SecurityException) {
+                // Permission can be revoked between the capability check and scheduling.
+            }
+        }
+        // Keep reminders working when exact-alarm access is unavailable, with Android's
+        // normal inexact-alarm delivery window.
+        alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
     }
 
     fun cancelCustom(id: String) {
@@ -265,7 +283,8 @@ class ReminderBootReceiver : BroadcastReceiver() {
         when (intent?.action) {
             Intent.ACTION_BOOT_COMPLETED,
             Intent.ACTION_TIME_CHANGED,
-            Intent.ACTION_TIMEZONE_CHANGED -> ReminderScheduler(context).scheduleAll()
+            Intent.ACTION_TIMEZONE_CHANGED,
+            AlarmManager.ACTION_SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED -> ReminderScheduler(context).scheduleAll()
         }
     }
 }
@@ -291,6 +310,24 @@ object ReminderNotificationPublisher {
         return post(context, notificationId(reminder.id), title, body, "home", "Open Sigma JEE")
     }
 
+    fun isReminderChannelEnabled(context: Context): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return true
+        val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val channel = manager.getNotificationChannel(CHANNEL_ID) ?: return true
+        return channel.importance != NotificationManager.IMPORTANCE_NONE
+    }
+
+    fun showTest(context: Context): Boolean = post(
+        context,
+        TEST_NOTIFICATION_ID,
+        "Sigma JEE test reminder",
+        "Notifications are reaching your device. Your reminder setup is ready to test.",
+        "home",
+        "Open Sigma JEE"
+    )
+
+    private const val TEST_NOTIFICATION_ID = 89999
+
     private fun post(context: Context, notificationId: Int, title: String, body: String, target: String, actionTitle: String): Boolean {
         if (Build.VERSION.SDK_INT >= 33 &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
@@ -298,6 +335,10 @@ object ReminderNotificationPublisher {
         if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) return false
 
         createChannel(context)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            if (manager.getNotificationChannel(CHANNEL_ID)?.importance == NotificationManager.IMPORTANCE_NONE) return false
+        }
         val openIntent = Intent(context, MainActivity::class.java)
             .putExtra(MainActivity.EXTRA_OPEN_TARGET, target)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
