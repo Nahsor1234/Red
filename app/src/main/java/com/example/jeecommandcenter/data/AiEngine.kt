@@ -203,10 +203,13 @@ class AiEngine(private val settings: AiSettingsRepository) {
                 "Each object: {\"prompt\":string,\"options\":[4 strings],\"correctIndex\":0-3," +
                 "\"explanation\":string,\"topic\":string}. No markdown."
 
+        val quizTokenBudget = (count.coerceIn(1, 20) * 400)
+            .coerceIn(2_048, MAX_QUIZ_OUTPUT_TOKENS)
         val result = ask(
             prompt,
             "You generate accurate educational multiple-choice questions for JEE. " +
-                "Exactly one option must be correct. Never invent exam claims."
+                "Exactly one option must be correct. Never invent exam claims.",
+            maxOutputTokens = quizTokenBudget
         )
 
         if (!result.success) return emptyList()
@@ -257,7 +260,8 @@ class AiEngine(private val settings: AiSettingsRepository) {
         key: String,
         model: String,
         messages: List<AiPromptMessage>,
-        systemInstruction: String?
+        systemInstruction: String?,
+        maxOutputTokens: Int
     ): AiResult {
         val contents = JSONArray()
         messages.filter { it.content.isNotBlank() }.forEach { message ->
@@ -282,6 +286,7 @@ class AiEngine(private val settings: AiSettingsRepository) {
                 )
             }
             put("contents", contents)
+            put("generationConfig", JSONObject().put("maxOutputTokens", maxOutputTokens))
         }
 
         return postJson(
@@ -305,7 +310,9 @@ class AiEngine(private val settings: AiSettingsRepository) {
         endpoint: String,
         model: String,
         messages: List<AiPromptMessage>,
-        systemInstruction: String?
+        systemInstruction: String?,
+        maxOutputTokens: Int,
+        provider: AiProvider
     ): AiResult {
         require(endpoint.startsWith("https://")) { "API endpoint must start with https://" }
         require(model.isNotBlank()) { "Model ID cannot be blank." }
@@ -333,9 +340,11 @@ class AiEngine(private val settings: AiSettingsRepository) {
         return postJson(
             URL(endpoint),
             mapOf("Authorization" to "Bearer $key"),
-            JSONObject()
-                .put("model", model.trim())
-                .put("messages", requestMessages)
+            JSONObject().apply {
+                put("model", model.trim())
+                put("messages", requestMessages)
+                put(if (provider == AiProvider.OPENAI) "max_completion_tokens" else "max_tokens", maxOutputTokens)
+            }
         ) { response ->
             response.optJSONArray("choices")
                 ?.optJSONObject(0)
@@ -352,6 +361,8 @@ class AiEngine(private val settings: AiSettingsRepository) {
         model: String,
         messages: List<AiPromptMessage>,
         systemInstruction: String?,
+        maxOutputTokens: Int,
+        provider: AiProvider,
         onChunk: suspend (String) -> Unit
     ): String {
         require(endpoint.startsWith("https://")) { "API endpoint must start with https://" }
@@ -390,6 +401,7 @@ class AiEngine(private val settings: AiSettingsRepository) {
                 JSONObject()
                     .put("model", model)
                     .put("messages", requestMessages)
+                    .put(if (provider == AiProvider.OPENAI) "max_completion_tokens" else "max_tokens", maxOutputTokens)
                     .put("stream", true)
                     .toString()
                     .toByteArray()
@@ -434,6 +446,7 @@ class AiEngine(private val settings: AiSettingsRepository) {
         model: String,
         messages: List<AiPromptMessage>,
         systemInstruction: String?,
+        maxOutputTokens: Int,
         onChunk: suspend (String) -> Unit
     ): String {
         val contents = JSONArray()
@@ -459,6 +472,7 @@ class AiEngine(private val settings: AiSettingsRepository) {
                 )
             }
             put("contents", contents)
+            put("generationConfig", JSONObject().put("maxOutputTokens", maxOutputTokens))
         }
 
         val url = URL(
