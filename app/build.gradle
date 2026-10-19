@@ -56,10 +56,6 @@ dependencies {
         exclude group: 'com.google.guava', module: 'listenablefuture'
     }
 
-    // Resolve the duplicate class if listenablefuture enters through another transitive dependency.
-    configurations.configureEach {
-        exclude group: 'com.google.guava', module: 'listenablefuture'
-    }
     debugImplementation 'androidx.compose.ui:ui-tooling'
 
     implementation 'com.google.android.material:material:1.12.0'
@@ -67,4 +63,10 @@ dependencies {
     implementation 'io.github.jan-tennert.supabase:gotrue-kt:2.6.0'
     implementation 'io.github.jan-tennert.supabase:postgrest-kt:2.6.0'
     implementation 'io.ktor:ktor-client-android:2.3.12'
+}
+
+
+// Resolve the duplicate ListenableFuture class if the standalone artifact arrives transitively.
+configurations.configureEach {
+    exclude group: 'com.google.guava', module: 'listenablefuture'
 }
