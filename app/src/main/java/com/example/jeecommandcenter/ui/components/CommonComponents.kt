@@ -88,7 +88,7 @@ enum class AppTab { HOME, SYLLABUS, AI, TASKS, STATS }
 
 @Composable fun JeeCard(modifier: Modifier = Modifier, featured: Boolean = false, content: @Composable ColumnScope.() -> Unit) { val shape = if (featured) JeeShapes.large else JeeShapes.medium; Column(modifier.fillMaxWidth().clip(shape).background(if (featured) BgCardAlt else BgCard).border(JeeSurfaceTokens.borderWidth, BgCardBorder.copy(alpha = if (featured) JeeSurfaceTokens.featuredBorderAlpha else JeeSurfaceTokens.cardBorderAlpha), shape).padding(JeeSpacing.lg), content = content) }
 @Composable fun LinearStatBar(progress: Float, modifier: Modifier = Modifier, trackColor: Color = BgDivider, fillColor: Color = Primary, height: androidx.compose.ui.unit.Dp = 5.dp) { val p by animateFloatAsState(progress.coerceIn(0f, 1f), animationSpec = tween(320), label = "progress"); Box(modifier.fillMaxWidth().height(height).clip(JeeShapes.pill).background(trackColor).semantics { progressBarRangeInfo = ProgressBarRangeInfo(p, 0f..1f) }) { Box(Modifier.fillMaxHeight().fillMaxWidth(p).clip(JeeShapes.pill).background(fillColor)) } }
-@Composable fun SectionHeader(title: String, actionLabel: String? = null, onActionClick: () -> Unit = {}) { Row(Modifier.fillMaxWidth().padding(vertical = JeeSpacing.sm), Arrangement.SpaceBetween, Alignment.CenterVertically) { Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold); if (actionLabel != null) Text(actionLabel, style = MaterialTheme.typography.labelMedium.copy(color = PrimaryLight), modifier = Modifier.semantics { role = Role.Button }.premiumClick { onActionClick() }) } }
+@Composable fun SectionHeader(title: String, actionLabel: String? = null, onActionClick: () -> Unit = {}) { Row(Modifier.fillMaxWidth().padding(vertical = JeeSpacing.sm), Arrangement.SpaceBetween, Alignment.CenterVertically) { Text(title, style = MaterialTheme.typography.titleMedium); if (actionLabel != null) Text(actionLabel, style = MaterialTheme.typography.labelMedium.copy(color = PrimaryLight), modifier = Modifier.semantics { role = Role.Button }.premiumClick { onActionClick() }) } }
 data class TaskItem(val id: String, val title: String, val subtitle: String, val duration: String, val done: Boolean = false, val inProgress: Boolean = false)
 @Composable
 fun TaskRow(
@@ -103,7 +103,7 @@ fun TaskRow(
         label = "task-alpha"
     )
     val check by animateColorAsState(
-        if (task.done) Primary else Color.Transparent,
+        if (task.done) (if (expressiveMotion) Primary else Success) else Color.Transparent,
         animationSpec = tween(300),
         label = "task-check"
     )
@@ -144,7 +144,7 @@ fun TaskRow(
                 Modifier.size(20.dp)
                     .clip(JeeShapes.small)
                     .background(check)
-                    .border(1.dp, if (task.done) Primary else BgCardBorder, JeeShapes.small),
+                    .border(1.dp, if (task.done && expressiveMotion) Primary else if (task.done) Success else BgCardBorder, JeeShapes.small),
                 contentAlignment = Alignment.Center
             ) {
                 if (task.done) {
