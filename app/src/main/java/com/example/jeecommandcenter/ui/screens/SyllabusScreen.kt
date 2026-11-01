@@ -166,7 +166,11 @@ fun SyllabusScreen(
                             )
                         }
                         Text(
-                            if (cloudAvailable) "Cloud progress" else "Local progress · offline-ready",
+                            when {
+                                cloudAvailable -> "Cloud progress"
+                                cloudError != null -> "Cloud unavailable · local progress shown"
+                                else -> "Local progress · offline-ready"
+                            },
                             color = TextSecondary,
                             style = MaterialTheme.typography.labelMedium
                         )
@@ -190,6 +194,7 @@ fun SyllabusScreen(
                         JeeFilterChip(value, value == subject) {
                             subject = value
                             filter = "All"
+                            query = ""
                         }
                     }
                 }
@@ -276,7 +281,7 @@ fun SyllabusScreen(
                     Modifier.weight(1f),
                     contentPadding = PaddingValues(bottom = 12.dp)
                 ) {
-                    if (filter == "All" && attention != null) {
+                    if (filter == "All" && query.isBlank() && attention != null) {
                         item {
                             Column(
                                 Modifier.fillMaxWidth()
@@ -363,7 +368,7 @@ fun SyllabusScreen(
                                     Text(
                                         "${(progress * 100).toInt()}% · ${chapter.estimatedMinutes} min",
                                         color = TextMuted,
-                                        fontSize = 10.sp
+                                        style = MaterialTheme.typography.labelMedium
                                     )
                                     Spacer(Modifier.height(5.dp))
                                     LinearStatBar(
