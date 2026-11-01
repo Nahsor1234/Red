@@ -114,9 +114,12 @@ private fun TaskListItem(task: AppTask, repo: JeeRepository, onOpen: (AppTask) -
                 Box(Modifier.size(22.dp).clip(RoundedCornerShape(7.dp)).background(checkColor)
                     .border(1.dp, if (task.done) Success else BgCardBorder, RoundedCornerShape(7.dp)),
                     contentAlignment = Alignment.Center) {
-                    AnimatedVisibility(visible = task.done, enter = fadeIn(tween(JeeMotion.fastMillis)),
-                        exit = fadeOut(tween(JeeMotion.fastMillis))) {
-                        Icon(Icons.Filled.Check, null, tint = SuccessDark, modifier = Modifier.size(14.dp))
+                    AnimatedContent(targetState = task.done, label = "task-checkbox-check") { completed ->
+                        if (completed) {
+                            Icon(Icons.Filled.Check, null, tint = SuccessDark, modifier = Modifier.size(14.dp))
+                        } else {
+                            Spacer(Modifier.size(14.dp))
+                        }
                     }
                 }
             }
