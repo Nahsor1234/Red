@@ -427,8 +427,8 @@ fun DashboardScreen(
                         onOpenAssessment
                     )
                     QuickAction(
-                        "Notes",
-                        "Your library",
+                        "Revision",
+                        "Review queue",
                         Icons.Filled.Description,
                         Modifier.weight(1f),
                         onOpenRevision
