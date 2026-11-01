@@ -173,7 +173,7 @@ fun TaskRow(
     }
 }
 
-@Composable fun JeeFilterChip(label: String, selected: Boolean, onClick: () -> Unit) { FilterChip(selected = selected, onClick = onClick, label = { Text(label, style = MaterialTheme.typography.labelMedium.copy(fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal)) }, shape = JeeShapes.small, colors = FilterChipDefaults.filterChipColors(containerColor = BgCard, labelColor = TextSecondary, selectedContainerColor = Primary, selectedLabelColor = MaterialTheme.colorScheme.onPrimary)) }
+@Composable fun JeeFilterChip(label: String, selected: Boolean, onClick: () -> Unit) { FilterChip(selected = selected, onClick = onClick, label = { Text(label, style = MaterialTheme.typography.labelMedium.copy(fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal)) }, shape = JeeShapes.small, colors = FilterChipDefaults.filterChipColors(containerColor = BgCard, labelColor = TextSecondary, selectedContainerColor = Primary, selectedLabelColor = BgAppBase)) }
 
 private enum class NavVisual { HOME, SYLLABUS, AI, TASKS, TIMER }
 
