@@ -168,7 +168,7 @@ fun DashboardScreen(
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         IconButton(onClick = onOpenNotifications) {
-                            Icon(Icons.Filled.Notifications, "Notifications", tint = PrimaryLight)
+                            Icon(Icons.Filled.Notifications, "Notifications", tint = TextSecondary)
                         }
                         IconButton(onClick = onOpenSettings) {
                             Icon(Icons.Filled.Settings, "Settings", tint = TextPrimary)
@@ -318,7 +318,7 @@ fun DashboardScreen(
                 Spacer(Modifier.height(JeeSpacing.md))
 
                 Spacer(Modifier.height(JeeSpacing.md))
-                SectionHeader("Today")
+                HomeSectionHeader("Today")
 
                 if (snapshot == null) {
                     Text(
@@ -371,14 +371,14 @@ fun DashboardScreen(
                         .padding(vertical = JeeSpacing.sm),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Filled.CalendarMonth, null, tint = PrimaryLight, modifier = Modifier.size(20.dp))
+                    Icon(Icons.Filled.CalendarMonth, null, tint = TextSecondary, modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(JeeSpacing.sm))
                     Column(Modifier.weight(1f)) {
                         Text("Daily consistency", style = MaterialTheme.typography.titleSmall)
                         Text(
                             "${currentMonth.month.getDisplayName(TextStyle.SHORT, Locale.getDefault())} · $dailyLogCompleted/${currentMonth.lengthOfMonth()} days completed",
                             color = TextSecondary,
-                            style = MaterialTheme.typography.labelSmall
+                            style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = "tnum")
                         )
                         Spacer(Modifier.height(6.dp))
                         LinearStatBar(
@@ -391,7 +391,7 @@ fun DashboardScreen(
                 }
 
                 Spacer(Modifier.height(JeeSpacing.md))
-                SectionHeader("Today's tasks", "See all") { onTabSelected(AppTab.TASKS) }
+                HomeSectionHeader("Today's tasks", "See all") { onTabSelected(AppTab.TASKS) }
                 if (snapshot == null) {
                     Text("Loading tasks…", color = TextSecondary, style = MaterialTheme.typography.bodySmall)
                 } else if (todayTasks.isEmpty()) {
@@ -471,7 +471,7 @@ fun DashboardScreen(
                             )
                         }
                         Spacer(Modifier.width(JeeSpacing.sm))
-                        Icon(Icons.Filled.ChevronRight, null, tint = PrimaryLight)
+                        Icon(Icons.Filled.ChevronRight, null, tint = TextSecondary)
                     }
                 }
 
@@ -549,6 +549,28 @@ fun DashboardScreen(
 data class FocusDisplay(val title: String, val reason: String, val durationMin: Int, val subject: String)
 
 @Composable
+@Composable
+private fun HomeSectionHeader(
+    title: String,
+    actionLabel: String? = null,
+    onActionClick: () -> Unit = {}
+) {
+    Row(
+        Modifier.fillMaxWidth().padding(vertical = JeeSpacing.sm),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        if (actionLabel != null) {
+            Text(
+                actionLabel,
+                style = MaterialTheme.typography.labelMedium.copy(color = TextSecondary),
+                modifier = Modifier.semantics { role = Role.Button }.premiumClick { onActionClick() }
+            )
+        }
+    }
+}
+
 private fun HomeMetric(
     value: String,
     label: String,
