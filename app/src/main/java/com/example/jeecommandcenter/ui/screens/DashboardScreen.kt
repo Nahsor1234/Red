@@ -413,6 +413,11 @@ fun DashboardScreen(
                     }
                     Icon(Icons.Filled.ChevronRight, null, tint = TextSecondary)
                 }
+                LinearStatBar(
+                    dailyLogCompleted.toFloat() / currentMonth.lengthOfMonth().coerceAtLeast(1),
+                    height = 4.dp,
+                    fillColor = Primary
+                )
 
                 HorizontalDivider(color = BgDivider.copy(alpha = .65f))
 
