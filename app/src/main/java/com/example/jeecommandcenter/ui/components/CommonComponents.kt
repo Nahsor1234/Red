@@ -103,7 +103,7 @@ fun TaskRow(
         label = "task-alpha"
     )
     val check by animateColorAsState(
-        if (task.done) Success else Color.Transparent,
+        if (task.done) Primary else Color.Transparent,
         animationSpec = tween(300),
         label = "task-check"
     )
@@ -144,7 +144,7 @@ fun TaskRow(
                 Modifier.size(20.dp)
                     .clip(JeeShapes.small)
                     .background(check)
-                    .border(1.dp, if (task.done) Success else BgCardBorder, JeeShapes.small),
+                    .border(1.dp, if (task.done) Primary else BgCardBorder, JeeShapes.small),
                 contentAlignment = Alignment.Center
             ) {
                 if (task.done) {
@@ -225,7 +225,7 @@ private fun RowScope.NavIconSlot(
     onClick: () -> Unit
 ) {
     val interaction = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-    val contentColor = if (selected) PrimaryLight else TextSecondary
+    val contentColor = if (selected) Primary else TextSecondary
     val icon = when (visual) {
         NavVisual.HOME -> Icons.Filled.Home
         NavVisual.SYLLABUS -> Icons.Filled.MenuBook
