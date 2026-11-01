@@ -161,7 +161,7 @@ fun DashboardScreen(
                         )
                         Text(
                             "JEE MAIN 2027 · $daysToJee days to Session 1",
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = "tnum"),
                             color = TextSecondary
                         )
                     }
@@ -240,7 +240,7 @@ fun DashboardScreen(
                                         Text(
                                             "${focus.durationMin} min",
                                             color = PrimaryLight,
-                                            style = MaterialTheme.typography.labelMedium
+                                            style = MaterialTheme.typography.labelMedium.copy(fontFeatureSettings = "tnum")
                                         )
                                     }
                                 }
@@ -317,7 +317,7 @@ fun DashboardScreen(
                 Spacer(Modifier.height(JeeSpacing.md))
 
                 Spacer(Modifier.height(JeeSpacing.md))
-                SectionHeader("Today", titleWeight = FontWeight.SemiBold)
+                SectionHeader("Today")
 
                 if (snapshot == null) {
                     Text(
@@ -330,7 +330,8 @@ fun DashboardScreen(
                         HomeMetric(
                             "${todayMinutes / 60}h ${todayMinutes % 60}m",
                             "Study time",
-                            Modifier.weight(1f)
+                            Modifier.weight(1f),
+                            emphasized = true
                         )
                         HomeMetric(
                             "$goalMinutes min",
@@ -389,7 +390,7 @@ fun DashboardScreen(
                 }
 
                 Spacer(Modifier.height(JeeSpacing.md))
-                SectionHeader("Today's tasks", "See all", titleWeight = FontWeight.SemiBold) { onTabSelected(AppTab.TASKS) }
+                SectionHeader("Today's tasks", "See all") { onTabSelected(AppTab.TASKS) }
                 if (snapshot == null) {
                     Text("Loading tasks…", color = TextSecondary, style = MaterialTheme.typography.bodySmall)
                 } else if (todayTasks.isEmpty()) {
@@ -547,14 +548,20 @@ fun DashboardScreen(
 data class FocusDisplay(val title: String, val reason: String, val durationMin: Int, val subject: String)
 
 @Composable
-private fun HomeMetric(value: String, label: String, modifier: Modifier = Modifier) {
+private fun HomeMetric(
+    value: String,
+    label: String,
+    modifier: Modifier = Modifier,
+    emphasized: Boolean = false
+) {
     Column(modifier.padding(vertical = JeeSpacing.xs)) {
         AnimatedContent(targetState = value, label = "home-metric-value") { animatedValue ->
             Text(
                 animatedValue,
-                color = TextPrimary,
-                style = MaterialTheme.typography.headlineSmall.copy(fontFeatureSettings = "tnum"),
-                fontWeight = FontWeight.Bold,
+                color = if (emphasized) TextPrimary else TextSecondary,
+                style = (if (emphasized) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.titleMedium)
+                    .copy(fontFeatureSettings = "tnum"),
+                fontWeight = if (emphasized) FontWeight.Bold else FontWeight.Medium,
                 maxLines = 1
             )
         }
