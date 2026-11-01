@@ -58,7 +58,7 @@ jobs:
           printf '%s' "$ANDROID_DEBUG_KEYSTORE_BASE64" | base64 --decode > "$HOME/.android/debug.keystore"
           test -s "$HOME/.android/debug.keystore"
 
-          KEYSTORE_CERT_SHA256="$(keytool -list -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey | sed -n 's/^[[:space:]]*SHA256: //p' | tr '[:lower:]' '[:upper:]')"
+          KEYSTORE_CERT_SHA256="$(keytool -list -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey | sed -n 's/^[[:space:]]*SHA256: //p' | tr '[:lower:]' '[:upper:]' | tr -d ':')"
           if [ "$KEYSTORE_CERT_SHA256" != "$EXPECTED_CERT_SHA256" ]; then
             echo "::error::Decoded GitHub secret is not the expected Sigma JE keystore."
             echo "Expected: $EXPECTED_CERT_SHA256"
