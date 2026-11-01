@@ -2,6 +2,13 @@ package com.example.jeecommandcenter.ui.screens
 
 import android.view.HapticFeedbackConstants
 import androidx.compose.foundation.background
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
@@ -16,6 +23,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import com.example.jeecommandcenter.data.*
 import com.example.jeecommandcenter.ui.components.*
@@ -28,15 +40,40 @@ fun TasksScreen(repo: JeeRepository, selectedTab: AppTab, onTabSelected: (AppTab
     Box(Modifier.fillMaxSize()) {
         Scaffold(containerColor = BgApp.copy(alpha = 0f), bottomBar = { AnimatedBottomNavBar(selectedTab, onTabSelected, visible = selectedTab != AppTab.AI) }) { padding ->
             Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 18.dp)) {
-                Spacer(Modifier.height(10.dp)); Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) { Text("Tasks", style = MaterialTheme.typography.headlineSmall); Icon(Icons.Filled.Refresh, "Refresh", tint = TextSecondary, modifier = Modifier.premiumClick { refresh++ }) }
-                Spacer(Modifier.height(12.dp)); LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) { items(listOf("All", "Today", "Upcoming", "Completed")) { value -> JeeFilterChip(value, value == filter) { filter = value } } }; Spacer(Modifier.height(14.dp))
-                if (filter != "All") { val count = visible.size; Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(BgCardAlt).border(JeeSurfaceTokens.borderWidth, BgCardBorder.copy(alpha = JeeSurfaceTokens.cardBorderAlpha), JeeShapes.medium).padding(17.dp)) { Text(filter.uppercase(), color = TextSecondary, fontSize = 11.sp); Text("$count ${if (count == 1) "task" else "tasks"}", style = MaterialTheme.typography.titleLarge); Text("${visible.sumOf { it.durationMin }} minutes planned", color = TextMuted, fontSize = 11.sp) }; Spacer(Modifier.height(8.dp)) }
-                LazyColumn(Modifier.weight(1f)) {
+                Spacer(Modifier.height(JeeSpacing.sm))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Tasks", style = MaterialTheme.typography.headlineSmall)
+                        AnimatedContent(targetState = "${all.count { it.done }} completed · ${all.count { !it.done }} remaining",
+                            label = "task-summary") { summary ->
+                            Text(summary, color = TextSecondary, style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                    IconButton(onClick = { showAdd = true }) {
+                        Icon(Icons.Filled.Add, contentDescription = "Add task", tint = PrimaryLight)
+                    }
+                }
+                Spacer(Modifier.height(JeeSpacing.sm))
+                LinearStatBar(if (all.isEmpty()) 0f else all.count { it.done }.toFloat() / all.size, height = 5.dp)
+                Spacer(Modifier.height(JeeSpacing.md))
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(JeeSpacing.sm)) {
+                    items(listOf("All" to all.size, "Today" to today.size,
+                        "Upcoming" to upcoming.size, "Completed" to completed.size)) { (label, count) ->
+                        JeeFilterChip("$label $count", label == filter) { filter = label }
+                    }
+                }
+                AnimatedContent(targetState = filter, label = "task-filter-summary") { activeFilter ->
+                    if (activeFilter != "All") {
+                        Text("${visible.size} ${if (visible.size == 1) "task" else "tasks"} · ${visible.sumOf { it.durationMin }} min planned",
+                            color = TextSecondary, style = MaterialTheme.typography.labelMedium,
+                            modifier = Modifier.fillMaxWidth().padding(vertical = JeeSpacing.sm))
+                    } else Spacer(Modifier.height(JeeSpacing.xs))
+                }
+                LazyColumn(Modifier.weight(1f).animateContentSize(animationSpec = tween(JeeMotion.layoutMillis))) {
                     if (filter == "All") { taskGroup("Today", today, repo, { selectedTask = it }, { refresh++ }); taskGroup("Upcoming", upcoming, repo, { selectedTask = it }, { refresh++ }); if (completed.isNotEmpty()) taskGroup("Completed", completed, repo, { selectedTask = it }, { refresh++ }); if (all.isEmpty()) emptyTaskState() }
                     else { if (visible.isEmpty()) emptyTaskState() else visible.forEach { task -> item(key = task.id) { TaskListItem(task, repo, { selectedTask = it }, { refresh++ }) } } }
                     item { Spacer(Modifier.height(8.dp)) }
                 }
-                Button(onClick = { showAdd = true }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(17.dp), colors = ButtonDefaults.buttonColors(containerColor = AccentBlue)) { Icon(Icons.Filled.Add, null, tint = Color(0xFF17120A)); Spacer(Modifier.width(7.dp)); Text("Add task", color = Color(0xFF17120A)) }; Spacer(Modifier.height(8.dp))
             }
         }
     }
@@ -44,9 +81,59 @@ fun TasksScreen(repo: JeeRepository, selectedTab: AppTab, onTabSelected: (AppTab
     selectedTask?.let { task -> AlertDialog(onDismissRequest = { selectedTask = null }, title = { Text(task.title) }, text = { Column(verticalArrangement = Arrangement.spacedBy(6.dp)) { Text("${task.subject} · ${task.durationMin} min", color = TextSecondary); Text("${task.activityType.name.lowercase().replace('_', ' ')} · ${task.dueDay}", color = TextMuted, fontSize = 12.sp); Text(if (task.done) "Completed" else "Not completed", color = if (task.done) AccentGreen else TextSecondary, fontSize = 12.sp) } }, confirmButton = { TextButton(onClick = { repo.toggleTask(task.id); selectedTask = null; refresh++ }) { Text(if (task.done) "Mark incomplete" else "Complete") } }, dismissButton = { Row { TextButton(onClick = { repo.deleteTask(task.id); selectedTask = null; refresh++ }) { Text("Delete", color = Danger) }; TextButton(onClick = { selectedTask = null }) { Text("Close") } } }) }
 }
 
-private fun LazyListScope.taskGroup(title: String, tasks: List<AppTask>, repo: JeeRepository, onOpen: (AppTask) -> Unit, onRefresh: () -> Unit) { if (tasks.isEmpty()) return; item(key = "header_$title") { Row(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 5.dp), verticalAlignment = Alignment.CenterVertically) { Text(title, style = MaterialTheme.typography.titleMedium); Spacer(Modifier.width(6.dp)); Text("· ${tasks.size}", color = TextMuted, fontSize = 11.sp) } }; items(tasks, key = { it.id }) { task -> TaskListItem(task, repo, onOpen, onRefresh) } }
+private fun LazyListScope.taskGroup(title: String, tasks: List<AppTask>, repo: JeeRepository, onOpen: (AppTask) -> Unit, onRefresh: () -> Unit) {
+    if (tasks.isEmpty()) return
+    item(key = "header_$title") {
+        Row(Modifier.fillMaxWidth().padding(top = JeeSpacing.lg, bottom = JeeSpacing.xs),
+            verticalAlignment = Alignment.CenterVertically) {
+            Text(title, style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.width(JeeSpacing.sm))
+            Text("${tasks.size}", color = TextSecondary, style = MaterialTheme.typography.labelMedium)
+        }
+    }
+    items(tasks, key = { it.id }) { task -> TaskListItem(task, repo, onOpen, onRefresh) }
+}
 
-@Composable private fun TaskListItem(task: AppTask, repo: JeeRepository, onOpen: (AppTask) -> Unit, onRefresh: () -> Unit) { Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(BgCard).border(1.dp, BgCardBorder.copy(alpha = JeeSurfaceTokens.cardBorderAlpha), RoundedCornerShape(16.dp)).premiumClick { onOpen(task) }.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) { Box(Modifier.size(23.dp).clip(RoundedCornerShape(7.dp)).background(if (task.done) AccentGreen else Color.Transparent).premiumClick(haptic = HapticFeedbackConstants.KEYBOARD_TAP) { repo.toggleTask(task.id); onRefresh() }, Alignment.Center) { if (task.done) Icon(Icons.Filled.Check, null, tint = AccentGreenDark, modifier = Modifier.size(14.dp)) }; Spacer(Modifier.width(12.dp)); Column(Modifier.weight(1f)) { Text(task.title, color = if (task.done) TextMuted else TextOnCard, fontSize = 15.sp); Row(verticalAlignment = Alignment.CenterVertically) { Text("${task.subject} · ${task.durationMin}m", color = TextMuted, fontSize = 11.sp); Spacer(Modifier.width(7.dp)); Box(Modifier.clip(RoundedCornerShape(6.dp)).background(AccentBlueSoft).padding(horizontal = 6.dp, vertical = 2.dp)) { Text(task.activityType.name.lowercase().replace('_', ' '), color = AccentBlueLight, fontSize = 9.sp, fontWeight = FontWeight.Medium) } } }; Icon(Icons.Filled.ChevronRight, "Open task", tint = AccentBlue, modifier = Modifier.size(19.dp)) } }
+@Composable
+private fun TaskListItem(task: AppTask, repo: JeeRepository, onOpen: (AppTask) -> Unit, onRefresh: () -> Unit) {
+    val checkColor by animateColorAsState(if (task.done) Success else Color.Transparent,
+        animationSpec = tween(JeeMotion.standardMillis), label = "task-checkbox-color")
+    val titleColor by animateColorAsState(if (task.done) TextSecondary else TextPrimary,
+        animationSpec = tween(JeeMotion.standardMillis), label = "task-title-color")
+    Column(Modifier.fillMaxWidth().animateContentSize(animationSpec = tween(JeeMotion.standardMillis))) {
+        Row(Modifier.fillMaxWidth().premiumClick { onOpen(task) }.padding(vertical = JeeSpacing.xs),
+            verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(48.dp).semantics {
+                role = Role.Checkbox
+                contentDescription = "Mark ${task.title} complete"
+                stateDescription = if (task.done) "Completed" else "Not completed"
+            }.premiumClick(haptic = HapticFeedbackConstants.KEYBOARD_TAP) {
+                repo.toggleTask(task.id)
+                onRefresh()
+            }, contentAlignment = Alignment.Center) {
+                Box(Modifier.size(22.dp).clip(RoundedCornerShape(7.dp)).background(checkColor)
+                    .border(1.dp, if (task.done) Success else BgCardBorder, RoundedCornerShape(7.dp)),
+                    contentAlignment = Alignment.Center) {
+                    AnimatedVisibility(visible = task.done, enter = fadeIn(tween(JeeMotion.fastMillis)),
+                        exit = fadeOut(tween(JeeMotion.fastMillis))) {
+                        Icon(Icons.Filled.Check, null, tint = SuccessDark, modifier = Modifier.size(14.dp))
+                    }
+                }
+            }
+            Column(Modifier.weight(1f)) {
+                Text(task.title, color = titleColor, style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium, maxLines = 2)
+                Spacer(Modifier.height(2.dp))
+                Text("${task.subject} · ${task.durationMin} min · ${task.dueDay}",
+                    color = TextSecondary, style = MaterialTheme.typography.bodySmall)
+                Text(task.activityType.name.lowercase().replace('_', ' '),
+                    color = PrimaryLight, style = MaterialTheme.typography.labelSmall)
+            }
+            Icon(Icons.Filled.ChevronRight, "Open task details", tint = TextSecondary, modifier = Modifier.size(20.dp))
+        }
+        HorizontalDivider(Modifier.padding(start = 48.dp), color = BgDivider.copy(alpha = .55f), thickness = 0.7.dp)
+    }
+}
 
 private fun LazyListScope.emptyTaskState() { item { Column(Modifier.fillMaxWidth().padding(vertical = 62.dp), horizontalAlignment = Alignment.CenterHorizontally) { Text("Nothing here yet", style = MaterialTheme.typography.titleMedium); Text("Add a task when you know what you want to study.", color = TextMuted, fontSize = 12.sp) } } }
 

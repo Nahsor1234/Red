@@ -1,6 +1,14 @@
 package com.example.jeecommandcenter.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
@@ -40,6 +48,7 @@ fun SyllabusScreen(
     var subject by remember { mutableStateOf("Physics") }
     var filter by remember { mutableStateOf("All") }
     var query by remember { mutableStateOf("") }
+    var searchExpanded by remember { mutableStateOf(false) }
     var refresh by remember { mutableIntStateOf(0) }
     var cloudChapters by remember { mutableStateOf<List<CloudChapter>>(emptyList()) }
     var cloudProgress by remember { mutableStateOf<Map<String, CloudChapterProgress>>(emptyMap()) }
@@ -184,11 +193,43 @@ fun SyllabusScreen(
                         TextButton(onClick = onOpenRevision) {
                             Text("Revision", style = MaterialTheme.typography.labelLarge)
                         }
+                        IconButton(onClick = {
+                            searchExpanded = !searchExpanded
+                            if (!searchExpanded) query = ""
+                        }) {
+                            Icon(if (searchExpanded) Icons.Filled.Close else Icons.Filled.Search,
+                                contentDescription = if (searchExpanded) "Close chapter search" else "Search chapters",
+                                tint = if (searchExpanded) PrimaryLight else TextPrimary)
+                        }
                     }
                 }
 
+                AnimatedVisibility(
+                    visible = searchExpanded,
+                    enter = fadeIn(tween(JeeMotion.fastMillis)) + expandVertically(tween(JeeMotion.layoutMillis)),
+                    exit = fadeOut(tween(JeeMotion.fastMillis)) + shrinkVertically(tween(JeeMotion.layoutMillis))
+                ) {
+                    OutlinedTextField(
+                        value = query, onValueChange = { query = it },
+                        modifier = Modifier.fillMaxWidth(), singleLine = true,
+                        placeholder = { Text("Search chapters by name or number") },
+                        leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+                        trailingIcon = {
+                            if (query.isNotEmpty()) IconButton(onClick = { query = "" }) {
+                                Icon(Icons.Filled.Close, contentDescription = "Clear chapter search")
+                            }
+                        },
+                        shape = JeeShapes.medium,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary,
+                            focusedContainerColor = BgCard, unfocusedContainerColor = BgCard,
+                            focusedBorderColor = Primary, unfocusedBorderColor = BgCardBorder,
+                            focusedPlaceholderColor = TextSecondary, unfocusedPlaceholderColor = TextSecondary,
+                            focusedLeadingIconColor = PrimaryLight, unfocusedLeadingIconColor = TextSecondary
+                        )
+                    )
+                }
                 Spacer(Modifier.height(12.dp))
-
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(listOf("Physics", "Chemistry", "Mathematics")) { value ->
                         JeeFilterChip(value, value == subject) {
@@ -201,72 +242,30 @@ fun SyllabusScreen(
 
                 Spacer(Modifier.height(14.dp))
 
-                Column(
-                    Modifier.fillMaxWidth()
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(BgCardAlt)
-                        .border(
-                            JeeSurfaceTokens.borderWidth,
-                            BgCardBorder.copy(alpha = JeeSurfaceTokens.cardBorderAlpha),
-                            JeeShapes.medium
-                        )
-                        .padding(17.dp)
-                ) {
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        Arrangement.SpaceBetween,
-                        Alignment.CenterVertically
-                    ) {
+                Column(Modifier.fillMaxWidth().animateContentSize(animationSpec = tween(JeeMotion.layoutMillis))) {
+                    Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            Text(subject.uppercase(), color = TextSecondary, fontSize = 12.sp)
-                            Text("${(avg * 100).toInt()}%", style = MaterialTheme.typography.displaySmall)
-                            Text(
-                                "$completedCount of ${allModels.size} chapters complete",
-                                color = TextSecondary,
-                                style = MaterialTheme.typography.bodySmall
-                            )
+                            Text("SUBJECT PROGRESS", color = TextSecondary, style = MaterialTheme.typography.labelSmall)
+                            AnimatedContent(targetState = (avg * 100).toInt(), label = "syllabus-subject-progress") { percent ->
+                                Text("$percent%", style = MaterialTheme.typography.headlineMedium)
+                            }
+                            Text("$completedCount of ${allModels.size} chapters complete",
+                                color = TextSecondary, style = MaterialTheme.typography.bodySmall)
                         }
                         Column(horizontalAlignment = Alignment.End) {
                             Text("$activeCount active", color = PrimaryLight, style = MaterialTheme.typography.labelLarge)
                             Text("$notStartedCount not started", color = TextSecondary, style = MaterialTheme.typography.labelSmall)
                         }
                     }
-                    Spacer(Modifier.height(10.dp))
-                    LinearStatBar(avg)
+                    Spacer(Modifier.height(JeeSpacing.sm))
+                    LinearStatBar(avg, height = 6.dp)
+                    Spacer(Modifier.height(JeeSpacing.xs))
+                    Row(horizontalArrangement = Arrangement.spacedBy(JeeSpacing.md)) {
+                        Text("$weakCount weak", color = TextSecondary, style = MaterialTheme.typography.labelSmall)
+                        Text("$completedCount done", color = TextSecondary, style = MaterialTheme.typography.labelSmall)
+                    }
                 }
-
-                Spacer(Modifier.height(14.dp))
-
-                OutlinedTextField(
-                    value = query,
-                    onValueChange = { query = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    placeholder = { Text("Search chapters by name or number") },
-                    leadingIcon = { Icon(Icons.Filled.Search, contentDescription = "Search chapters") },
-                    trailingIcon = {
-                        if (query.isNotEmpty()) {
-                            IconButton(onClick = { query = "" }) {
-                                Icon(Icons.Filled.Close, contentDescription = "Clear chapter search")
-                            }
-                        }
-                    },
-                    shape = JeeShapes.medium,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = TextPrimary,
-                        unfocusedTextColor = TextPrimary,
-                        focusedContainerColor = BgCard,
-                        unfocusedContainerColor = BgCard,
-                        focusedBorderColor = Primary,
-                        unfocusedBorderColor = BgCardBorder,
-                        focusedPlaceholderColor = TextSecondary,
-                        unfocusedPlaceholderColor = TextSecondary,
-                        focusedLeadingIconColor = PrimaryLight,
-                        unfocusedLeadingIconColor = TextSecondary
-                    )
-                )
-
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(14.dp))                Spacer(Modifier.height(10.dp))
 
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     item { JeeFilterChip("All ${allModels.size}", filter == "All") { filter = "All" } }
@@ -283,31 +282,22 @@ fun SyllabusScreen(
                 ) {
                     if (filter == "All" && query.isBlank() && attention != null) {
                         item {
-                            Column(
-                                Modifier.fillMaxWidth()
-                                    .clip(RoundedCornerShape(18.dp))
-                                    .background(BgCard)
-                                    .border(
-                                        JeeSurfaceTokens.borderWidth,
-                                        BgCardBorder.copy(alpha = JeeSurfaceTokens.cardBorderAlpha),
-                                        JeeShapes.medium
-                                    )
-                                    .padding(15.dp)
-                            ) {
-                                Text("NEXT ATTENTION", color = TextSecondary, fontSize = 11.sp)
-                                Text(attention.first.name, style = MaterialTheme.typography.titleMedium)
-                                Text(
-                                    "Low confidence, incomplete or weak chapter",
-                                    color = TextMuted,
-                                    fontSize = 11.sp
-                                )
-                                Spacer(Modifier.height(8.dp))
-                                LinearStatBar(attention.second, height = 5.dp)
+                            Row(Modifier.fillMaxWidth().animateContentSize(animationSpec = tween(JeeMotion.standardMillis))
+                                .padding(vertical = JeeSpacing.sm), verticalAlignment = Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f)) {
+                                    Text("NEXT TO REVIEW", color = PrimaryLight, style = MaterialTheme.typography.labelSmall)
+                                    Text(attention.first.name, style = MaterialTheme.typography.titleSmall)
+                                    Text("Low confidence or incomplete progress", color = TextSecondary,
+                                        style = MaterialTheme.typography.bodySmall)
+                                }
+                                Text("${(attention.second * 100).toInt()}%", color = PrimaryLight,
+                                    style = MaterialTheme.typography.labelLarge)
                             }
-                            Spacer(Modifier.height(8.dp))
+                            LinearStatBar(attention.second, height = 4.dp)
+                            Spacer(Modifier.height(JeeSpacing.sm))
+                            HorizontalDivider(color = BgDivider.copy(alpha = .65f))
                         }
                     }
-
                     if (models.isEmpty()) {
                         item {
                             Column(
@@ -328,17 +318,9 @@ fun SyllabusScreen(
                     }
 
                     items(models, key = { it.first.id }) { (chapter, progress) ->
-                        Row(
-                            Modifier.fillMaxWidth()
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(BgCard)
-                                .border(
-                                    1.dp,
-                                    BgCardBorder.copy(alpha = JeeSurfaceTokens.cardBorderAlpha),
-                                    RoundedCornerShape(16.dp)
-                                )
-                                .premiumClick { onOpenChapter(chapter) }
-                                .padding(horizontal = 14.dp, vertical = 12.dp),
+                        Column(Modifier.fillMaxWidth().animateContentSize(animationSpec = tween(JeeMotion.standardMillis))) {
+                        Row(Modifier.fillMaxWidth().premiumClick { onOpenChapter(chapter) }
+                                .padding(horizontal = JeeSpacing.xs, vertical = JeeSpacing.md),
                             Arrangement.SpaceBetween,
                             Alignment.CenterVertically
                         ) {
@@ -365,11 +347,10 @@ fun SyllabusScreen(
                                         color = TextOnCard,
                                         fontSize = 14.sp
                                     )
-                                    Text(
-                                        "${(progress * 100).toInt()}% · ${chapter.estimatedMinutes} min",
-                                        color = TextMuted,
-                                        style = MaterialTheme.typography.labelMedium
-                                    )
+                                    AnimatedContent(targetState = (progress * 100).toInt(), label = "syllabus-chapter-progress") { percent ->
+                                        Text("$percent% · ${chapter.estimatedMinutes} min",
+                                            color = TextSecondary, style = MaterialTheme.typography.labelMedium)
+                                    }
                                     Spacer(Modifier.height(5.dp))
                                     LinearStatBar(
                                         progress,
@@ -393,7 +374,9 @@ fun SyllabusScreen(
                                 )
                             }
                         }
-                        Spacer(Modifier.height(8.dp))
+                        HorizontalDivider(Modifier.padding(start = 34.dp),
+                            color = BgDivider.copy(alpha = .55f), thickness = 0.7.dp)
+                        }
                     }
                 }
             }

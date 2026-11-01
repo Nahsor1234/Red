@@ -1,6 +1,11 @@
 package com.example.jeecommandcenter.ui.screens
 
 import android.view.HapticFeedbackConstants
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -120,20 +125,32 @@ fun StudyTimerScreen(repo: JeeRepository, selectedTab: AppTab, onTabSelected: (A
             item {
                 Box(Modifier.fillMaxWidth().height(250.dp), Alignment.Center) {
                     val progress = if (total > 0) remaining.toFloat() / total else 0f
+                    val animatedProgress by animateFloatAsState(progress,
+                        animationSpec = tween(JeeMotion.timerProgressMillis), label = "timer-ring-progress")
                     Canvas(Modifier.size(224.dp)) {
                         val st = Stroke(12.dp.toPx(), cap = StrokeCap.Round)
                         drawArc(BgDivider, -90f, 360f, false, style = st)
-                        drawArc(AccentBlue, -90f, 360f * progress, false, style = st)
+                        drawArc(Primary, -90f, 360f * animatedProgress, false, style = st)
                     }
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(String.format(Locale.US, "%02d:%02d", remaining / 60, remaining % 60), fontSize = 46.sp, fontWeight = FontWeight.Normal)
-                        Text(if (running) "Focus mode" else "Ready", color = TextMuted, fontSize = 12.sp)
+                        AnimatedContent(targetState = when {
+                            running -> "Focus mode"
+                            remaining == 0 -> "Session complete"
+                            remaining < total -> "Paused"
+                            else -> "Ready"
+                        }, label = "timer-session-state") { state ->
+                            Text(state, color = if (running) PrimaryLight else TextSecondary, fontSize = 12.sp)
+                        }
                     }
                 }
             }
             item {
                 Column(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(BgCardAlt).border(JeeSurfaceTokens.borderWidth, BgCardBorder.copy(alpha = JeeSurfaceTokens.cardBorderAlpha), JeeShapes.medium).padding(15.dp)
+                    Modifier.fillMaxWidth().animateContentSize(animationSpec = tween(JeeMotion.layoutMillis))
+                        .clip(RoundedCornerShape(18.dp)).background(BgCardAlt)
+                        .border(JeeSurfaceTokens.borderWidth, BgCardBorder.copy(alpha = JeeSurfaceTokens.cardBorderAlpha), JeeShapes.medium)
+                        .padding(15.dp)
                 ) {
                     Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
                         Text("SESSION CONTEXT", color = TextSecondary, fontSize = 11.sp)
@@ -198,7 +215,13 @@ fun StudyTimerScreen(repo: JeeRepository, selectedTab: AppTab, onTabSelected: (A
                     }
                     view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                 }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(17.dp), colors = ButtonDefaults.buttonColors(containerColor = AccentBlue)) {
-                    Icon(if (running) Icons.Filled.Pause else Icons.Filled.PlayArrow, null, tint = Color(0xFF17120A)); Spacer(Modifier.width(8.dp)); Text(if (running) "Pause" else "Start session", color = Color(0xFF17120A))
+                    AnimatedContent(targetState = running, label = "timer-primary-action") { isRunning ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(if (isRunning) Icons.Filled.Pause else Icons.Filled.PlayArrow, null, tint = Color(0xFF17120A))
+                            Spacer(Modifier.width(8.dp))
+                            Text(if (isRunning) "Pause" else "Start session", color = Color(0xFF17120A))
+                        }
+                    }
                 }
             }
             item { SectionHeader("Completed sessions") }
@@ -206,9 +229,20 @@ fun StudyTimerScreen(repo: JeeRepository, selectedTab: AppTab, onTabSelected: (A
                 item { JeeCard { Text("No completed sessions yet.", color = TextMuted, fontSize = 12.sp); Spacer(Modifier.height(4.dp)); Text("Completed sessions will appear here after your first study block.", color = TextSecondary, fontSize = 11.sp) } }
             } else {
                 items(recentSessions, key = { it.id }) { session ->
-                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(BgCard).border(1.dp,BgCardBorder.copy(alpha=.72f),RoundedCornerShape(14.dp)).padding(horizontal=14.dp, vertical=11.dp), Arrangement.SpaceBetween, Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) { Text(session.subject, color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.Medium); Text(session.chapter + " · " + session.activityType.name.lowercase().replace('_', ' '), color = TextMuted, fontSize = 10.sp) }
-                        Column(horizontalAlignment = Alignment.End) { Text(session.minutes.toString() + " min", color = PrimaryLight, fontSize = 12.sp); Text(session.date, color = TextMuted, fontSize = 9.sp) }
+                    Column(Modifier.fillMaxWidth()) {
+                        Row(Modifier.fillMaxWidth().padding(vertical = JeeSpacing.sm),
+                            horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text(session.subject, color = TextPrimary, style = MaterialTheme.typography.titleSmall)
+                                Text(session.chapter + " · " + session.activityType.name.lowercase().replace('_', ' '),
+                                    color = TextSecondary, style = MaterialTheme.typography.bodySmall)
+                            }
+                            Column(horizontalAlignment = Alignment.End) {
+                                Text(session.minutes.toString() + " min", color = PrimaryLight, style = MaterialTheme.typography.labelLarge)
+                                Text(session.date, color = TextSecondary, style = MaterialTheme.typography.labelSmall)
+                            }
+                        }
+                        HorizontalDivider(color = BgDivider.copy(alpha = .55f), thickness = 0.7.dp)
                     }
                 }
             }
@@ -224,8 +258,17 @@ fun StudyTimerScreen(repo: JeeRepository, selectedTab: AppTab, onTabSelected: (A
 
 @Composable
 private fun Preset(label: String, sub: String, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
-    Column(modifier.clip(RoundedCornerShape(15.dp)).background(BgCard).border(1.dp, if (selected) AccentBlue else Color.Transparent, RoundedCornerShape(15.dp)).premiumClick(onClick).padding(vertical = 11.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(label, color = if (selected) AccentBlue else TextOnCard, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-        Text(sub, color = TextMuted, fontSize = 10.sp)
+    val containerColor by animateColorAsState(if (selected) PrimarySoft else BgCard,
+        animationSpec = tween(JeeMotion.standardMillis), label = "timer-preset-container")
+    val borderColor by animateColorAsState(if (selected) Primary else BgCardBorder.copy(alpha = .55f),
+        animationSpec = tween(JeeMotion.standardMillis), label = "timer-preset-border")
+    val labelColor by animateColorAsState(if (selected) PrimaryLight else TextPrimary,
+        animationSpec = tween(JeeMotion.standardMillis), label = "timer-preset-label")
+    Column(modifier.animateContentSize(animationSpec = tween(JeeMotion.standardMillis))
+        .clip(RoundedCornerShape(15.dp)).background(containerColor)
+        .border(1.dp, borderColor, RoundedCornerShape(15.dp)).premiumClick(onClick)
+        .padding(vertical = 11.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(label, color = labelColor, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+        Text(sub, color = TextSecondary, fontSize = 10.sp)
     }
 }

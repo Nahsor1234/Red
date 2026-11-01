@@ -24,3 +24,11 @@ object JeeSurfaceTokens {
     val cardBorderAlpha = 0.72f
     val featuredBorderAlpha = 0.90f
 }
+
+/** Shared durations for purposeful, low-distraction interface motion. */
+object JeeMotion {
+    const val fastMillis = 150
+    const val standardMillis = 190
+    const val layoutMillis = 280
+    const val timerProgressMillis = 850
+}

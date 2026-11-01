@@ -1,6 +1,9 @@
 package com.example.jeecommandcenter.ui.screens
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -178,7 +181,7 @@ fun DashboardScreen(
                 Spacer(Modifier.height(JeeSpacing.md))
 
                 // One dominant dashboard surface: the next useful study action.
-                JeeCard(featured = true) {
+                JeeCard(featured = true, modifier = Modifier.animateContentSize(animationSpec = tween(JeeMotion.layoutMillis))) {
                     Row(
                         Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -216,18 +219,13 @@ fun DashboardScreen(
                             )
                         }
                         focus != null -> {
-                            Text(
-                                focus.title,
-                                style = MaterialTheme.typography.headlineSmall,
-                                fontWeight = FontWeight.SemiBold
-                            )
+                            AnimatedContent(targetState = focus.title, label = "home-focus-title") { title ->
+                                Text(title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
+                            }
                             Spacer(Modifier.height(JeeSpacing.xs))
-                            Text(
-                                focus.reason,
-                                color = TextSecondary,
-                                style = MaterialTheme.typography.bodyMedium,
-                                lineHeight = 21.sp
-                            )
+                            AnimatedContent(targetState = focus.reason, label = "home-focus-reason") { reason ->
+                                Text(reason, color = TextSecondary, style = MaterialTheme.typography.bodyMedium, lineHeight = 21.sp)
+                            }
                             Spacer(Modifier.height(JeeSpacing.md))
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Surface(
@@ -327,11 +325,9 @@ fun DashboardScreen(
                         )
                     }
                     Column(horizontalAlignment = Alignment.End) {
-                        Text(
-                            daysToJee.toString(),
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.SemiBold
-                        )
+                        AnimatedContent(targetState = daysToJee, label = "home-exam-countdown") { days ->
+                            Text(days.toString(), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                        }
                         Text("days left", style = MaterialTheme.typography.labelSmall, color = TextSecondary)
                     }
                 }
@@ -362,11 +358,6 @@ fun DashboardScreen(
                         HomeMetric(
                             "${(coverage * 100).toInt()}%",
                             "Coverage",
-                            Modifier.weight(1f)
-                        )
-                        HomeMetric(
-                            unresolvedMistakes.toString(),
-                            "Mistakes",
                             Modifier.weight(1f)
                         )
                     }
@@ -444,13 +435,6 @@ fun DashboardScreen(
                         Icons.Filled.ErrorOutline,
                         Modifier.weight(1f),
                         onOpenMistakes
-                    )
-                    QuickAction(
-                        "Study",
-                        "${todayMinutes / 60}h ${todayMinutes % 60}m",
-                        Icons.Filled.Timer,
-                        Modifier.weight(1f),
-                        onOpenStudyTimer
                     )
                 }
 
@@ -634,13 +618,10 @@ private fun QuickAction(
 @Composable
 private fun HomeMetric(value: String, label: String, modifier: Modifier = Modifier) {
     Column(modifier.padding(vertical = JeeSpacing.xs)) {
-        Text(
-            value,
-            color = TextPrimary,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-            maxLines = 1
-        )
+        AnimatedContent(targetState = value, label = "home-metric-value") { animatedValue ->
+            Text(animatedValue, color = TextPrimary, style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold, maxLines = 1)
+        }
         Text(
             label,
             color = TextSecondary,
