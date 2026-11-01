@@ -89,7 +89,77 @@ enum class AppTab { HOME, SYLLABUS, AI, TASKS, STATS }
 @Composable fun LinearStatBar(progress: Float, modifier: Modifier = Modifier, trackColor: Color = BgDivider, fillColor: Color = Primary, height: androidx.compose.ui.unit.Dp = 5.dp) { val p by animateFloatAsState(progress.coerceIn(0f, 1f), animationSpec = tween(320), label = "progress"); Box(modifier.fillMaxWidth().height(height).clip(JeeShapes.pill).background(trackColor).semantics { progressBarRangeInfo = ProgressBarRangeInfo(p, 0f..1f) }) { Box(Modifier.fillMaxHeight().fillMaxWidth(p).clip(JeeShapes.pill).background(fillColor)) } }
 @Composable fun SectionHeader(title: String, actionLabel: String? = null, onActionClick: () -> Unit = {}) { Row(Modifier.fillMaxWidth().padding(vertical = JeeSpacing.sm), Arrangement.SpaceBetween, Alignment.CenterVertically) { Text(title, style = MaterialTheme.typography.titleMedium); if (actionLabel != null) Text(actionLabel, style = MaterialTheme.typography.labelMedium.copy(color = PrimaryLight), modifier = Modifier.semantics { role = Role.Button }.premiumClick { onActionClick() }) } }
 data class TaskItem(val id: String, val title: String, val subtitle: String, val duration: String, val done: Boolean = false, val inProgress: Boolean = false)
-@Composable fun TaskRow(task: TaskItem, onToggle: (String) -> Unit, onClick: () -> Unit = {}) { val alpha by animateFloatAsState(if (task.done) .62f else 1f, label = "task-alpha"); val check by animateColorAsState(if (task.done) Success else Color.Transparent, label = "task-check"); val scale by animateFloatAsState(if (task.done) .985f else 1f, animationSpec = tween(180), label = "task-scale"); Row(Modifier.fillMaxWidth().graphicsLayer(alpha = alpha, scaleX = scale, scaleY = scale).semantics { role = Role.Button }.premiumClick(onClick = onClick).padding(vertical = 11.dp), verticalAlignment = Alignment.CenterVertically) { Box(Modifier.size(21.dp).clip(RoundedCornerShape(7.dp)).background(check).border(1.dp, if (task.done) Success else BgCardBorder, RoundedCornerShape(7.dp)).semantics { role = Role.Checkbox; contentDescription = "Mark ${task.title} complete"; stateDescription = if (task.done) "Completed" else "Not completed" }.premiumClick(haptic = if (!task.done) HapticFeedbackConstants.KEYBOARD_TAP else HapticFeedbackConstants.VIRTUAL_KEY) { onToggle(task.id) }, Alignment.Center) { if (task.done) Icon(Icons.Filled.Check, null, tint = SuccessDark, modifier = Modifier.size(14.dp)) }; Spacer(Modifier.width(JeeSpacing.md)); Column(Modifier.weight(1f)) { Text(task.title, color = TextOnCard, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium), textDecoration = if (task.done) TextDecoration.LineThrough else TextDecoration.None); if (task.subtitle.isNotEmpty()) Text(task.subtitle, color = TextSecondary, style = MaterialTheme.typography.bodySmall) }; Text(task.duration, color = TextMuted, style = MaterialTheme.typography.labelMedium) } }
+@Composable
+fun TaskRow(
+    task: TaskItem,
+    onToggle: (String) -> Unit,
+    onClick: () -> Unit = {}
+) {
+    val alpha by animateFloatAsState(
+        if (task.done) 0.62f else 1f,
+        animationSpec = tween(300),
+        label = "task-alpha"
+    )
+    val check by animateColorAsState(
+        if (task.done) Success else Color.Transparent,
+        animationSpec = tween(300),
+        label = "task-check"
+    )
+    val scale by animateFloatAsState(
+        if (task.done) 0.985f else 1f,
+        animationSpec = tween(300),
+        label = "task-scale"
+    )
+    Row(
+        Modifier.fillMaxWidth()
+            .graphicsLayer(alpha = alpha, scaleX = scale, scaleY = scale)
+            .semantics { role = Role.Button }
+            .premiumClick(onClick = onClick)
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            Modifier.size(48.dp)
+                .semantics {
+                    role = Role.Checkbox
+                    contentDescription = "Mark ${task.title} complete"
+                    stateDescription = if (task.done) "Completed" else "Not completed"
+                }
+                .premiumClick(
+                    haptic = if (!task.done) HapticFeedbackConstants.KEYBOARD_TAP
+                    else HapticFeedbackConstants.VIRTUAL_KEY,
+                    onClick = { onToggle(task.id) }
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Box(
+                Modifier.size(20.dp)
+                    .clip(JeeShapes.small)
+                    .background(check)
+                    .border(1.dp, if (task.done) Success else BgCardBorder, JeeShapes.small),
+                contentAlignment = Alignment.Center
+            ) {
+                if (task.done) {
+                    Icon(Icons.Filled.Check, null, tint = SuccessDark, modifier = Modifier.size(14.dp))
+                }
+            }
+        }
+        Spacer(Modifier.width(JeeSpacing.md))
+        Column(Modifier.weight(1f)) {
+            Text(
+                task.title,
+                color = TextOnCard,
+                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                textDecoration = if (task.done) TextDecoration.LineThrough else TextDecoration.None
+            )
+            if (task.subtitle.isNotEmpty()) {
+                Text(task.subtitle, color = TextSecondary, style = MaterialTheme.typography.bodySmall)
+            }
+        }
+        Text(task.duration, color = TextMuted, style = MaterialTheme.typography.labelMedium)
+    }
+}
+
 @Composable fun JeeFilterChip(label: String, selected: Boolean, onClick: () -> Unit) { FilterChip(selected = selected, onClick = onClick, label = { Text(label, style = MaterialTheme.typography.labelMedium.copy(fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal)) }, shape = JeeShapes.small, colors = FilterChipDefaults.filterChipColors(containerColor = BgCard, labelColor = TextSecondary, selectedContainerColor = Primary, selectedLabelColor = MaterialTheme.colorScheme.onPrimary)) }
 
 private enum class NavVisual { HOME, SYLLABUS, AI, TASKS, TIMER }

@@ -59,6 +59,8 @@ fun DashboardScreen(
     onOpenChapter: (JeeChapter) -> Unit = {}
 ) {
     var refresh by remember { mutableIntStateOf(0) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
     var showFocusPicker by remember { mutableStateOf(false) }
     var focusSubject by remember { mutableStateOf("Physics") }
     var selectedFocusId by remember { mutableStateOf<String?>(null) }
@@ -120,6 +122,7 @@ fun DashboardScreen(
     Box(Modifier.fillMaxSize()) {
         Scaffold(
             containerColor = BgAppBase,
+            snackbarHost = { SnackbarHost(snackbarHostState) },
             bottomBar = {
                 AnimatedBottomNavBar(
                     selectedTab,
@@ -139,7 +142,7 @@ fun DashboardScreen(
 
                 // Header: utility actions remain available without competing with the study action.
                 Row(
-                    Modifier.fillMaxWidth(),
+                    Modifier.fillMaxWidth().heightIn(min = 112.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -391,8 +394,22 @@ fun DashboardScreen(
                                 task.done
                             ),
                             onToggle = { id ->
-                                repo.toggleTask(id.toLong())
+                                val taskId = id.toLong()
+                                val wasDone = todayTasks.firstOrNull { it.id == taskId }?.done == true
+                                repo.toggleTask(taskId)
                                 refresh++
+                                scope.launch {
+                                    val result = snackbarHostState.showSnackbar(
+                                        message = if (wasDone) "Task reopened" else "Task completed",
+                                        actionLabel = "Undo",
+                                        withDismissAction = true,
+                                        duration = SnackbarDuration.Short
+                                    )
+                                    if (result == SnackbarResult.ActionPerformed) {
+                                        repo.toggleTask(taskId)
+                                        refresh++
+                                    }
+                                }
                             },
                             onClick = { onTabSelected(AppTab.TASKS) }
                         )
