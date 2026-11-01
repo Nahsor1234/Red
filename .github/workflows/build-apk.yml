@@ -17,8 +17,6 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      HAS_PERSISTENT_SIGNING_KEY: ${{ secrets.ANDROID_DEBUG_KEYSTORE_BASE64 != '' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -42,36 +40,48 @@ jobs:
         with:
           gradle-version: '8.7'
 
-      # GitHub-hosted runners are ephemeral. Reuse one stable debug keystore so
-      # subsequent debug APKs can update the installed app instead of conflicting.
-      # Debug keys are for development APKs only; production releases need a dedicated
-      # private release keystore managed separately.
-      - name: Restore stable debug signing key
-        if: ${{ env.HAS_PERSISTENT_SIGNING_KEY != 'true' }}
-        uses: actions/cache@v4
-        with:
-          path: ~/.android/debug.keystore
-          key: sigma-je-debug-keystore-v1-${{ runner.os }}
-
-      # For stability across branch/merge boundaries, optionally provide the same
-      # development keystore as a GitHub Actions secret. If unset, the cached
-      # branch-local debug key remains in use.
-      - name: Use persistent debug signing key when configured
+      # Release-producing builds must use the dedicated persistent key.
+      # Fork pull requests do not receive repository secrets, so PR builds use
+      # the runner-generated debug key and never publish a release.
+      - name: Require permanent signing key
+        if: ${{ github.event_name != 'pull_request' }}
         env:
           ANDROID_DEBUG_KEYSTORE_BASE64: ${{ secrets.ANDROID_DEBUG_KEYSTORE_BASE64 }}
         run: |
-          if [ -n "$ANDROID_DEBUG_KEYSTORE_BASE64" ]; then
-            mkdir -p "$HOME/.android"
-            printf '%s' "$ANDROID_DEBUG_KEYSTORE_BASE64" | base64 --decode > "$HOME/.android/debug.keystore"
-          else
-            echo "No persistent keystore secret configured; using the cached debug keystore."
+          if [ -z "$ANDROID_DEBUG_KEYSTORE_BASE64" ]; then
+            echo "::error::ANDROID_DEBUG_KEYSTORE_BASE64 is required for release-producing builds."
+            exit 1
           fi
+
+          mkdir -p "$HOME/.android"
+          printf '%s' "$ANDROID_DEBUG_KEYSTORE_BASE64" | base64 --decode > "$HOME/.android/debug.keystore"
+          test -s "$HOME/.android/debug.keystore"
 
       - name: Build APK
         run: gradle assembleDebug --stacktrace
 
+      # Verify every APK that can be published uses the expected permanent key.
+      - name: Verify permanent APK signing certificate
+        if: ${{ github.event_name != 'pull_request' }}
+        env:
+          EXPECTED_CERT_SHA256: "CE:52:86:9B:CA:EE:87:00:60:F4:4D:F1:25:E7:9F:60:79:E9:E6:7E:3A:69:FD:F1:EC:B9:26:B9:CD:38:1C:94"
+        run: |
+          APK_PATH="app/build/outputs/apk/debug/app-debug.apk"
+          APKSIGNER="$ANDROID_HOME/build-tools/35.0.0/apksigner"
+
+          "$APKSIGNER" verify --verbose --print-certs "$APK_PATH" | tee /tmp/apk-signing.txt
+          ACTUAL_CERT_SHA256="$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' /tmp/apk-signing.txt | tr '[:lower:]' '[:upper:]')"
+
+          if [ "$ACTUAL_CERT_SHA256" != "$EXPECTED_CERT_SHA256" ]; then
+            echo "::error::APK signing certificate does not match the permanent Sigma JE key."
+            echo "Expected: $EXPECTED_CERT_SHA256"
+            echo "Actual:   $ACTUAL_CERT_SHA256"
+            exit 1
+          fi
+
+          echo "APK signature verified against the permanent Sigma JE certificate."
+
       # Keep a short-lived Actions artifact for convenient run-level downloads.
-      # The GitHub Release below is the durable download location.
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
@@ -81,8 +91,7 @@ jobs:
           retention-days: 14
           compression-level: 0
 
-      # Publish only completed non-PR builds. Each run gets its own prerelease
-      # and immutable tag, preserving a download/history entry for every build.
+      # Publish only completed non-PR builds after certificate verification.
       - name: Publish APK to GitHub Releases
         if: ${{ success() && github.event_name != 'pull_request' }}
         env:
@@ -100,6 +109,7 @@ jobs:
             echo "- Commit: ${GITHUB_SHA}"
             echo "- Workflow run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
             echo
+            echo "Signed with the permanent Sigma JE development key."
             echo "This is a development build, not a production-signed release."
           } > "$NOTES_FILE"
 
