@@ -1,6 +1,13 @@
 package com.example.jeecommandcenter.ui.navigation
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.platform.LocalContext
@@ -67,9 +74,16 @@ fun AppRoot(initialTarget: String? = null, launchRequestId: Int = 0) {
     BackHandler(enabled = secondaryStack.isNotEmpty()) { popPage() }
     val screenKey = secondaryPage?.let { "secondary:" + it.name } ?: ("tab:" + selectedTab.name)
 
-    key(screenKey) {
-        saveableStateHolder.SaveableStateProvider(screenKey) {
-            val key = screenKey
+    AnimatedContent(
+        targetState = screenKey,
+        transitionSpec = {
+            (fadeIn(tween(280)) + slideInHorizontally(tween(280)) { it / 24 }) togetherWith
+                (fadeOut(tween(220)) + slideOutHorizontally(tween(220)) { -it / 24 })
+        },
+        label = "app-screen-transition"
+    ) { targetKey ->
+        saveableStateHolder.SaveableStateProvider(targetKey) {
+            val key = targetKey
 
             val targetSecondary = if (key.startsWith("secondary:")) SecondaryPage.valueOf(key.removePrefix("secondary:")) else null
             val targetTab = if (key.startsWith("tab:")) AppTab.valueOf(key.removePrefix("tab:")) else null
