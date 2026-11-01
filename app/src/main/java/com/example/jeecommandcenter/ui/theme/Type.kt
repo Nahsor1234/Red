@@ -24,7 +24,7 @@ val AppTypography = Typography(
     displaySmall = TextStyle(
         fontFamily = AppFont,
         fontWeight = FontWeight.Medium,
-        fontSize = 28.sp,
+        fontSize = 36.sp,
         color = TextPrimary
     ),
     headlineLarge = TextStyle(
@@ -36,19 +36,19 @@ val AppTypography = Typography(
     headlineMedium = TextStyle(
         fontFamily = AppFont,
         fontWeight = FontWeight.Medium,
-        fontSize = 24.sp,
+        fontSize = 28.sp,
         color = TextPrimary
     ),
     headlineSmall = TextStyle(
         fontFamily = AppFont,
         fontWeight = FontWeight.Medium,
-        fontSize = 22.sp,
+        fontSize = 24.sp,
         color = TextPrimary
     ),
     titleLarge = TextStyle(
         fontFamily = AppFont,
         fontWeight = FontWeight.Medium,
-        fontSize = 18.sp,
+        fontSize = 22.sp,
         color = TextPrimary
     ),
     titleMedium = TextStyle(

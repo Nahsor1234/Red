@@ -30,5 +30,5 @@ object JeeMotion {
     const val fastMillis = 150
     const val standardMillis = 190
     const val layoutMillis = 280
-    const val timerProgressMillis = 850
+    const val timerProgressMillis = 1000
 }

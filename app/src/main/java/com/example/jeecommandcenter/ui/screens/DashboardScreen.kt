@@ -39,11 +39,8 @@ private data class DashboardSnapshot(
     val tasks: List<AppTask>,
     val todayMinutes: Int,
     val goalMinutes: Int,
-    val completedChapters: Int,
     val priorities: List<DailyPriority>,
-    val weak: WeakChapter?,
-    val unresolvedMistakes: Int,
-    val questionsAttempted: Int
+    val weak: WeakChapter?
 )
 
 @Composable
@@ -68,7 +65,6 @@ fun DashboardScreen(
     val context = androidx.compose.ui.platform.LocalContext.current.applicationContext
     val learning = remember { LearningRepository(context) }
     val intelligence = remember { JeeIntelligence(repo, learning) }
-    val totalChapters = JeeRepository.syllabus.values.sumOf { it.size }
     var snapshot by remember { mutableStateOf<DashboardSnapshot?>(null) }
 
     LaunchedEffect(refresh) {
@@ -77,13 +73,8 @@ fun DashboardScreen(
                 tasks = repo.getTasks(),
                 todayMinutes = repo.getTodayMinutes(),
                 goalMinutes = repo.getDailyGoalMinutes(),
-                completedChapters = JeeRepository.syllabus.keys.sumOf { subject ->
-                    repo.chapters(subject).count { it.progress >= 1f }
-                },
                 priorities = intelligence.dailyPriorities(3),
-                weak = intelligence.weakChapters(1).firstOrNull(),
-                unresolvedMistakes = learning.getMistakes().count { !it.resolved },
-                questionsAttempted = learning.getQuestionAttempts().size
+                weak = intelligence.weakChapters(1).firstOrNull()
             )
         }
     }
@@ -91,12 +82,8 @@ fun DashboardScreen(
     val tasks = snapshot?.tasks.orEmpty()
     val todayMinutes = snapshot?.todayMinutes ?: 0
     val goalMinutes = snapshot?.goalMinutes ?: repo.getDailyGoalMinutes()
-    val completedChapters = snapshot?.completedChapters ?: 0
-    val coverage = if (totalChapters == 0) 0f else completedChapters.toFloat() / totalChapters
     val priorities = snapshot?.priorities.orEmpty()
     val weak = snapshot?.weak
-    val unresolvedMistakes = snapshot?.unresolvedMistakes ?: 0
-    val questionsAttempted = snapshot?.questionsAttempted ?: 0
     val todayTasks = tasks.filter { it.dueDay == "Today" }
     val dailyLog = remember { DailyLogRepository(context) }
     val currentMonth = YearMonth.now()
@@ -132,7 +119,7 @@ fun DashboardScreen(
 
     Box(Modifier.fillMaxSize()) {
         Scaffold(
-            containerColor = BgApp.copy(alpha = 0f),
+            containerColor = BgAppBase,
             bottomBar = {
                 AnimatedBottomNavBar(
                     selectedTab,
@@ -163,7 +150,7 @@ fun DashboardScreen(
                             fontWeight = FontWeight.SemiBold
                         )
                         Text(
-                            "JEE 2027 · focused preparation",
+                            "JEE MAIN 2027 · $daysToJee days to Session 1",
                             style = MaterialTheme.typography.bodySmall,
                             color = TextSecondary
                         )
@@ -305,34 +292,9 @@ fun DashboardScreen(
 
                 Spacer(Modifier.height(JeeSpacing.md))
 
-                // Exam date is supporting context, not a competing hero card.
-                Row(
-                    Modifier.fillMaxWidth().padding(vertical = JeeSpacing.xs),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(Icons.Filled.Event, null, tint = PrimaryLight, modifier = Modifier.size(20.dp))
-                    Spacer(Modifier.width(JeeSpacing.sm))
-                    Column(Modifier.weight(1f)) {
-                        Text(
-                            "JEE Main 2027 · Session 1",
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Medium
-                        )
-                        Text(
-                            "Tentative schedule · Jan 22–24 and Jan 28–30, 2027",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = TextSecondary
-                        )
-                    }
-                    Column(horizontalAlignment = Alignment.End) {
-                        AnimatedContent(targetState = daysToJee, label = "home-exam-countdown") { days ->
-                            Text(days.toString(), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-                        }
-                        Text("days left", style = MaterialTheme.typography.labelSmall, color = TextSecondary)
-                    }
-                }
-
                 HorizontalDivider(color = BgDivider.copy(alpha = .65f))
+
+
 
                 Spacer(Modifier.height(JeeSpacing.md))
                 SectionHeader("Today")
@@ -344,20 +306,15 @@ fun DashboardScreen(
                         style = MaterialTheme.typography.bodySmall
                     )
                 } else {
-                    Row(horizontalArrangement = Arrangement.spacedBy(JeeSpacing.sm)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(JeeSpacing.lg)) {
                         HomeMetric(
                             "${todayMinutes / 60}h ${todayMinutes % 60}m",
-                            "Study",
+                            "Study time",
                             Modifier.weight(1f)
                         )
                         HomeMetric(
-                            "${todayTasks.count { it.done }}/${todayTasks.size}",
-                            "Tasks done",
-                            Modifier.weight(1f)
-                        )
-                        HomeMetric(
-                            "${(coverage * 100).toInt()}%",
-                            "Coverage",
+                            "$goalMinutes min",
+                            "Daily goal",
                             Modifier.weight(1f)
                         )
                     }
@@ -411,32 +368,6 @@ fun DashboardScreen(
                 )
 
                 HorizontalDivider(color = BgDivider.copy(alpha = .65f))
-
-                Spacer(Modifier.height(JeeSpacing.md))
-                SectionHeader("Quick actions")
-                Row(horizontalArrangement = Arrangement.spacedBy(JeeSpacing.xs)) {
-                    QuickAction(
-                        "Practice",
-                        "${questionsAttempted} questions",
-                        Icons.Filled.Quiz,
-                        Modifier.weight(1f),
-                        onOpenAssessment
-                    )
-                    QuickAction(
-                        "Revision",
-                        "Review queue",
-                        Icons.Filled.Description,
-                        Modifier.weight(1f),
-                        onOpenRevision
-                    )
-                    QuickAction(
-                        "Mistakes",
-                        "$unresolvedMistakes open",
-                        Icons.Filled.ErrorOutline,
-                        Modifier.weight(1f),
-                        onOpenMistakes
-                    )
-                }
 
                 Spacer(Modifier.height(JeeSpacing.md))
                 SectionHeader("Today's tasks", "See all") { onTabSelected(AppTab.TASKS) }
@@ -576,44 +507,6 @@ fun DashboardScreen(
 }
 
 data class FocusDisplay(val title: String, val reason: String, val durationMin: Int, val subject: String)
-
-@Composable
-private fun QuickAction(
-    title: String,
-    metric: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit
-) {
-    Column(
-        modifier
-            .heightIn(min = 76.dp)
-            .semantics(mergeDescendants = true) {
-                role = Role.Button
-                contentDescription = "$title, $metric"
-            }
-            .premiumClick(onClick)
-            .padding(vertical = JeeSpacing.sm),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Icon(icon, null, tint = PrimaryLight, modifier = Modifier.size(21.dp))
-        Spacer(Modifier.height(JeeSpacing.xs))
-        Text(
-            title,
-            color = TextPrimary,
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.SemiBold,
-            maxLines = 1
-        )
-        Text(
-            metric,
-            color = TextSecondary,
-            style = MaterialTheme.typography.labelSmall,
-            maxLines = 1
-        )
-    }
-}
 
 @Composable
 private fun HomeMetric(value: String, label: String, modifier: Modifier = Modifier) {

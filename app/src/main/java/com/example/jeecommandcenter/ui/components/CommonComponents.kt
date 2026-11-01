@@ -90,30 +90,19 @@ enum class AppTab { HOME, SYLLABUS, AI, TASKS, STATS }
 @Composable fun SectionHeader(title: String, actionLabel: String? = null, onActionClick: () -> Unit = {}) { Row(Modifier.fillMaxWidth().padding(vertical = JeeSpacing.sm), Arrangement.SpaceBetween, Alignment.CenterVertically) { Text(title, style = MaterialTheme.typography.titleMedium); if (actionLabel != null) Text(actionLabel, style = MaterialTheme.typography.labelMedium.copy(color = PrimaryLight), modifier = Modifier.semantics { role = Role.Button }.premiumClick { onActionClick() }) } }
 data class TaskItem(val id: String, val title: String, val subtitle: String, val duration: String, val done: Boolean = false, val inProgress: Boolean = false)
 @Composable fun TaskRow(task: TaskItem, onToggle: (String) -> Unit, onClick: () -> Unit = {}) { val alpha by animateFloatAsState(if (task.done) .62f else 1f, label = "task-alpha"); val check by animateColorAsState(if (task.done) Success else Color.Transparent, label = "task-check"); val scale by animateFloatAsState(if (task.done) .985f else 1f, animationSpec = tween(180), label = "task-scale"); Row(Modifier.fillMaxWidth().graphicsLayer(alpha = alpha, scaleX = scale, scaleY = scale).semantics { role = Role.Button }.premiumClick(onClick = onClick).padding(vertical = 11.dp), verticalAlignment = Alignment.CenterVertically) { Box(Modifier.size(21.dp).clip(RoundedCornerShape(7.dp)).background(check).border(1.dp, if (task.done) Success else BgCardBorder, RoundedCornerShape(7.dp)).semantics { role = Role.Checkbox; contentDescription = "Mark ${task.title} complete"; stateDescription = if (task.done) "Completed" else "Not completed" }.premiumClick(haptic = if (!task.done) HapticFeedbackConstants.KEYBOARD_TAP else HapticFeedbackConstants.VIRTUAL_KEY) { onToggle(task.id) }, Alignment.Center) { if (task.done) Icon(Icons.Filled.Check, null, tint = SuccessDark, modifier = Modifier.size(14.dp)) }; Spacer(Modifier.width(JeeSpacing.md)); Column(Modifier.weight(1f)) { Text(task.title, color = TextOnCard, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium), textDecoration = if (task.done) TextDecoration.LineThrough else TextDecoration.None); if (task.subtitle.isNotEmpty()) Text(task.subtitle, color = TextSecondary, style = MaterialTheme.typography.bodySmall) }; Text(task.duration, color = TextMuted, style = MaterialTheme.typography.labelMedium) } }
-@Composable fun JeeFilterChip(label: String, selected: Boolean, onClick: () -> Unit) { FilterChip(selected = selected, onClick = onClick, label = { Text(label, style = MaterialTheme.typography.labelMedium.copy(fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal)) }, shape = JeeShapes.pill, colors = FilterChipDefaults.filterChipColors(containerColor = BgCard, labelColor = TextSecondary, selectedContainerColor = Primary, selectedLabelColor = MaterialTheme.colorScheme.onPrimary)) }
+@Composable fun JeeFilterChip(label: String, selected: Boolean, onClick: () -> Unit) { FilterChip(selected = selected, onClick = onClick, label = { Text(label, style = MaterialTheme.typography.labelMedium.copy(fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal)) }, shape = JeeShapes.small, colors = FilterChipDefaults.filterChipColors(containerColor = BgCard, labelColor = TextSecondary, selectedContainerColor = Primary, selectedLabelColor = MaterialTheme.colorScheme.onPrimary)) }
 
 private enum class NavVisual { HOME, SYLLABUS, AI, TASKS, TIMER }
 
 @Composable
 fun BottomNavBar(selected: AppTab, onTabSelected: (AppTab) -> Unit) {
     val view = LocalView.current
-    Box(
-        Modifier
-            .fillMaxWidth()
-            .navigationBarsPadding()
-            .padding(horizontal = 28.dp)
-            .padding(bottom = 4.dp),
-        contentAlignment = Alignment.Center
+    Column(
+        Modifier.fillMaxWidth().navigationBarsPadding().background(BgCard)
     ) {
+        HorizontalDivider(color = BgDivider.copy(alpha = 0.8f), thickness = 1.dp)
         Row(
-            Modifier
-                .fillMaxWidth()
-                .height(60.dp)
-                .shadow(10.dp, JeeShapes.pill, clip = false)
-                .clip(JeeShapes.pill)
-                .background(BgCard.copy(alpha = .94f))
-                .border(1.dp, BgCardBorder.copy(alpha = .95f), JeeShapes.pill)
-                .padding(horizontal = 4.dp, vertical = 3.dp),
+            Modifier.fillMaxWidth().height(80.dp).padding(horizontal = 8.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             NavIconSlot(NavVisual.HOME, selected == AppTab.HOME, Modifier.weight(1f)) {
