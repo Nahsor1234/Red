@@ -87,13 +87,14 @@ enum class AppTab { HOME, SYLLABUS, AI, TASKS, STATS }
 
 @Composable fun JeeCard(modifier: Modifier = Modifier, featured: Boolean = false, content: @Composable ColumnScope.() -> Unit) { val shape = if (featured) JeeShapes.large else JeeShapes.medium; Column(modifier.fillMaxWidth().clip(shape).background(if (featured) BgCardAlt else BgCard).border(JeeSurfaceTokens.borderWidth, BgCardBorder.copy(alpha = if (featured) JeeSurfaceTokens.featuredBorderAlpha else JeeSurfaceTokens.cardBorderAlpha), shape).padding(JeeSpacing.lg), content = content) }
 @Composable fun LinearStatBar(progress: Float, modifier: Modifier = Modifier, trackColor: Color = BgDivider, fillColor: Color = Primary, height: androidx.compose.ui.unit.Dp = 5.dp) { val p by animateFloatAsState(progress.coerceIn(0f, 1f), animationSpec = tween(320), label = "progress"); Box(modifier.fillMaxWidth().height(height).clip(JeeShapes.pill).background(trackColor).semantics { progressBarRangeInfo = ProgressBarRangeInfo(p, 0f..1f) }) { Box(Modifier.fillMaxHeight().fillMaxWidth(p).clip(JeeShapes.pill).background(fillColor)) } }
-@Composable fun SectionHeader(title: String, actionLabel: String? = null, onActionClick: () -> Unit = {}) { Row(Modifier.fillMaxWidth().padding(vertical = JeeSpacing.sm), Arrangement.SpaceBetween, Alignment.CenterVertically) { Text(title, style = MaterialTheme.typography.titleMedium); if (actionLabel != null) Text(actionLabel, style = MaterialTheme.typography.labelMedium.copy(color = PrimaryLight), modifier = Modifier.semantics { role = Role.Button }.premiumClick { onActionClick() }) } }
+@Composable fun SectionHeader(title: String, actionLabel: String? = null, titleWeight: FontWeight = FontWeight.Normal, onActionClick: () -> Unit = {}) { Row(Modifier.fillMaxWidth().padding(vertical = JeeSpacing.sm), Arrangement.SpaceBetween, Alignment.CenterVertically) { Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = titleWeight); if (actionLabel != null) Text(actionLabel, style = MaterialTheme.typography.labelMedium.copy(color = PrimaryLight), modifier = Modifier.semantics { role = Role.Button }.premiumClick { onActionClick() }) } }
 data class TaskItem(val id: String, val title: String, val subtitle: String, val duration: String, val done: Boolean = false, val inProgress: Boolean = false)
 @Composable
 fun TaskRow(
     task: TaskItem,
     onToggle: (String) -> Unit,
-    onClick: () -> Unit = {}
+    onClick: () -> Unit = {},
+    expressiveMotion: Boolean = false
 ) {
     val alpha by animateFloatAsState(
         if (task.done) 0.62f else 1f,
@@ -110,16 +111,22 @@ fun TaskRow(
         animationSpec = tween(300),
         label = "task-scale"
     )
+    val checkScale by animateFloatAsState(
+        targetValue = if (task.done) 1f else 0.72f,
+        animationSpec = spring(dampingRatio = 0.6f, stiffness = Spring.StiffnessMedium),
+        label = "task-check-scale"
+    )
     Row(
         Modifier.fillMaxWidth()
             .graphicsLayer(alpha = alpha, scaleX = scale, scaleY = scale)
+            .then(if (expressiveMotion) Modifier.animateContentSize() else Modifier)
             .semantics { role = Role.Button }
             .premiumClick(onClick = onClick)
             .padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = if (expressiveMotion) Alignment.Top else Alignment.CenterVertically
     ) {
         Box(
-            Modifier.size(48.dp)
+            Modifier.then(if (expressiveMotion) Modifier.padding(top = 2.dp) else Modifier).size(48.dp)
                 .semantics {
                     role = Role.Checkbox
                     contentDescription = "Mark ${task.title} complete"
@@ -140,7 +147,12 @@ fun TaskRow(
                 contentAlignment = Alignment.Center
             ) {
                 if (task.done) {
-                    Icon(Icons.Filled.Check, null, tint = SuccessDark, modifier = Modifier.size(14.dp))
+                    Icon(
+                        Icons.Filled.Check,
+                        null,
+                        tint = SuccessDark,
+                        modifier = Modifier.size(14.dp).graphicsLayer(scaleX = checkScale, scaleY = checkScale)
+                    )
                 }
             }
         }
@@ -243,12 +255,19 @@ private fun RowScope.NavIconSlot(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = contentColor,
-            modifier = Modifier.size(22.dp)
-        )
+        Box(
+            Modifier
+                .clip(JeeShapes.pill)
+                .background(if (selected) PrimarySoft else Color.Transparent)
+                .padding(horizontal = 10.dp, vertical = 5.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = contentColor,
+                modifier = Modifier.size(22.dp)
+            )
+        }
         Spacer(Modifier.height(3.dp))
         Text(
             text = label,
@@ -259,11 +278,5 @@ private fun RowScope.NavIconSlot(
             maxLines = 1
         )
         Spacer(Modifier.height(2.dp))
-        Box(
-            Modifier
-                .size(4.dp)
-                .clip(RoundedCornerShape(50))
-                .background(if (selected) PrimaryLight else Color.Transparent)
-        )
     }
 }
