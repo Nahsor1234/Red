@@ -18,7 +18,8 @@ val TextPriorityBadge = Color(0xFFCAF592)
 val TextAmber = Color(0xFFCAF592)
 val TextPrimary = Color(0xFFF2F6EF)
 val TextSecondary = Color(0xFFAEB7A7)
-val TextMuted = Color(0xFF7F8979)
+// Meets WCAG AA normal-text contrast on both BgCard and BgCardAlt.
+val TextMuted = Color(0xFF949E8D)
 val TextOnCard = Color(0xFFF2F6EF)
 
 // Semantic accent tokens. Prefer these names in new code.
