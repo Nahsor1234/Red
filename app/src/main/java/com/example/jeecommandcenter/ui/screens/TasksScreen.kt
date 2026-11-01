@@ -146,7 +146,7 @@ fun TasksScreen(
 
             LazyColumn(
                 Modifier.weight(1f).animateContentSize(animationSpec = tween(JeeMotion.layoutMillis)),
-                contentPadding = PaddingValues(bottom = 92.dp)
+                contentPadding = PaddingValues(bottom = 120.dp)
             ) {
                 if (filter == "All") {
                     taskGroup("Today", today, ::toggleWithUndo, { selectedTask = it })
@@ -278,7 +278,7 @@ private fun TaskListItem(task: AppTask, onToggle: () -> Unit, onOpen: () -> Unit
                     maxLines = 1
                 )
             }
-            Icon(Icons.Filled.ChevronRight, "Open task details", tint = TextSecondary, modifier = Modifier.size(20.dp))
+            Icon(Icons.Filled.ChevronRight, "Open task details", tint = TextSecondary, modifier = Modifier.padding(end = JeeSpacing.lg).size(20.dp))
         }
         HorizontalDivider(Modifier.padding(start = 48.dp), color = BgDivider.copy(alpha = 0.55f), thickness = 0.7.dp)
     }
