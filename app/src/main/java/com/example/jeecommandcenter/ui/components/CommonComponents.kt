@@ -166,10 +166,10 @@ fun TaskRow(
                 textDecoration = if (task.done) TextDecoration.LineThrough else TextDecoration.None
             )
             if (task.subtitle.isNotEmpty()) {
-                Text(task.subtitle, color = TextSecondary, style = MaterialTheme.typography.bodySmall)
+                Text(task.subtitle, color = TextSecondary, style = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = "tnum"))
             }
         }
-        Text(task.duration, color = TextMuted, style = MaterialTheme.typography.labelMedium)
+        Text(task.duration, color = TextMuted, style = MaterialTheme.typography.labelMedium.copy(fontFeatureSettings = "tnum"))
     }
 }
 
