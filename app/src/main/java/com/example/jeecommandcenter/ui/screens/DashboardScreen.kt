@@ -257,7 +257,7 @@ fun DashboardScreen(
                             Text(
                                 nextTask.title,
                                 style = MaterialTheme.typography.headlineSmall,
-                                fontWeight = FontWeight.SemiBold
+                                fontWeight = FontWeight.Bold
                             )
                             Spacer(Modifier.height(JeeSpacing.xs))
                             Text(
