@@ -89,7 +89,8 @@ fun TasksScreen(
             ExtendedFloatingActionButton(
                 onClick = { showAdd = true },
                 icon = { Icon(Icons.Filled.Add, contentDescription = null) },
-                text = { Text("Add task") },
+                text = { Text("Add task", style = MaterialTheme.typography.labelLarge) },
+                modifier = Modifier.height(56.dp),
                 shape = JeeShapes.medium,
                 containerColor = Primary,
                 contentColor = BgAppBase

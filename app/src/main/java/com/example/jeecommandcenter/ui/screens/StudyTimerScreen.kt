@@ -125,7 +125,7 @@ fun StudyTimerScreen(
         LazyColumn(
             Modifier.fillMaxSize().padding(padding).padding(horizontal = JeeSpacing.lg),
             verticalArrangement = Arrangement.spacedBy(JeeSpacing.md),
-            contentPadding = PaddingValues(top = JeeSpacing.md, bottom = JeeSpacing.xl)
+            contentPadding = PaddingValues(top = JeeSpacing.md, bottom = 120.dp)
         ) {
             item {
                 Column {
@@ -252,18 +252,18 @@ fun StudyTimerScreen(
                         label = "focus-ring-progress"
                     )
                     Canvas(Modifier.size(240.dp)) {
-                        val stroke = Stroke(6.dp.toPx(), cap = StrokeCap.Round)
+                        val stroke = Stroke(10.dp.toPx(), cap = StrokeCap.Round)
                         drawArc(BgDivider, -90f, 360f, false, style = stroke)
                         drawArc(Primary, -90f, 360f * animatedFraction, false, style = stroke)
                     }
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
                             String.format(Locale.US, "%02d:%02d", remaining / 60, remaining % 60),
-                            style = MaterialTheme.typography.displaySmall.copy(
+                            style = MaterialTheme.typography.headlineLarge.copy(fontSize = 32.sp,
                                 fontFamily = FontFamily.Monospace,
                                 fontFeatureSettings = "tnum"
                             ),
-                            fontWeight = FontWeight.Normal
+                            fontWeight = FontWeight.Bold
                         )
                         AnimatedContent(
                             targetState = when {

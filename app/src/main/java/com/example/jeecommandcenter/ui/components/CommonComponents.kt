@@ -180,12 +180,14 @@ private enum class NavVisual { HOME, SYLLABUS, AI, TASKS, TIMER }
 @Composable
 fun BottomNavBar(selected: AppTab, onTabSelected: (AppTab) -> Unit) {
     val view = LocalView.current
-    Column(
-        Modifier.fillMaxWidth().navigationBarsPadding().background(BgCard)
+    Surface(
+        modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp),
+        color = BgCard,
+        shape = JeeShapes.large,
+        border = androidx.compose.foundation.BorderStroke(1.dp, BgCardBorder)
     ) {
-        HorizontalDivider(color = BgDivider.copy(alpha = 0.8f), thickness = 1.dp)
         Row(
-            Modifier.fillMaxWidth().height(80.dp).padding(horizontal = 8.dp, vertical = 6.dp),
+            Modifier.fillMaxWidth().height(72.dp).padding(horizontal = 8.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             NavIconSlot(NavVisual.HOME, selected == AppTab.HOME, Modifier.weight(1f)) {

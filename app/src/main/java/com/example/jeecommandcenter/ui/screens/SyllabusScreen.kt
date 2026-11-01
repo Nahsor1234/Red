@@ -278,7 +278,7 @@ fun SyllabusScreen(
 
                 LazyColumn(
                     Modifier.weight(1f),
-                    contentPadding = PaddingValues(bottom = 12.dp)
+                    contentPadding = PaddingValues(bottom = 120.dp)
                 ) {
                     if (filter == "All" && query.isBlank() && attention != null) {
                         item {
