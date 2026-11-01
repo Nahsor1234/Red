@@ -549,7 +549,6 @@ fun DashboardScreen(
 data class FocusDisplay(val title: String, val reason: String, val durationMin: Int, val subject: String)
 
 @Composable
-@Composable
 private fun HomeSectionHeader(
     title: String,
     actionLabel: String? = null,
@@ -570,7 +569,8 @@ private fun HomeSectionHeader(
         }
     }
 }
-
+ 
+@Composable
 private fun HomeMetric(
     value: String,
     label: String,
