@@ -3,7 +3,12 @@ package com.example.jeecommandcenter.ui.screens
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -16,6 +21,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
@@ -183,13 +189,14 @@ fun DashboardScreen(
                             color = PrimaryLight,
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold,
-                            letterSpacing = 0.7.sp
+                            letterSpacing = 0.5.sp
                         )
                         TextButton(
                             onClick = { showFocusPicker = true },
                             contentPadding = PaddingValues(horizontal = JeeSpacing.sm, vertical = 0.dp)
                         ) {
-                            Text("Change")
+                            Text("Change", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Medium)
+                            Icon(Icons.Outlined.ChevronRight, null, modifier = Modifier.size(16.dp))
                         }
                     }
 
@@ -211,7 +218,7 @@ fun DashboardScreen(
                         }
                         focus != null -> {
                             AnimatedContent(targetState = focus.title, label = "home-focus-title") { title ->
-                                Text(title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
+                                Text(title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                             }
                             Spacer(Modifier.height(JeeSpacing.xs))
                             AnimatedContent(targetState = focus.reason, label = "home-focus-reason") { reason ->
@@ -282,26 +289,35 @@ fun DashboardScreen(
                     }
 
                     Spacer(Modifier.height(JeeSpacing.lg))
+                    val buttonInteraction = remember { MutableInteractionSource() }
+                    val buttonPressed by buttonInteraction.collectIsPressedAsState()
+                    val buttonScale by animateFloatAsState(
+                        targetValue = if (buttonPressed) 0.98f else 1f,
+                        animationSpec = spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessMedium),
+                        label = "home-focus-button-scale"
+                    )
                     Button(
                         onClick = onOpenStudyTimer,
-                        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                        modifier = Modifier.fillMaxWidth().height(56.dp)
+                            .graphicsLayer(scaleX = buttonScale, scaleY = buttonScale),
                         shape = JeeShapes.medium,
-                        enabled = snapshot != null
+                        enabled = snapshot != null,
+                        interactionSource = buttonInteraction,
+                        contentPadding = PaddingValues(horizontal = 16.dp)
                     ) {
-                        Icon(Icons.Filled.PlayArrow, null, Modifier.size(18.dp))
-                        Spacer(Modifier.width(JeeSpacing.sm))
-                        Text(if (focus == null && nextTask == null) "Open study timer" else "Start focused session")
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Filled.PlayArrow, null, Modifier.size(18.dp))
+                            Spacer(Modifier.width(JeeSpacing.sm))
+                            Text(if (focus == null && nextTask == null) "Open study timer" else "Start focused session")
+                            Spacer(Modifier.weight(1f))
+                        }
                     }
                 }
 
                 Spacer(Modifier.height(JeeSpacing.md))
 
-                HorizontalDivider(color = BgDivider.copy(alpha = .65f))
-
-
-
                 Spacer(Modifier.height(JeeSpacing.md))
-                SectionHeader("Today")
+                SectionHeader("Today", titleWeight = FontWeight.SemiBold)
 
                 if (snapshot == null) {
                     Text(
@@ -334,7 +350,7 @@ fun DashboardScreen(
                         if (goalMinutes == 0) "Daily goal not set"
                         else "${todayMinutes.coerceAtMost(goalMinutes)} / $goalMinutes min daily goal",
                         color = TextSecondary,
-                        style = MaterialTheme.typography.labelSmall
+                        style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = "tnum")
                     )
                 }
 
@@ -362,19 +378,18 @@ fun DashboardScreen(
                             color = TextSecondary,
                             style = MaterialTheme.typography.labelSmall
                         )
+                        Spacer(Modifier.height(6.dp))
+                        LinearStatBar(
+                            dailyLogCompleted.toFloat() / currentMonth.lengthOfMonth().coerceAtLeast(1),
+                            height = 4.dp,
+                            fillColor = Primary
+                        )
                     }
                     Icon(Icons.Filled.ChevronRight, null, tint = TextSecondary)
                 }
-                LinearStatBar(
-                    dailyLogCompleted.toFloat() / currentMonth.lengthOfMonth().coerceAtLeast(1),
-                    height = 4.dp,
-                    fillColor = Primary
-                )
-
-                HorizontalDivider(color = BgDivider.copy(alpha = .65f))
 
                 Spacer(Modifier.height(JeeSpacing.md))
-                SectionHeader("Today's tasks", "See all") { onTabSelected(AppTab.TASKS) }
+                SectionHeader("Today's tasks", "See all", titleWeight = FontWeight.SemiBold) { onTabSelected(AppTab.TASKS) }
                 if (snapshot == null) {
                     Text("Loading tasks…", color = TextSecondary, style = MaterialTheme.typography.bodySmall)
                 } else if (todayTasks.isEmpty()) {
@@ -412,10 +427,15 @@ fun DashboardScreen(
                                     }
                                 }
                             },
-                            onClick = { onTabSelected(AppTab.TASKS) }
+                            onClick = { onTabSelected(AppTab.TASKS) },
+                            expressiveMotion = true
                         )
                         if (index < minOf(todayTasks.size, 4) - 1) {
-                            HorizontalDivider(color = BgDivider.copy(alpha = .45f), thickness = .5.dp)
+                            HorizontalDivider(
+                                modifier = Modifier.padding(start = 72.dp, end = 16.dp),
+                                color = BgDivider.copy(alpha = .45f),
+                                thickness = .5.dp
+                            )
                         }
                     }
                 }
@@ -453,7 +473,7 @@ fun DashboardScreen(
                     }
                 }
 
-                Spacer(Modifier.height(JeeSpacing.xl))
+                Spacer(Modifier.height(96.dp))
             }
         }
     }
@@ -530,8 +550,13 @@ data class FocusDisplay(val title: String, val reason: String, val durationMin: 
 private fun HomeMetric(value: String, label: String, modifier: Modifier = Modifier) {
     Column(modifier.padding(vertical = JeeSpacing.xs)) {
         AnimatedContent(targetState = value, label = "home-metric-value") { animatedValue ->
-            Text(animatedValue, color = TextPrimary, style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold, maxLines = 1)
+            Text(
+                animatedValue,
+                color = TextPrimary,
+                style = MaterialTheme.typography.headlineSmall.copy(fontFeatureSettings = "tnum"),
+                fontWeight = FontWeight.Bold,
+                maxLines = 1
+            )
         }
         Text(
             label,
