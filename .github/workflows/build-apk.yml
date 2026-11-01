@@ -2,10 +2,13 @@ name: Build APK
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, ContinueBuilding ]
   pull_request:
     branches: [ main ]
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 concurrency:
   group: android-build-${{ github.ref }}
@@ -65,13 +68,45 @@ jobs:
           fi
 
       - name: Build APK
-        run: gradle assembleDebug
+        run: gradle assembleDebug --stacktrace
 
-      - name: Upload APK
+      # Keep a short-lived Actions artifact for convenient run-level downloads.
+      # The GitHub Release below is the durable download location.
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: JEECommandCenter-debug-apk
+          name: Sigma-JE-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
 
-      # Verification build for the current implementation batch.
-      # Current app identity/state verification build.
+      # Publish only completed non-PR builds. Each run gets its own prerelease
+      # and immutable tag, preserving a download/history entry for every build.
+      - name: Publish APK to GitHub Releases
+        if: ${{ success() && github.event_name != 'pull_request' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          APK_PATH: app/build/outputs/apk/debug/app-debug.apk
+        run: |
+          TAG="debug-build-${GITHUB_RUN_NUMBER}"
+          TITLE="Sigma JE Debug Build #${GITHUB_RUN_NUMBER}"
+          NOTES_FILE="$(mktemp)"
+
+          {
+            echo "Automated debug APK build."
+            echo
+            echo "- Branch: ${GITHUB_REF_NAME}"
+            echo "- Commit: ${GITHUB_SHA}"
+            echo "- Workflow run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+            echo
+            echo "This is a development build, not a production-signed release."
+          } > "$NOTES_FILE"
+
+          gh release create "$TAG" "$APK_PATH" \
+            --title "$TITLE" \
+            --notes-file "$NOTES_FILE" \
+            --prerelease \
+            --target "$GITHUB_SHA"
+
+          rm -f "$NOTES_FILE"
