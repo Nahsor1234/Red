@@ -47,6 +47,7 @@ jobs:
         if: ${{ github.event_name != 'pull_request' }}
         env:
           ANDROID_DEBUG_KEYSTORE_BASE64: ${{ secrets.ANDROID_DEBUG_KEYSTORE_BASE64 }}
+          EXPECTED_CERT_SHA256: "CE52869BCAEE870060F44DF125E79F6079E9E67E3A69FDF1ECB926B9CD381C94"
         run: |
           if [ -z "$ANDROID_DEBUG_KEYSTORE_BASE64" ]; then
             echo "::error::ANDROID_DEBUG_KEYSTORE_BASE64 is required for release-producing builds."
@@ -56,6 +57,15 @@ jobs:
           mkdir -p "$HOME/.android"
           printf '%s' "$ANDROID_DEBUG_KEYSTORE_BASE64" | base64 --decode > "$HOME/.android/debug.keystore"
           test -s "$HOME/.android/debug.keystore"
+
+          KEYSTORE_CERT_SHA256="$(keytool -list -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey | sed -n 's/^[[:space:]]*SHA256: //p' | tr '[:lower:]' '[:upper:]')"
+          if [ "$KEYSTORE_CERT_SHA256" != "$EXPECTED_CERT_SHA256" ]; then
+            echo "::error::Decoded GitHub secret is not the expected Sigma JE keystore."
+            echo "Expected: $EXPECTED_CERT_SHA256"
+            echo "Decoded:  $KEYSTORE_CERT_SHA256"
+            exit 1
+          fi
+          echo "Loaded keystore fingerprint verified."
 
       - name: Build APK
         run: gradle assembleDebug --stacktrace
@@ -70,7 +80,7 @@ jobs:
           APKSIGNER="$ANDROID_HOME/build-tools/35.0.0/apksigner"
 
           "$APKSIGNER" verify --verbose --print-certs "$APK_PATH" | tee /tmp/apk-signing.txt
-          ACTUAL_CERT_SHA256="$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' /tmp/apk-signing.txt | tr '[:lower:]' '[:upper:]')"
+          ACTUAL_CERT_SHA256="$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' /tmp/apk-signing.txt | tr '[:lower:]' '[:upper:]' | tr -d ':')"
 
           if [ "$ACTUAL_CERT_SHA256" != "$EXPECTED_CERT_SHA256" ]; then
             echo "::error::APK signing certificate does not match the permanent Sigma JE key."
