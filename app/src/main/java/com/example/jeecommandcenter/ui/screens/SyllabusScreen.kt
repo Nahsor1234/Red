@@ -265,7 +265,7 @@ fun SyllabusScreen(
                         Text("$completedCount done", color = TextSecondary, style = MaterialTheme.typography.labelSmall)
                     }
                 }
-                Spacer(Modifier.height(14.dp))                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(24.dp))
 
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     item { JeeFilterChip("All ${allModels.size}", filter == "All") { filter = "All" } }
