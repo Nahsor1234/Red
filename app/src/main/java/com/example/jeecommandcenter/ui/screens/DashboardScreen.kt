@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -186,7 +187,7 @@ fun DashboardScreen(
                     ) {
                         Text(
                             focusEyebrow,
-                            color = PrimaryLight,
+                            color = Primary,
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 0.5.sp
@@ -212,7 +213,7 @@ fun DashboardScreen(
                             Spacer(Modifier.height(JeeSpacing.sm))
                             LinearProgressIndicator(
                                 modifier = Modifier.fillMaxWidth(),
-                                color = Primary,
+                                color = TextSecondary,
                                 trackColor = BgDivider
                             )
                         }
@@ -228,18 +229,18 @@ fun DashboardScreen(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Surface(
                                     shape = JeeShapes.pill,
-                                    color = PrimarySoft,
+                                    color = BgCardAlt,
                                     border = BorderStroke(1.dp, BgCardBorder.copy(alpha = .8f))
                                 ) {
                                     Row(
                                         Modifier.padding(horizontal = JeeSpacing.sm, vertical = JeeSpacing.xs),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Icon(Icons.Filled.Schedule, null, tint = PrimaryLight, modifier = Modifier.size(15.dp))
+                                        Icon(Icons.Filled.Schedule, null, tint = TextSecondary, modifier = Modifier.size(15.dp))
                                         Spacer(Modifier.width(JeeSpacing.xs))
                                         Text(
                                             "${focus.durationMin} min",
-                                            color = PrimaryLight,
+                                            color = TextSecondary,
                                             style = MaterialTheme.typography.labelMedium.copy(fontFeatureSettings = "tnum")
                                         )
                                     }
@@ -344,7 +345,7 @@ fun DashboardScreen(
                     LinearStatBar(
                         if (goalMinutes == 0) 0f else (todayMinutes.toFloat() / goalMinutes).coerceIn(0f, 1f),
                         height = 6.dp,
-                        fillColor = Primary
+                        fillColor = TextSecondary
                     )
                     Spacer(Modifier.height(JeeSpacing.xs))
                     Text(
@@ -383,7 +384,7 @@ fun DashboardScreen(
                         LinearStatBar(
                             dailyLogCompleted.toFloat() / currentMonth.lengthOfMonth().coerceAtLeast(1),
                             height = 4.dp,
-                            fillColor = Primary
+                            fillColor = TextSecondary
                         )
                     }
                     Icon(Icons.Filled.ChevronRight, null, tint = TextSecondary)
