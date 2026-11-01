@@ -242,7 +242,7 @@ fun SyllabusScreen(
 
                 Spacer(Modifier.height(14.dp))
 
-                Column(Modifier.fillMaxWidth().animateContentSize(animationSpec = tween(JeeMotion.layoutMillis))) {
+                JeeCard(modifier = Modifier.animateContentSize(animationSpec = tween(JeeMotion.layoutMillis))) {
                     Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text("SUBJECT PROGRESS", color = TextSecondary, style = MaterialTheme.typography.labelSmall)
@@ -345,7 +345,7 @@ fun SyllabusScreen(
                                     Text(
                                         "${chapter.number}. ${chapter.name}",
                                         color = TextOnCard,
-                                        fontSize = 14.sp
+                                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
                                     )
                                     AnimatedContent(targetState = (progress * 100).toInt(), label = "syllabus-chapter-progress") { percent ->
                                         Text("$percent% · ${chapter.estimatedMinutes} min",
@@ -364,7 +364,7 @@ fun SyllabusScreen(
                                 if (due.contains(chapter.id)) {
                                     Text("Review due", color = Warning, style = MaterialTheme.typography.labelSmall)
                                 } else if (weak.contains(chapter.id)) {
-                                    Text("Weak", color = PrimaryLight, style = MaterialTheme.typography.labelSmall)
+                                    Text("Weak", color = TextSecondary, style = MaterialTheme.typography.labelSmall)
                                 }
                                 Icon(
                                     Icons.Filled.ChevronRight,

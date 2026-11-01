@@ -335,39 +335,42 @@ fun StudyTimerScreen(
                 }
             }
             item {
-                SectionHeader("Recent sessions")
-                if (!sessionsLoaded) {
-                    Text("Loading sessions…", color = TextSecondary, style = MaterialTheme.typography.bodySmall)
-                } else if (recentSessions.isEmpty()) {
-                    Text(
-                        "Completed focus sessions will appear here.",
-                        color = TextSecondary,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(vertical = JeeSpacing.sm)
-                    )
-                }
-            }
-            items(recentSessions, key = { it.id }) { session ->
-                Column(Modifier.fillMaxWidth()) {
-                    Row(
-                        Modifier.fillMaxWidth().heightIn(min = 60.dp).padding(vertical = JeeSpacing.sm),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(Modifier.weight(1f)) {
-                            Text(session.subject, style = MaterialTheme.typography.bodyLarge)
-                            Text(
-                                "${session.chapter} · ${session.activityType.name.lowercase().replace('_', ' ')}",
-                                color = TextSecondary,
-                                style = MaterialTheme.typography.bodySmall,
-                                maxLines = 1
-                            )
-                        }
-                        Column(horizontalAlignment = Alignment.End) {
-                            Text("${session.minutes} min", color = PrimaryLight, style = MaterialTheme.typography.labelLarge)
-                            Text(session.date, color = TextSecondary, style = MaterialTheme.typography.labelSmall)
+                JeeCard {
+                    SectionHeader("Recent sessions")
+                    if (!sessionsLoaded) {
+                        Text("Loading sessions…", color = TextSecondary, style = MaterialTheme.typography.bodySmall)
+                    } else if (recentSessions.isEmpty()) {
+                        Text(
+                            "Completed focus sessions will appear here.",
+                            color = TextSecondary,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(vertical = JeeSpacing.sm)
+                        )
+                    } else {
+                        recentSessions.forEachIndexed { index, session ->
+                            Row(
+                                Modifier.fillMaxWidth().heightIn(min = 60.dp).padding(vertical = JeeSpacing.sm),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(Modifier.weight(1f)) {
+                                    Text(session.subject, style = MaterialTheme.typography.bodyLarge)
+                                    Text(
+                                        "${session.chapter} · ${session.activityType.name.lowercase().replace('_', ' ')}",
+                                        color = TextSecondary,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        maxLines = 1
+                                    )
+                                }
+                                Column(horizontalAlignment = Alignment.End) {
+                                    Text("${session.minutes} min", color = PrimaryLight, style = MaterialTheme.typography.labelLarge)
+                                    Text(session.date, color = TextSecondary, style = MaterialTheme.typography.labelSmall)
+                                }
+                            }
+                            if (index < recentSessions.lastIndex) {
+                                HorizontalDivider(color = BgDivider.copy(alpha = 0.6f), thickness = 0.7.dp)
+                            }
                         }
                     }
-                    HorizontalDivider(color = BgDivider.copy(alpha = 0.6f), thickness = 0.7.dp)
                 }
             }
         }
