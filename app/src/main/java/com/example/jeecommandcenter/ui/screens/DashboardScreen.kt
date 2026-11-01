@@ -1,12 +1,7 @@
 package com.example.jeecommandcenter.ui.screens
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -16,6 +11,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -26,8 +25,8 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.YearMonth
 import java.time.format.TextStyle
-import java.util.Locale
 import java.time.temporal.ChronoUnit
+import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -54,7 +53,8 @@ fun DashboardScreen(
     onOpenMistakes: () -> Unit = {},
     onOpenStudyTimer: () -> Unit = {},
     onOpenDailyLog: () -> Unit = {},
-    onOpenNotifications: () -> Unit = {}
+    onOpenNotifications: () -> Unit = {},
+    onOpenChapter: (JeeChapter) -> Unit = {}
 ) {
     var refresh by remember { mutableIntStateOf(0) }
     var showFocusPicker by remember { mutableStateOf(false) }
@@ -65,6 +65,7 @@ fun DashboardScreen(
     val intelligence = remember { JeeIntelligence(repo, learning) }
     val totalChapters = JeeRepository.syllabus.values.sumOf { it.size }
     var snapshot by remember { mutableStateOf<DashboardSnapshot?>(null) }
+
     LaunchedEffect(refresh) {
         snapshot = withContext(Dispatchers.Default) {
             DashboardSnapshot(
@@ -81,6 +82,7 @@ fun DashboardScreen(
             )
         }
     }
+
     val tasks = snapshot?.tasks.orEmpty()
     val todayMinutes = snapshot?.todayMinutes ?: 0
     val goalMinutes = snapshot?.goalMinutes ?: repo.getDailyGoalMinutes()
@@ -107,7 +109,16 @@ fun DashboardScreen(
             chapter.subject
         )
     } ?: autoFocus?.let { FocusDisplay(it.title, it.reason, it.durationMin, it.subject) }
-    val daysToJee = remember { ChronoUnit.DAYS.between(LocalDate.now(), LocalDate.of(2027, 1, 22)).coerceAtLeast(0) }
+
+    val focusEyebrow = when {
+        selectedFocusChapter != null -> "YOUR SELECTED FOCUS"
+        autoFocus != null -> "RECOMMENDED NEXT ACTION"
+        nextTask != null -> "TASK TO PICK UP"
+        else -> "SET YOUR NEXT FOCUS"
+    }
+    val daysToJee = remember {
+        ChronoUnit.DAYS.between(LocalDate.now(), LocalDate.of(2027, 1, 22)).coerceAtLeast(0)
+    }
     val greeting = when (LocalTime.now().hour) {
         in 5..11 -> "Good morning"
         in 12..16 -> "Good afternoon"
@@ -115,141 +126,394 @@ fun DashboardScreen(
     }
 
     Box(Modifier.fillMaxSize()) {
-        Scaffold(containerColor = BgApp.copy(alpha = 0f), bottomBar = { AnimatedBottomNavBar(selectedTab, onTabSelected, visible = selectedTab != AppTab.AI) }) { padding ->
-            Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 18.dp).verticalScroll(rememberScrollState())) {
-                Spacer(Modifier.height(12.dp))
-                Row(Modifier.fillMaxWidth().padding(bottom = 14.dp), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+        Scaffold(
+            containerColor = BgApp.copy(alpha = 0f),
+            bottomBar = {
+                AnimatedBottomNavBar(
+                    selectedTab,
+                    onTabSelected,
+                    visible = selectedTab != AppTab.AI
+                )
+            }
+        ) { padding ->
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(horizontal = JeeSpacing.lg)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                Spacer(Modifier.height(JeeSpacing.sm))
+
+                // Header: utility actions remain available without competing with the study action.
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Column {
-                        Text(greeting, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
-                        Text("JEE 2027 · focused preparation", color = TextSecondary, fontSize = 12.sp)
+                        Text(
+                            greeting,
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            "JEE 2027 · focused preparation",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextSecondary
+                        )
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         IconButton(onClick = onOpenNotifications) {
-                            Icon(Icons.Filled.Notifications, "Notifications", tint = PrimaryLight, modifier = Modifier.size(23.dp))
+                            Icon(Icons.Filled.Notifications, "Notifications", tint = PrimaryLight)
                         }
                         IconButton(onClick = onOpenSettings) {
-                            Icon(Icons.Filled.Settings, "Settings", tint = TextPrimary, modifier = Modifier.size(24.dp))
+                            Icon(Icons.Filled.Settings, "Settings", tint = TextPrimary)
                         }
                     }
                 }
 
-                JeeCard {
-                    Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
-                        Column {
-                            Text("JEE MAIN 2027 · SESSION 1", color = PrimaryLight, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = .8.sp)
-                            Spacer(Modifier.height(4.dp))
-                            Text(daysToJee.toString(), fontSize = 30.sp, fontWeight = FontWeight.SemiBold)
-                            Text("days to first scheduled exam day", color = TextSecondary, fontSize = 11.sp)
-                        }
-                        Surface(shape = RoundedCornerShape(14.dp), color = PrimarySoft, border = BorderStroke(1.dp, BgCardBorder.copy(alpha = .75f))) { Icon(Icons.Filled.Event, "JEE Main 2027 countdown", tint = PrimaryLight, modifier = Modifier.padding(12.dp).size(22.dp)) }
-                    }
-                    Spacer(Modifier.height(7.dp))
-                    Text("Tentative NTA schedule · Jan 22–24 and Jan 28–30, 2027", color = TextMuted, fontSize = 9.sp)
-                }
+                Spacer(Modifier.height(JeeSpacing.md))
 
-                Spacer(Modifier.height(16.dp))
-                SectionHeader("Quick actions")
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    QuickAction("Practice", questionsAttempted.toString() + " questions", Icons.Filled.Quiz, Modifier.weight(1f), true, onOpenAssessment)
-                    QuickAction("Notes", "Your library", Icons.Filled.Description, Modifier.weight(1f), false, onOpenRevision)
-                }
-                Spacer(Modifier.height(10.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    QuickAction("Mistakes", unresolvedMistakes.toString() + " unresolved", Icons.Filled.ErrorOutline, Modifier.weight(1f), false, onOpenMistakes)
-                    QuickAction("Study", (todayMinutes / 60).toString() + "h " + (todayMinutes % 60).toString() + "m today", Icons.Filled.Timer, Modifier.weight(1f), false, onOpenStudyTimer)
-                }
-
-                Spacer(Modifier.height(18.dp))
-                JeeCard(modifier = Modifier.premiumClick(onClick = onOpenDailyLog)) {
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Surface(shape = RoundedCornerShape(12.dp), color = PrimarySoft) {
-                            Icon(Icons.Filled.CalendarMonth, "Daily Progress", tint = PrimaryLight, modifier = Modifier.padding(10.dp).size(21.dp))
-                        }
-                        Spacer(Modifier.width(11.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text("Daily Progress", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                            Text("${currentMonth.month.getDisplayName(TextStyle.SHORT, Locale.getDefault())} · $dailyLogCompleted/${currentMonth.lengthOfMonth()} days completed", color = TextSecondary, fontSize = 11.sp)
-                        }
-                        Icon(Icons.Filled.ChevronRight, "Open Daily Progress", tint = PrimaryLight)
-                    }
-                    Spacer(Modifier.height(10.dp))
-                    LinearStatBar(dailyLogCompleted.toFloat() / currentMonth.lengthOfMonth().coerceAtLeast(1), height = 5.dp, fillColor = Primary)
-                }
-
-                Spacer(Modifier.height(18.dp))
-                SectionHeader("Today at a glance")
-                JeeCard {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        HomeMetric((todayMinutes / 60).toString() + "h " + (todayMinutes % 60).toString() + "m", "Study", Modifier.weight(1f))
-                        HomeMetric(todayTasks.count { it.done }.toString() + "/" + todayTasks.size, "Tasks", Modifier.weight(1f))
-                        HomeMetric(unresolvedMistakes.toString(), "Mistakes", Modifier.weight(1f))
-                        HomeMetric((coverage * 100).toInt().toString() + "%", "Coverage", Modifier.weight(1f))
-                    }
-                    Spacer(Modifier.height(12.dp))
-                    LinearStatBar(if (goalMinutes == 0) 0f else (todayMinutes.toFloat() / goalMinutes).coerceIn(0f, 1f), height = 6.dp, fillColor = Primary)
-                    Spacer(Modifier.height(6.dp))
-                    Text(if (goalMinutes == 0) "Daily goal not set" else todayMinutes.coerceAtMost(goalMinutes).toString() + " / " + goalMinutes + " min daily goal", color = TextMuted, fontSize = 10.sp)
-                }
-
-                Spacer(Modifier.height(18.dp))
-                SectionHeader("Your focus")
+                // One dominant dashboard surface: the next useful study action.
                 JeeCard(featured = true) {
-                    Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
-                        Text("YOUR FOCUS", color = PrimaryLight, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
-                        TextButton(onClick = { showFocusPicker = true }) { Text("Change", color = PrimaryLight, fontSize = 11.sp) }
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            focusEyebrow,
+                            color = PrimaryLight,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.7.sp
+                        )
+                        TextButton(
+                            onClick = { showFocusPicker = true },
+                            contentPadding = PaddingValues(horizontal = JeeSpacing.sm, vertical = 0.dp)
+                        ) {
+                            Text("Change")
+                        }
                     }
-                    Spacer(Modifier.height(3.dp))
+
+                    Spacer(Modifier.height(JeeSpacing.xs))
+
                     when {
+                        snapshot == null -> {
+                            Text(
+                                "Preparing your study overview…",
+                                color = TextSecondary,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            Spacer(Modifier.height(JeeSpacing.sm))
+                            LinearProgressIndicator(
+                                modifier = Modifier.fillMaxWidth(),
+                                color = Primary,
+                                trackColor = BgDivider
+                            )
+                        }
                         focus != null -> {
-                            Text(focus.title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
-                            Spacer(Modifier.height(5.dp))
-                            Text(focus.reason, color = TextSecondary, fontSize = 12.sp, lineHeight = 17.sp)
-                            Spacer(Modifier.height(12.dp))
+                            Text(
+                                focus.title,
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Spacer(Modifier.height(JeeSpacing.xs))
+                            Text(
+                                focus.reason,
+                                color = TextSecondary,
+                                style = MaterialTheme.typography.bodyMedium,
+                                lineHeight = 21.sp
+                            )
+                            Spacer(Modifier.height(JeeSpacing.md))
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Surface(shape = JeeShapes.pill, color = PrimarySoft, border = BorderStroke(1.dp, BgCardBorder.copy(alpha = .8f))) {
-                                    Row(Modifier.padding(horizontal = 9.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(Icons.Filled.Schedule, null, tint = PrimaryLight, modifier = Modifier.size(14.dp))
-                                        Spacer(Modifier.width(5.dp))
-                                        Text(focus.durationMin.toString() + " min", color = PrimaryLight, fontSize = 11.sp)
+                                Surface(
+                                    shape = JeeShapes.pill,
+                                    color = PrimarySoft,
+                                    border = BorderStroke(1.dp, BgCardBorder.copy(alpha = .8f))
+                                ) {
+                                    Row(
+                                        Modifier.padding(horizontal = JeeSpacing.sm, vertical = JeeSpacing.xs),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(Icons.Filled.Schedule, null, tint = PrimaryLight, modifier = Modifier.size(15.dp))
+                                        Spacer(Modifier.width(JeeSpacing.xs))
+                                        Text(
+                                            "${focus.durationMin} min",
+                                            color = PrimaryLight,
+                                            style = MaterialTheme.typography.labelMedium
+                                        )
                                     }
                                 }
-                                Spacer(Modifier.width(9.dp)); Text(focus.subject, color = TextMuted, fontSize = 11.sp)
+                                Spacer(Modifier.width(JeeSpacing.sm))
+                                Text(
+                                    focus.subject,
+                                    color = TextSecondary,
+                                    style = MaterialTheme.typography.labelMedium
+                                )
                             }
                         }
                         nextTask != null -> {
-                            Text(nextTask.title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
-                            Spacer(Modifier.height(5.dp)); Text("A task is waiting today. Start a focused study block and keep the next action simple.", color = TextSecondary, fontSize = 12.sp, lineHeight = 17.sp)
-                            Spacer(Modifier.height(12.dp)); Text(nextTask.subject + " · " + nextTask.durationMin + " min", color = TextMuted, fontSize = 11.sp)
+                            Text(
+                                nextTask.title,
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Spacer(Modifier.height(JeeSpacing.xs))
+                            Text(
+                                "An unfinished task is ready to pick up. Start a focused block and work through it.",
+                                color = TextSecondary,
+                                style = MaterialTheme.typography.bodyMedium,
+                                lineHeight = 21.sp
+                            )
+                            Spacer(Modifier.height(JeeSpacing.sm))
+                            Text(
+                                "${nextTask.subject} · ${nextTask.durationMin} min",
+                                color = TextSecondary,
+                                style = MaterialTheme.typography.labelMedium
+                            )
                         }
                         else -> {
-                            Text("Choose a chapter to focus on", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
-                            Spacer(Modifier.height(5.dp)); Text("Pick a chapter or keep the automatic data-driven recommendation.", color = TextSecondary, fontSize = 12.sp, lineHeight = 17.sp)
+                            Text(
+                                "Choose a chapter to focus on",
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Spacer(Modifier.height(JeeSpacing.xs))
+                            Text(
+                                "Select a chapter or use the automatic recommendation when enough study evidence is available.",
+                                color = TextSecondary,
+                                style = MaterialTheme.typography.bodyMedium,
+                                lineHeight = 21.sp
+                            )
                         }
                     }
-                    Spacer(Modifier.height(15.dp))
-                    Button(onClick = onOpenStudyTimer, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp)) {
-                        Icon(Icons.Filled.PlayArrow, null, Modifier.size(18.dp)); Spacer(Modifier.width(7.dp)); Text("Start focused session")
+
+                    Spacer(Modifier.height(JeeSpacing.lg))
+                    Button(
+                        onClick = onOpenStudyTimer,
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                        shape = JeeShapes.medium,
+                        enabled = snapshot != null
+                    ) {
+                        Icon(Icons.Filled.PlayArrow, null, Modifier.size(18.dp))
+                        Spacer(Modifier.width(JeeSpacing.sm))
+                        Text(if (focus == null && nextTask == null) "Open study timer" else "Start focused session")
                     }
                 }
 
-                Spacer(Modifier.height(18.dp))
+                Spacer(Modifier.height(JeeSpacing.md))
+
+                // Exam date is supporting context, not a competing hero card.
+                Row(
+                    Modifier.fillMaxWidth().padding(vertical = JeeSpacing.xs),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Filled.Event, null, tint = PrimaryLight, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(JeeSpacing.sm))
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            "JEE Main 2027 · Session 1",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            "Tentative schedule · Jan 22–24 and Jan 28–30, 2027",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = TextSecondary
+                        )
+                    }
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            daysToJee.toString(),
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text("days left", style = MaterialTheme.typography.labelSmall, color = TextSecondary)
+                    }
+                }
+
+                HorizontalDivider(color = BgDivider.copy(alpha = .65f))
+
+                Spacer(Modifier.height(JeeSpacing.md))
+                SectionHeader("Today")
+
+                if (snapshot == null) {
+                    Text(
+                        "Loading today's study data…",
+                        color = TextSecondary,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                } else {
+                    Row(horizontalArrangement = Arrangement.spacedBy(JeeSpacing.sm)) {
+                        HomeMetric(
+                            "${todayMinutes / 60}h ${todayMinutes % 60}m",
+                            "Study",
+                            Modifier.weight(1f)
+                        )
+                        HomeMetric(
+                            "${todayTasks.count { it.done }}/${todayTasks.size}",
+                            "Tasks done",
+                            Modifier.weight(1f)
+                        )
+                        HomeMetric(
+                            "${(coverage * 100).toInt()}%",
+                            "Coverage",
+                            Modifier.weight(1f)
+                        )
+                        HomeMetric(
+                            unresolvedMistakes.toString(),
+                            "Mistakes",
+                            Modifier.weight(1f)
+                        )
+                    }
+
+                    Spacer(Modifier.height(JeeSpacing.sm))
+                    LinearStatBar(
+                        if (goalMinutes == 0) 0f else (todayMinutes.toFloat() / goalMinutes).coerceIn(0f, 1f),
+                        height = 6.dp,
+                        fillColor = Primary
+                    )
+                    Spacer(Modifier.height(JeeSpacing.xs))
+                    Text(
+                        if (goalMinutes == 0) "Daily goal not set"
+                        else "${todayMinutes.coerceAtMost(goalMinutes)} / $goalMinutes min daily goal",
+                        color = TextSecondary,
+                        style = MaterialTheme.typography.labelSmall
+                    )
+                }
+
+                Spacer(Modifier.height(JeeSpacing.md))
+
+                // Daily log remains directly reachable, but no longer occupies a full card.
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .clip(JeeShapes.medium)
+                        .semantics(mergeDescendants = true) {
+                            role = Role.Button
+                            contentDescription = "Open daily progress, ${currentMonth.month.getDisplayName(TextStyle.SHORT, Locale.getDefault())}, $dailyLogCompleted of ${currentMonth.lengthOfMonth()} days completed"
+                        }
+                        .premiumClick(onClick = onOpenDailyLog)
+                        .padding(vertical = JeeSpacing.sm),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Filled.CalendarMonth, null, tint = PrimaryLight, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(JeeSpacing.sm))
+                    Column(Modifier.weight(1f)) {
+                        Text("Daily consistency", style = MaterialTheme.typography.titleSmall)
+                        Text(
+                            "${currentMonth.month.getDisplayName(TextStyle.SHORT, Locale.getDefault())} · $dailyLogCompleted/${currentMonth.lengthOfMonth()} days completed",
+                            color = TextSecondary,
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                    }
+                    Icon(Icons.Filled.ChevronRight, null, tint = TextSecondary)
+                }
+
+                HorizontalDivider(color = BgDivider.copy(alpha = .65f))
+
+                Spacer(Modifier.height(JeeSpacing.md))
+                SectionHeader("Quick actions")
+                Row(horizontalArrangement = Arrangement.spacedBy(JeeSpacing.xs)) {
+                    QuickAction(
+                        "Practice",
+                        "${questionsAttempted} questions",
+                        Icons.Filled.Quiz,
+                        Modifier.weight(1f),
+                        onOpenAssessment
+                    )
+                    QuickAction(
+                        "Notes",
+                        "Your library",
+                        Icons.Filled.Description,
+                        Modifier.weight(1f),
+                        onOpenRevision
+                    )
+                    QuickAction(
+                        "Mistakes",
+                        "$unresolvedMistakes open",
+                        Icons.Filled.ErrorOutline,
+                        Modifier.weight(1f),
+                        onOpenMistakes
+                    )
+                    QuickAction(
+                        "Study",
+                        "${todayMinutes / 60}h ${todayMinutes % 60}m",
+                        Icons.Filled.Timer,
+                        Modifier.weight(1f),
+                        onOpenStudyTimer
+                    )
+                }
+
+                Spacer(Modifier.height(JeeSpacing.md))
                 SectionHeader("Today's tasks", "See all") { onTabSelected(AppTab.TASKS) }
-                JeeCard {
-                    if (todayTasks.isEmpty()) Text("No tasks scheduled for today.", color = TextMuted, fontSize = 13.sp, modifier = Modifier.padding(vertical = 6.dp))
-                    else todayTasks.take(4).forEachIndexed { index, task ->
-                        TaskRow(TaskItem(task.id.toString(), task.title, task.subject + " · " + task.durationMin + "m", "", task.done), onToggle = { id -> repo.toggleTask(id.toLong()); refresh++ }, onClick = { onTabSelected(AppTab.TASKS) })
-                        if (index < minOf(todayTasks.size, 4) - 1) HorizontalDivider(color = BgDivider.copy(alpha = .45f), thickness = .5.dp)
+                if (snapshot == null) {
+                    Text("Loading tasks…", color = TextSecondary, style = MaterialTheme.typography.bodySmall)
+                } else if (todayTasks.isEmpty()) {
+                    Text(
+                        "No tasks scheduled for today.",
+                        color = TextSecondary,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(vertical = JeeSpacing.sm)
+                    )
+                } else {
+                    todayTasks.take(4).forEachIndexed { index, task ->
+                        TaskRow(
+                            TaskItem(
+                                task.id.toString(),
+                                task.title,
+                                task.subject + " · " + task.durationMin + "m",
+                                "",
+                                task.done
+                            ),
+                            onToggle = { id ->
+                                repo.toggleTask(id.toLong())
+                                refresh++
+                            },
+                            onClick = { onTabSelected(AppTab.TASKS) }
+                        )
+                        if (index < minOf(todayTasks.size, 4) - 1) {
+                            HorizontalDivider(color = BgDivider.copy(alpha = .45f), thickness = .5.dp)
+                        }
                     }
                 }
 
-                weak?.let {
-                    Spacer(Modifier.height(18.dp)); SectionHeader("Needs attention")
-                    JeeCard { Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) { Text(it.chapter.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium); Text(it.signals.take(2).joinToString(" · "), color = TextSecondary, fontSize = 11.sp, lineHeight = 16.sp) }
-                        Icon(Icons.Filled.ChevronRight, "Review chapter", tint = PrimaryLight)
-                    } }
+                weak?.let { item ->
+                    Spacer(Modifier.height(JeeSpacing.md))
+                    SectionHeader("Needs attention")
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .clip(JeeShapes.medium)
+                            .semantics(mergeDescendants = true) {
+                                role = Role.Button
+                                contentDescription = "Review ${item.chapter.name}. ${item.signals.take(2).joinToString(", ")}"
+                            }
+                            .premiumClick { onOpenChapter(item.chapter) }
+                            .padding(vertical = JeeSpacing.sm),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                item.chapter.name,
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                item.signals.take(2).joinToString(" · "),
+                                color = TextSecondary,
+                                style = MaterialTheme.typography.bodySmall,
+                                lineHeight = 18.sp
+                            )
+                        }
+                        Spacer(Modifier.width(JeeSpacing.sm))
+                        Icon(Icons.Filled.ChevronRight, null, tint = PrimaryLight)
+                    }
                 }
-                Spacer(Modifier.height(24.dp))
+
+                Spacer(Modifier.height(JeeSpacing.xl))
             }
         }
     }
@@ -257,34 +521,124 @@ fun DashboardScreen(
     if (showFocusPicker) {
         val subjects = listOf("Physics", "Chemistry", "Mathematics")
         val chapters = JeeCatalog.forSubject(focusSubject)
-        AlertDialog(onDismissRequest = { showFocusPicker = false }, title = { Text("Choose your focus") }, text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("Subject", color = TextSecondary, fontSize = 12.sp)
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { subjects.forEach { value -> JeeFilterChip(value, value == focusSubject) { focusSubject = value; selectedFocusId = null } } }
-                Text("Chapter", color = TextSecondary, fontSize = 12.sp)
-                LazyColumn(Modifier.fillMaxWidth().height(260.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    item { TextButton(onClick = { selectedFocusId = null }) { Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) { Text("Automatic recommendation", color = if (selectedFocusId == null) PrimaryLight else TextOnCard); if (selectedFocusId == null) Text("Selected", color = PrimaryLight, fontSize = 10.sp) } } }
-                    items(chapters, key = { it.id }) { chapter -> TextButton(onClick = { selectedFocusId = chapter.id }) { Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) { Text("${chapter.number}. ${chapter.name}", color = if (selectedFocusId == chapter.id) PrimaryLight else TextOnCard); if (selectedFocusId == chapter.id) Text("Selected", color = PrimaryLight, fontSize = 10.sp) } } }
+        AlertDialog(
+            onDismissRequest = { showFocusPicker = false },
+            title = { Text("Choose your focus") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(JeeSpacing.sm)) {
+                    Text("Subject", color = TextSecondary, style = MaterialTheme.typography.labelMedium)
+                    Row(horizontalArrangement = Arrangement.spacedBy(JeeSpacing.xs)) {
+                        subjects.forEach { value ->
+                            JeeFilterChip(value, value == focusSubject) {
+                                focusSubject = value
+                                selectedFocusId = null
+                            }
+                        }
+                    }
+                    Text("Chapter", color = TextSecondary, style = MaterialTheme.typography.labelMedium)
+                    LazyColumn(
+                        Modifier.fillMaxWidth().height(260.dp),
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        item {
+                            TextButton(onClick = { selectedFocusId = null }) {
+                                Row(
+                                    Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        "Automatic recommendation",
+                                        color = if (selectedFocusId == null) PrimaryLight else TextOnCard
+                                    )
+                                    if (selectedFocusId == null) {
+                                        Text("Selected", color = PrimaryLight, style = MaterialTheme.typography.labelSmall)
+                                    }
+                                }
+                            }
+                        }
+                        items(chapters, key = { it.id }) { chapter ->
+                            TextButton(onClick = { selectedFocusId = chapter.id }) {
+                                Row(
+                                    Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        "${chapter.number}. ${chapter.name}",
+                                        color = if (selectedFocusId == chapter.id) PrimaryLight else TextOnCard
+                                    )
+                                    if (selectedFocusId == chapter.id) {
+                                        Text("Selected", color = PrimaryLight, style = MaterialTheme.typography.labelSmall)
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
+            },
+            confirmButton = {
+                TextButton(onClick = { showFocusPicker = false }) { Text("Done") }
             }
-        }, confirmButton = { TextButton(onClick = { showFocusPicker = false }) { Text("Done") } })
+        )
     }
 }
 
 data class FocusDisplay(val title: String, val reason: String, val durationMin: Int, val subject: String)
 
 @Composable
-private fun QuickAction(title: String, metric: String, icon: androidx.compose.ui.graphics.vector.ImageVector, modifier: Modifier = Modifier, primary: Boolean = false, onClick: () -> Unit) {
-    Column(modifier.height(78.dp).clip(RoundedCornerShape(15.dp)).background(if (primary) BgCardAlt else BgCard).border(1.dp, if (primary) Primary.copy(alpha = .55f) else BgCardBorder.copy(alpha = .8f), RoundedCornerShape(15.dp)).premiumClick(onClick).padding(horizontal = 14.dp, vertical = 11.dp)) {
-        Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.Top) { Icon(icon, null, tint = if (primary) PrimaryLight else TextSecondary, modifier = Modifier.size(21.dp)); Text(metric, color = if (primary) PrimaryLight else TextSecondary, fontSize = 10.sp, fontWeight = FontWeight.Medium, maxLines = 1) }
-        Spacer(Modifier.height(5.dp)); Text(title, color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+private fun QuickAction(
+    title: String,
+    metric: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Column(
+        modifier
+            .heightIn(min = 76.dp)
+            .semantics(mergeDescendants = true) {
+                role = Role.Button
+                contentDescription = "$title, $metric"
+            }
+            .premiumClick(onClick)
+            .padding(vertical = JeeSpacing.sm),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(icon, null, tint = PrimaryLight, modifier = Modifier.size(21.dp))
+        Spacer(Modifier.height(JeeSpacing.xs))
+        Text(
+            title,
+            color = TextPrimary,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1
+        )
+        Text(
+            metric,
+            color = TextSecondary,
+            style = MaterialTheme.typography.labelSmall,
+            maxLines = 1
+        )
     }
 }
 
 @Composable
 private fun HomeMetric(value: String, label: String, modifier: Modifier = Modifier) {
-    Column(modifier.clip(RoundedCornerShape(12.dp)).background(BgCard.copy(alpha = .6f)).padding(horizontal = 8.dp, vertical = 10.dp)) {
-        Text(value, color = TextPrimary, fontSize = 21.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
-        Text(label, color = TextMuted, fontSize = 10.sp, maxLines = 1)
+    Column(modifier.padding(vertical = JeeSpacing.xs)) {
+        Text(
+            value,
+            color = TextPrimary,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1
+        )
+        Text(
+            label,
+            color = TextSecondary,
+            style = MaterialTheme.typography.labelSmall,
+            maxLines = 1
+        )
     }
 }
