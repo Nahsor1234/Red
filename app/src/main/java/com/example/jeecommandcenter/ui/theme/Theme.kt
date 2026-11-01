@@ -7,15 +7,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
 private val JeeDarkColorScheme = darkColorScheme(
-    primary = AccentBlue,
+    primary = Primary,
     onPrimary = Color.Black,
-    primaryContainer = AccentBlueSoft,
+    primaryContainer = PrimarySoft,
     onPrimaryContainer = TextPrimary,
-    secondary = AccentGreen,
+    secondary = Success,
     onSecondary = Color.Black,
     secondaryContainer = Color(0xFF18181B),
     onSecondaryContainer = TextPrimary,
-    tertiary = AccentBlueLight,
+    tertiary = PrimaryLight,
     onTertiary = Color.Black,
     tertiaryContainer = Color(0xFF1E1E21),
     onTertiaryContainer = TextPrimary,
@@ -27,8 +27,8 @@ private val JeeDarkColorScheme = darkColorScheme(
     onSurfaceVariant = TextSecondary,
     outline = BgCardBorder,
     outlineVariant = BgCardBorder,
-    error = TextPriorityBadge,
-    onError = Color.White
+    error = Danger,
+    onError = Color.Black
 )
 
 private val JeeMaterialShapes = Shapes(
