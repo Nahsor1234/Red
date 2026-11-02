@@ -119,7 +119,7 @@ fun StudyTimerScreen(
     }
 
     Scaffold(
-        containerColor = BgAppBase,
+        containerColor = BgApp,
         bottomBar = { AnimatedBottomNavBar(selectedTab, onTabSelected, visible = selectedTab != AppTab.AI) }
     ) { padding ->
         LazyColumn(
@@ -129,7 +129,13 @@ fun StudyTimerScreen(
         ) {
             item {
                 Column {
-                    Text("Focus", style = MaterialTheme.typography.headlineSmall)
+                    Text(
+                        "FOCUS STUDIO",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = PrimaryLight,
+                        letterSpacing = 1.15.sp
+                    )
+                    Text("Focus", style = MaterialTheme.typography.headlineMedium)
                     Text(
                         if (sessionsLoaded) "$todayMinutes min studied today" else "Loading study total…",
                         color = TextSecondary,

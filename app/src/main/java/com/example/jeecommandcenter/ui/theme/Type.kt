@@ -6,49 +6,49 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
-private val AppFont = FontFamily.Default
+private val AppFont = FontFamily.SansSerif
 
 val AppTypography = Typography(
     displayLarge = TextStyle(
         fontFamily = AppFont,
-        fontWeight = FontWeight.Medium,
+        fontWeight = FontWeight.SemiBold,
         fontSize = 34.sp,
         color = TextPrimary
     ),
     displayMedium = TextStyle(
         fontFamily = AppFont,
-        fontWeight = FontWeight.Medium,
+        fontWeight = FontWeight.SemiBold,
         fontSize = 30.sp,
         color = TextPrimary
     ),
     displaySmall = TextStyle(
         fontFamily = AppFont,
-        fontWeight = FontWeight.Medium,
-        fontSize = 36.sp,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 28.sp,
         color = TextPrimary
     ),
     headlineLarge = TextStyle(
         fontFamily = AppFont,
-        fontWeight = FontWeight.Medium,
+        fontWeight = FontWeight.SemiBold,
         fontSize = 26.sp,
         color = TextPrimary
     ),
     headlineMedium = TextStyle(
         fontFamily = AppFont,
-        fontWeight = FontWeight.Medium,
-        fontSize = 28.sp,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 23.sp,
         color = TextPrimary
     ),
     headlineSmall = TextStyle(
         fontFamily = AppFont,
-        fontWeight = FontWeight.Medium,
-        fontSize = 24.sp,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 21.sp,
         color = TextPrimary
     ),
     titleLarge = TextStyle(
         fontFamily = AppFont,
         fontWeight = FontWeight.Medium,
-        fontSize = 22.sp,
+        fontSize = 20.sp,
         color = TextPrimary
     ),
     titleMedium = TextStyle(

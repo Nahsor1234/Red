@@ -80,7 +80,7 @@ fun TasksScreen(
     }
 
     Scaffold(
-        containerColor = BgAppBase,
+        containerColor = BgApp,
         bottomBar = {
             AnimatedBottomNavBar(selectedTab, onTabSelected, visible = selectedTab != AppTab.AI)
         },
@@ -101,17 +101,29 @@ fun TasksScreen(
             Modifier.fillMaxSize().padding(padding).padding(horizontal = JeeSpacing.lg)
         ) {
             Spacer(Modifier.height(JeeSpacing.md))
-            Column {
-                Text("Tasks", style = MaterialTheme.typography.headlineSmall)
+            JeeCard(modifier = Modifier.animateContentSize(animationSpec = tween(JeeMotion.layoutMillis))) {
+                Text(
+                    "YOUR STUDY PLAN",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = PrimaryLight,
+                    letterSpacing = 1.15.sp
+                )
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Tasks", style = MaterialTheme.typography.headlineMedium)
+                    Text("${(progress * 100).toInt()}%", color = PrimaryLight,
+                        style = MaterialTheme.typography.titleMedium.copy(fontFeatureSettings = "tnum"))
+                }
                 AnimatedContent(
                     targetState = "$remainingCount remaining · $completedCount completed",
                     label = "task-summary"
-                ) { summary ->
-                    Text(summary, color = TextSecondary, style = MaterialTheme.typography.bodySmall)
-                }
+                ) { summary -> Text(summary, color = TextSecondary, style = MaterialTheme.typography.bodySmall) }
+                Spacer(Modifier.height(JeeSpacing.md))
+                LinearStatBar(progress, height = 6.dp, fillColor = Primary)
             }
-            Spacer(Modifier.height(JeeSpacing.md))
-            LinearStatBar(progress, height = 4.dp)
             Spacer(Modifier.height(JeeSpacing.md))
 
             LazyRow(

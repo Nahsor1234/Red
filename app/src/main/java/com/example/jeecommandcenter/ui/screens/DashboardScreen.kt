@@ -129,7 +129,7 @@ fun DashboardScreen(
 
     Box(Modifier.fillMaxSize()) {
         Scaffold(
-            containerColor = BgAppBase,
+            containerColor = BgApp,
             snackbarHost = { SnackbarHost(snackbarHostState) },
             bottomBar = {
                 AnimatedBottomNavBar(
@@ -150,14 +150,20 @@ fun DashboardScreen(
 
                 // Header: utility actions remain available without competing with the study action.
                 Row(
-                    Modifier.fillMaxWidth().heightIn(min = 112.dp),
+                    Modifier.fillMaxWidth().heightIn(min = 104.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column {
                         Text(
+                            "JEE MAIN 2027  /  STUDY OVERVIEW",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = PrimaryLight,
+                            letterSpacing = 1.15.sp
+                        )
+                        Text(
                             greeting,
-                            style = MaterialTheme.typography.headlineSmall,
+                            style = MaterialTheme.typography.headlineMedium,
                             fontWeight = FontWeight.SemiBold
                         )
                         Text(
@@ -316,44 +322,42 @@ fun DashboardScreen(
                 }
 
                 Spacer(Modifier.height(JeeSpacing.md))
-
-                Spacer(Modifier.height(JeeSpacing.md))
                 HomeSectionHeader("Today")
-
-                if (snapshot == null) {
-                    Text(
-                        "Loading today's study data…",
-                        color = TextSecondary,
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                } else {
-                    Row(horizontalArrangement = Arrangement.spacedBy(JeeSpacing.lg)) {
-                        HomeMetric(
-                            "${todayMinutes / 60}h ${todayMinutes % 60}m",
-                            "Study time",
-                            Modifier.weight(1f),
-                            emphasized = true
+                JeeCard(modifier = Modifier.animateContentSize(animationSpec = tween(JeeMotion.layoutMillis))) {
+                    if (snapshot == null) {
+                        Text(
+                            "Loading today's study data…",
+                            color = TextSecondary,
+                            style = MaterialTheme.typography.bodySmall
                         )
-                        HomeMetric(
-                            "$goalMinutes min",
-                            "Daily goal",
-                            Modifier.weight(1f)
+                    } else {
+                        Row(horizontalArrangement = Arrangement.spacedBy(JeeSpacing.lg)) {
+                            HomeMetric(
+                                "${todayMinutes / 60}h ${todayMinutes % 60}m",
+                                "Study time",
+                                Modifier.weight(1f),
+                                emphasized = true
+                            )
+                            HomeMetric(
+                                "$goalMinutes min",
+                                "Daily goal",
+                                Modifier.weight(1f)
+                            )
+                        }
+                        Spacer(Modifier.height(JeeSpacing.md))
+                        LinearStatBar(
+                            if (goalMinutes == 0) 0f else (todayMinutes.toFloat() / goalMinutes).coerceIn(0f, 1f),
+                            height = 7.dp,
+                            fillColor = Primary
+                        )
+                        Spacer(Modifier.height(JeeSpacing.xs))
+                        Text(
+                            if (goalMinutes == 0) "Daily goal not set"
+                            else "${todayMinutes.coerceAtMost(goalMinutes)} / $goalMinutes min daily goal",
+                            color = TextSecondary,
+                            style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = "tnum")
                         )
                     }
-
-                    Spacer(Modifier.height(JeeSpacing.sm))
-                    LinearStatBar(
-                        if (goalMinutes == 0) 0f else (todayMinutes.toFloat() / goalMinutes).coerceIn(0f, 1f),
-                        height = 6.dp,
-                        fillColor = TextSecondary
-                    )
-                    Spacer(Modifier.height(JeeSpacing.xs))
-                    Text(
-                        if (goalMinutes == 0) "Daily goal not set"
-                        else "${todayMinutes.coerceAtMost(goalMinutes)} / $goalMinutes min daily goal",
-                        color = TextSecondary,
-                        style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = "tnum")
-                    )
                 }
 
                 Spacer(Modifier.height(JeeSpacing.md))
@@ -363,12 +367,14 @@ fun DashboardScreen(
                     Modifier
                         .fillMaxWidth()
                         .clip(JeeShapes.medium)
+                        .background(BgCard.copy(alpha = 0.84f))
+                        .border(1.dp, BgCardBorder.copy(alpha = 0.78f), JeeShapes.medium)
                         .semantics(mergeDescendants = true) {
                             role = Role.Button
                             contentDescription = "Open daily progress, ${currentMonth.month.getDisplayName(TextStyle.SHORT, Locale.getDefault())}, $dailyLogCompleted of ${currentMonth.lengthOfMonth()} days completed"
                         }
                         .premiumClick(onClick = onOpenDailyLog)
-                        .padding(vertical = JeeSpacing.sm),
+                        .padding(horizontal = JeeSpacing.md, vertical = JeeSpacing.md),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(Icons.Filled.CalendarMonth, null, tint = TextSecondary, modifier = Modifier.size(20.dp))
