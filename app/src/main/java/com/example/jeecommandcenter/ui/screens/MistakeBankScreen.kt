@@ -22,6 +22,7 @@ import com.example.jeecommandcenter.ui.components.*
 fun MistakeBankScreen(learning: LearningRepository, onBack: () -> Unit, onOpenTutor: () -> Unit) {
     var refresh by remember { mutableIntStateOf(0) }
     var syncingCloudMistakes by remember { mutableStateOf(false) }
+    var cloudImportStatus by remember { mutableStateOf("Checking cloud attempts…") }
     val mistakes = remember(refresh) { learning.getMistakes().filterNot { it.resolved } }
     val cloud = remember { CloudJeeRepository() }
 
@@ -46,23 +47,68 @@ fun MistakeBankScreen(learning: LearningRepository, onBack: () -> Unit, onOpenTu
                     selectedIndex = attempt.selectedIndex
                 )) imported++
             }
+            imported
+        }.onSuccess { imported ->
+            cloudImportStatus = if (imported > 0) "$imported cloud mistake${if (imported == 1) "" else "s"} imported" else "Cloud import checked · local records shown"
             if (imported > 0) refresh++
+        }.onFailure {
+            cloudImportStatus = "Cloud import unavailable · local records shown"
         }
         syncingCloudMistakes = false
     }
     Scaffold(containerColor = BgApp, topBar = {
-        JeeTopBar(title = "Mistake Bank", subtitle = if (syncingCloudMistakes) "Syncing saved attempts…" else "${mistakes.size} unresolved questions", onBack = onBack, trailing = { Text(mistakes.size.toString(), color = AccentAmber) })
+        JeeTopBar(title = "Mistake Bank", subtitle = "Review saved incorrect answers", onBack = onBack)
     }) { padding ->
-        LazyColumn(Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            if (mistakes.isEmpty()) {
-                item { Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(BgCard).border(JeeSurfaceTokens.borderWidth,BgCardBorder.copy(alpha=JeeSurfaceTokens.cardBorderAlpha),JeeShapes.medium).padding(18.dp)) { Text("No unresolved mistakes", style = MaterialTheme.typography.titleMedium); Text("Incorrect answers from Chapter Practice, Tests & Mocks, and supported quizzes appear here automatically.", color = TextMuted, fontSize = 12.sp) } }
-            } else items(mistakes, key = { it.id }) { mistake -> MistakeCard(mistake, learning) { refresh++ } }
+        LazyColumn(
+            Modifier.fillMaxSize().padding(padding).padding(horizontal = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(top = 8.dp, bottom = 24.dp)
+        ) {
             item {
-                Button(onClick = onOpenTutor, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Primary)) {
-                    Icon(Icons.Filled.AutoAwesome, null); Spacer(Modifier.width(7.dp)); Text("Ask AI about my mistakes")
+                JeePageHeader(
+                    title = "Mistakes to review",
+                    eyebrow = "LEARNING RECORDS",
+                    subtitle = "${mistakes.size} unresolved · imported attempts are added when available"
+                )
+            }
+            item {
+                JeeCard {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text("UNRESOLVED", color = TextSecondary, style = MaterialTheme.typography.labelSmall)
+                            Text("${mistakes.size}", style = MaterialTheme.typography.headlineMedium)
+                            Text(if (mistakes.isEmpty()) "No saved incorrect answers need review" else "Saved incorrect answers awaiting your review", color = TextSecondary, style = MaterialTheme.typography.bodySmall)
+                        }
+                        Icon(Icons.Filled.ErrorOutline, contentDescription = null, tint = if (mistakes.isEmpty()) Success else Warning, modifier = Modifier.size(30.dp))
+                    }
+                    Spacer(Modifier.height(12.dp))
+                    Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (syncingCloudMistakes) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = Primary)
+                        else Icon(Icons.Filled.Cloud, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(17.dp))
+                        Text(if (syncingCloudMistakes) "Importing cloud attempts…" else cloudImportStatus, color = TextSecondary, style = MaterialTheme.typography.bodySmall)
+                    }
                 }
             }
-            item { Spacer(Modifier.height(24.dp)) }
+            if (mistakes.isEmpty()) {
+                item {
+                    JeeCard {
+                        Text("No unresolved mistakes", style = MaterialTheme.typography.titleMedium)
+                        Spacer(Modifier.height(4.dp))
+                        Text("Incorrect answers from Chapter Practice, Tests & Mocks, and supported quizzes appear here when recorded.", color = TextSecondary, style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            } else {
+                item {
+                    SectionHeader(title = "Review records")
+                    Text("${mistakes.size} open", color = TextSecondary, style = MaterialTheme.typography.labelMedium)
+                }
+                items(mistakes, key = { it.id }) { mistake -> MistakeCard(mistake, learning) { refresh++ } }
+                item {
+                    Button(onClick = onOpenTutor, modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp), colors = ButtonDefaults.buttonColors(containerColor = FocusAction, contentColor = TextPrimary)) {
+                        Icon(Icons.Filled.AutoAwesome, null); Spacer(Modifier.width(7.dp)); Text("Ask AI about my mistakes")
+                    }
+                }
+            }
         }
     }
 }
@@ -73,14 +119,18 @@ private fun MistakeCard(mistake: MistakeRecord, learning: LearningRepository, on
     val chapterName = JeeCatalog.find(mistake.chapterId)?.name ?: mistake.chapterId.replace("_", " ").replaceFirstChar { it.uppercase() }
     val sourceLabel = when (mistake.source.lowercase()) { "practice" -> "Chapter Practice"; "assessment" -> "Tests & Mocks"; else -> mistake.source.replaceFirstChar { it.uppercase() } }
     var typeMenu by remember { mutableStateOf(false) }
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(BgCard).border(JeeSurfaceTokens.borderWidth,BgCardBorder.copy(alpha=JeeSurfaceTokens.cardBorderAlpha),JeeShapes.medium).padding(14.dp)) {
+    Column(Modifier.fillMaxWidth().clip(JeeShapes.medium).background(BgCard).border(JeeSurfaceTokens.borderWidth, BgCardBorder, JeeShapes.medium).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Column(Modifier.weight(1f)) { Text(mistake.subject + " · " + chapterName + " · " + sourceLabel, color = AccentBlueLight, fontSize = 10.sp); Spacer(Modifier.height(4.dp)); MathMarkdownText(mistake.questionPrompt, modifier = Modifier.fillMaxWidth(), color = TextPrimary, fontSize = MaterialTheme.typography.titleMedium.fontSize, lineHeight = MaterialTheme.typography.titleMedium.lineHeight) }
-            Text("×" + mistake.count, color = if (mistake.count >= 2) AccentAmber else TextMuted)
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("${mistake.subject} · $chapterName", color = PrimaryLight, style = MaterialTheme.typography.labelMedium)
+                Text(sourceLabel, color = TextSecondary, style = MaterialTheme.typography.bodySmall)
+                MathMarkdownText(mistake.questionPrompt, modifier = Modifier.fillMaxWidth(), color = TextPrimary, fontSize = MaterialTheme.typography.titleMedium.fontSize, lineHeight = MaterialTheme.typography.titleMedium.lineHeight)
+            }
+            Text("×${mistake.count}", color = if (mistake.count >= 2) Warning else TextMuted, style = MaterialTheme.typography.labelLarge)
         }
         Spacer(Modifier.height(8.dp))
         Box {
-            OutlinedButton(onClick = { typeMenu = true }, contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp), modifier = Modifier.height(36.dp)) { Text("Type: " + mistake.mistakeType.name.replace('_', ' '), fontSize = 10.sp) }
+            OutlinedButton(onClick = { typeMenu = true }, contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp), modifier = Modifier.heightIn(min = 48.dp)) { Text("Type: " + mistake.mistakeType.name.replace('_', ' '), style = MaterialTheme.typography.labelMedium) }
             DropdownMenu(expanded = typeMenu, onDismissRequest = { typeMenu = false }) {
                 MistakeType.entries.forEach { type -> DropdownMenuItem(text = { Text(type.name.replace('_', ' '), fontSize = 11.sp) }, onClick = { learning.updateMistakeType(mistake.id, type); typeMenu = false; onRefresh() }) }
             }
@@ -98,8 +148,8 @@ private fun MistakeCard(mistake: MistakeRecord, learning: LearningRepository, on
         }
         Spacer(Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = { expanded = !expanded }, modifier = Modifier.weight(1f)) { Text(if (expanded) "Hide answer" else "Answer") }
-            Button(onClick = { learning.resolveMistake(mistake.id); onRefresh() }, modifier = Modifier.weight(1f)) { Text("Resolve") }
+            OutlinedButton(onClick = { expanded = !expanded }, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) { Text(if (expanded) "Hide answer" else "Reveal answer") }
+            Button(onClick = { learning.resolveMistake(mistake.id); onRefresh() }, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) { Text("Resolve") }
         }
     }
 }

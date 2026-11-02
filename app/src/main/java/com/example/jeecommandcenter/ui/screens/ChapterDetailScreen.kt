@@ -3,6 +3,7 @@ package com.example.jeecommandcenter.ui.screens
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -21,6 +22,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.jeecommandcenter.data.*
+import com.example.jeecommandcenter.ui.components.JeeCard
+import com.example.jeecommandcenter.ui.components.LinearStatBar
 import com.example.jeecommandcenter.ui.theme.*
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
@@ -42,6 +45,8 @@ fun ChapterDetailScreen(
     var cloudUserId by remember { mutableStateOf<String?>(null) }
     var cloudReady by remember { mutableStateOf(false) }
     var questionCount by remember { mutableIntStateOf(0) }
+    var questionsLoading by remember { mutableStateOf(true) }
+    var questionBankFailed by remember { mutableStateOf(false) }
     var selectedTopic by remember(chapter.id) { mutableStateOf<ChapterTopic?>(null) }
     var showChapterMenu by remember { mutableStateOf(false) }
 
@@ -49,6 +54,8 @@ fun ChapterDetailScreen(
         val localTopics = topicsRepo.topicsFor(chapter)
         topics = localTopics
         cloudReady = false
+        questionsLoading = true
+        questionBankFailed = false
         runCatching {
             val user = cloud.ensureSession()
             cloudUserId = user.id
@@ -73,9 +80,13 @@ fun ChapterDetailScreen(
             }
 
             questionCount = cloud.questions(chapter.id).size
+            questionsLoading = false
         }.onFailure {
             cloudReady = false
             cloudTopicIdsByLocalId = emptyMap()
+            questionCount = 0
+            questionBankFailed = true
+            questionsLoading = false
         }
     }
 
@@ -184,143 +195,61 @@ fun ChapterDetailScreen(
             contentPadding = PaddingValues(top = 8.dp, bottom = 24.dp)
         ) {
             item {
-                Column(
-                    Modifier.fillMaxWidth()
-                        .clip(RoundedCornerShape(22.dp))
-                        .background(BgCardAlt.copy(alpha = .78f))
-                        .border(
-                            JeeSurfaceTokens.borderWidth,
-                            BgCardBorder.copy(alpha = JeeSurfaceTokens.cardBorderAlpha),
-                            RoundedCornerShape(22.dp)
-                        )
-                        .padding(18.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
-                ) {
-                    Text(
-                        "CHAPTER MASTERY",
-                        color = TextSecondary,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        letterSpacing = 1.1.sp
-                    )
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Column(
-                            Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(5.dp)
-                        ) {
-                            Text(
-                                "${completed} of ${topics.size} topics",
-                                style = MaterialTheme.typography.headlineMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = TextPrimary
-                            )
+                JeeCard(modifier = Modifier.animateContentSize()) {
+                    Text("CHAPTER MASTERY", color = TextSecondary, style = MaterialTheme.typography.labelSmall)
+                    Spacer(Modifier.height(8.dp))
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                            Text("${completed} of ${topics.size} topics", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
                             Text(
                                 when {
                                     topics.isEmpty() -> "No learning topics available"
-                                    completed == topics.size -> "Chapter mastery achieved"
-                                    completed == 0 -> "Your progress starts here"
-                                    else -> "Keep building your mastery"
+                                    completed == topics.size -> "All listed topics are complete"
+                                    completed == 0 -> "Start with any topic below"
+                                    else -> "Continue checking off topics you have mastered"
                                 },
-                                color = TextSecondary,
-                                fontSize = 14.sp
+                                color = TextSecondary, style = MaterialTheme.typography.bodyMedium
                             )
                         }
-                        Box(Modifier.size(88.dp), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(
-                                progress = { progress },
-                                modifier = Modifier.fillMaxSize(),
-                                color = Primary,
-                                trackColor = BgDivider,
-                                strokeWidth = 7.dp
-                            )
-                            Text(
-                                "${(progress * 100).roundToInt()}%",
-                                color = TextPrimary,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 19.sp
-                            )
+                        Box(Modifier.size(72.dp), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxSize(), color = Primary, trackColor = BgDivider, strokeWidth = 6.dp)
+                            Text("${(progress * 100).roundToInt()}%", color = TextPrimary, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
                         }
                     }
-                    LinearProgressIndicator(
-                        progress = { progress },
-                        modifier = Modifier.fillMaxWidth().height(5.dp).clip(RoundedCornerShape(99.dp)),
-                        color = Primary,
-                        trackColor = BgDivider
-                    )
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(9.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            if (cloudReady) Icons.Filled.Cloud else Icons.Filled.CloudOff,
-                            null,
-                            tint = TextSecondary,
-                            modifier = Modifier.size(20.dp)
-                        )
+                    Spacer(Modifier.height(12.dp))
+                    LinearStatBar(progress, height = 6.dp)
+                    Spacer(Modifier.height(12.dp))
+                    Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Icon(if (cloudReady) Icons.Filled.Cloud else Icons.Filled.CloudOff, null, tint = if (cloudReady) Primary else TextSecondary, modifier = Modifier.size(18.dp))
                         Text(
-                            if (cloudReady) {
-                                "Synced to Supabase. Topic completion updates cloud progress."
-                            } else {
-                                "Local fallback active · Sync resumes when available"
-                            },
-                            color = TextSecondary,
-                            fontSize = 12.sp
+                            if (cloudReady) "Cloud topic progress connected · changes also save locally"
+                            else "Local topic progress · cloud sync unavailable or not mapped",
+                            color = TextSecondary, style = MaterialTheme.typography.bodySmall
                         )
                     }
                 }
             }
 
             item {
-                Row(
-                    Modifier.fillMaxWidth()
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(BgCard.copy(alpha = .96f))
-                        .border(1.dp, BgCardBorder.copy(alpha = .9f), RoundedCornerShape(20.dp))
-                        .clickable(enabled = questionCount > 0, onClick = onPracticeQuestions)
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(13.dp)
-                ) {
-                    Box(
-                        Modifier.size(58.dp).clip(RoundedCornerShape(16.dp))
-                            .background(PrimarySoft),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.Filled.GpsFixed,
-                            null,
-                            tint = PrimaryLight,
-                            modifier = Modifier.size(28.dp)
-                        )
+                JeeCard(featured = true, modifier = Modifier.clickable(enabled = questionCount > 0, onClick = onPracticeQuestions)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Box(Modifier.size(48.dp).clip(RoundedCornerShape(14.dp)).background(PrimarySoft), contentAlignment = Alignment.Center) {
+                            Icon(Icons.Filled.GpsFixed, null, tint = Primary, modifier = Modifier.size(24.dp))
+                        }
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                            Text("Practice questions", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                            Text(
+                                when {
+                                    questionsLoading -> "Checking question bank…"
+                                    questionCount > 0 -> "$questionCount questions available"
+                                    questionBankFailed -> "Question bank unavailable right now"
+                                    else -> "No questions currently available in the bank"
+                                },
+                                color = TextSecondary, style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                        Icon(Icons.Filled.ChevronRight, "Open practice", tint = if (questionCount > 0) Primary else TextMuted)
                     }
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("Practice questions", fontWeight = FontWeight.SemiBold, fontSize = 19.sp)
-                        Text(
-                            "Test your understanding of this chapter",
-                            color = TextSecondary,
-                            fontSize = 13.sp
-                        )
-                        Text(
-                            if (questionCount > 0) {
-                                "Question bank · $questionCount available"
-                            } else {
-                                "Question availability depends on the bank"
-                            },
-                            color = TextMuted,
-                            fontSize = 11.sp
-                        )
-                    }
-                    Icon(
-                        Icons.Filled.ChevronRight,
-                        null,
-                        tint = if (questionCount > 0) PrimaryLight else TextMuted,
-                        modifier = Modifier.size(25.dp)
-                    )
                 }
             }
 
@@ -337,7 +266,7 @@ fun ChapterDetailScreen(
                         color = TextPrimary
                     )
                     Text(
-                        "Tap a topic to preview",
+                        "Mark topics as you master them",
                         color = TextSecondary,
                         fontSize = 11.sp
                     )
@@ -395,7 +324,7 @@ fun ChapterDetailScreen(
                     modifier = Modifier.fillMaxWidth(),
                     enabled = topics.isNotEmpty() && completed < topics.size
                 ) {
-                    Text(if (completed == topics.size && topics.isNotEmpty()) "Chapter completed" else "Mark chapter complete")
+                    Text(if (completed == topics.size && topics.isNotEmpty()) "Chapter completed" else "Mark all topics complete")
                 }
             }
         }
@@ -415,7 +344,7 @@ fun ChapterDetailScreen(
                 Text("LEARNING TOPIC", color = PrimaryLight, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                 Text(topic.title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
                 Text(
-                    "Part of ${chapter.name}. Use this checkpoint to track your understanding, key formulas, and ability to solve JEE-style questions.",
+                    "Part of ${chapter.name}. This checklist records your own completion; topic lesson content is not available here.",
                     color = TextSecondary,
                     fontSize = 13.sp
                 )

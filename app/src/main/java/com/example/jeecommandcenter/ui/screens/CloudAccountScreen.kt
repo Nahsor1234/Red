@@ -1,9 +1,13 @@
 package com.example.jeecommandcenter.ui.screens
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.*
@@ -11,11 +15,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.jeecommandcenter.data.CloudJeeRepository
 import com.example.jeecommandcenter.data.CloudSyncCoordinator
 import com.example.jeecommandcenter.ui.components.JeeCard
+import com.example.jeecommandcenter.ui.components.JeePageHeader
 import com.example.jeecommandcenter.ui.components.JeeTopBar
+import com.example.jeecommandcenter.ui.components.SectionHeader
 import com.example.jeecommandcenter.ui.theme.*
 import kotlinx.coroutines.launch
 import java.text.DateFormat
@@ -56,68 +61,96 @@ fun CloudAccountScreen(
                 message = "Synced: ↑ ${result.chaptersUploaded} chapters, ${result.topicsUploaded} topics, ${result.attemptsUploaded} attempts, ${result.preferenceDataUploaded} other records · ↓ ${result.chaptersRestored} chapters, ${result.topicsRestored} topics, ${result.attemptsRestored} attempts, ${result.preferenceDataRestored} other records restored."
             }
         }.onFailure {
-            // Keep the account state when a sync request fails, and never expose
-            // raw HTTP/Ktor/Supabase exception text because it may contain tokens
-            // or request headers.
+            // Keep the account state on a sync failure and never expose raw provider exception text.
             message = safeCloudErrorMessage(it)
         }
         loading = false
     }
 
     LaunchedEffect(Unit) { refreshAccount(syncAfterLogin = true) }
+    val networkUnavailable = message?.contains("could not reach the server", ignoreCase = true) == true
+    val signedOutAfterAction = message?.startsWith("Signed out.", ignoreCase = true) == true
+    val syncFailed = connected && message != null && !message.orEmpty().startsWith("Synced:")
+    val statusTitle = when {
+        loading && connected -> "Updating cloud account"
+        loading -> "Checking cloud account"
+        syncFailed -> "Sync needs attention"
+        connected -> "Cloud sync available"
+        signedOutAfterAction -> "Signed out"
+        networkUnavailable -> "Connection unavailable"
+        message != null -> "Cloud status unavailable"
+        else -> "Signed out"
+    }
+    val statusSubtitle = when {
+        loading && connected -> email ?: "Refreshing your cloud data"
+        loading -> "Checking the saved session…"
+        syncFailed -> "${email ?: "Account signed in"} · the latest sync did not finish."
+        connected -> email ?: "Signed-in Sigma JE account"
+        signedOutAfterAction -> "Sigma JE is still available offline."
+        networkUnavailable -> "The server could not be reached. Local JeE data remains available offline."
+        message != null -> "${message} Local JeE data remains available offline."
+        else -> "No cloud account is connected. You can continue using JeE offline."
+    }
 
-    Scaffold(
-        containerColor = BgApp,
-        topBar = { JeeTopBar(title = "Cloud account", onBack = onBack) }
-    ) { padding ->
+    Scaffold(containerColor = BgApp, topBar = { JeeTopBar(title = "Cloud account", onBack = onBack) }) { padding ->
         Column(
-            Modifier.fillMaxSize().padding(padding).padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            JeeCard(featured = true) {
+            JeePageHeader(
+                title = "Your cloud connection",
+                subtitle = "Cloud sync is optional; local study data stays on this device and works offline.",
+                eyebrow = "ACCOUNT & SYNC"
+            )
+
+            JeeCard(featured = true, modifier = Modifier.animateContentSize()) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        if (connected) Icons.Filled.CloudDone else Icons.Filled.CloudOff,
-                        null,
-                        tint = if (connected) Primary else Danger,
+                        when {
+                            syncFailed || networkUnavailable || message != null -> Icons.Filled.ErrorOutline
+                            connected -> Icons.Filled.CloudDone
+                            else -> Icons.Filled.CloudOff
+                        },
+                        contentDescription = null,
+                        tint = when {
+                            connected && !syncFailed -> Success
+                            networkUnavailable || message != null -> Warning
+                            else -> TextMuted
+                        },
                         modifier = Modifier.size(28.dp)
                     )
-                    Spacer(Modifier.width(12.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(
-                            if (connected) "Cloud sync active" else "Cloud account not connected",
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        Text(
-                            if (connected) email ?: "Signed-in Sigma JE account"
-                            else "Sign in to sync your progress across devices.",
-                            color = TextSecondary,
-                            fontSize = 11.sp
-                        )
+                    Spacer(Modifier.width(14.dp))
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        Text(statusTitle, style = MaterialTheme.typography.titleLarge)
+                        Text(statusSubtitle, color = TextSecondary, style = MaterialTheme.typography.bodyMedium)
                     }
+                }
+                if (loading || syncing) {
+                    Spacer(Modifier.height(14.dp))
+                    LinearProgressIndicator(Modifier.fillMaxWidth(), color = Primary)
                 }
             }
 
             if (connected) {
-                Text(
-                    "Your local progress stays available offline. Sync covers chapter/topic progress, question attempts, daily progress notes and checked days, study sessions, tasks, revision notes, reminders, mistakes, assessment history, AI chat history, and other persistent user data.",
-                    color = TextMuted,
-                    fontSize = 11.sp
-                )
-
-                userId?.let { id ->
-                    val lastSync = syncCoordinator.lastSyncAt(id)
-                    if (lastSync > 0L) {
-                        Text(
-                            "Last sync: ${DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(lastSync))}",
-                            color = TextMuted,
-                            fontSize = 10.sp
-                        )
+                SectionHeader(title = "Sync")
+                JeeCard {
+                    Text(
+                        "Sync includes chapter and topic progress, question attempts, daily progress, study sessions, tasks, revision notes, reminders, mistakes, assessment history, AI chat history and other saved user data.",
+                        color = TextSecondary,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    userId?.let { id ->
+                        val lastSync = syncCoordinator.lastSyncAt(id)
+                        if (lastSync > 0L) {
+                            Spacer(Modifier.height(12.dp))
+                            Text(
+                                "Last sync · ${DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(lastSync))}",
+                                color = TextMuted,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
                     }
-                }
-
-                if (loading || syncing) {
-                    LinearProgressIndicator(Modifier.fillMaxWidth(), color = Primary)
                 }
 
                 Button(
@@ -129,13 +162,12 @@ fun CloudAccountScreen(
                         }
                     },
                     enabled = !loading && !syncing,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)
                 ) {
-                    Icon(Icons.Filled.Sync, null)
+                    Icon(Icons.Filled.Sync, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
-                    Text("Sync now")
+                    Text(if (syncing) "Syncing…" else "Sync now")
                 }
-
                 OutlinedButton(
                     onClick = {
                         scope.launch {
@@ -147,48 +179,57 @@ fun CloudAccountScreen(
                                     email = null
                                     message = "Signed out. Sigma JE is still available offline."
                                 }
-                                .onFailure {
-                                    message = it.message ?: "Could not sign out."
-                                }
+                                .onFailure { message = it.message ?: "Could not sign out." }
                             loading = false
                         }
                     },
                     enabled = !loading && !syncing,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
                 ) {
-                    Icon(Icons.Filled.Logout, null)
+                    Icon(Icons.Filled.Logout, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
                     Text("Sign out")
                 }
-            } else {
-                Text(
-                    "Authentication is optional. Continue using Sigma JE offline, or connect an account when you want cloud backup and multi-device sync.",
-                    color = TextMuted,
-                    fontSize = 11.sp
-                )
-
+            } else if (!loading) {
+                SectionHeader(title = if (networkUnavailable || (message != null && !signedOutAfterAction)) "Try again when ready" else "Connect an account")
+                if (networkUnavailable || (message != null && !signedOutAfterAction)) {
+                    message?.let { errorMessage ->
+                        JeeCard {
+                            Text(errorMessage, color = if (networkUnavailable) Warning else MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
+                            Spacer(Modifier.height(12.dp))
+                            OutlinedButton(
+                                onClick = { scope.launch { refreshAccount(syncAfterLogin = true) } },
+                                enabled = !loading,
+                                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
+                            ) { Text("Check connection again") }
+                        }
+                    }
+                }
                 Button(
                     onClick = { onOpenAuth(CloudAuthMode.SIGN_IN) },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Sign in")
-                }
-
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)
+                ) { Text("Sign in") }
                 OutlinedButton(
                     onClick = { onOpenAuth(CloudAuthMode.SIGN_UP) },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Create account")
-                }
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
+                ) { Text("Create account") }
             }
 
-            message?.let {
-                Text(it, color = if (connected) TextSecondary else Danger, fontSize = 11.sp)
+            message?.takeIf { connected }?.let { syncMessage ->
+                val failed = !syncMessage.startsWith("Synced:")
+                JeeCard(modifier = Modifier.animateContentSize()) {
+                    Text(if (failed) "Sync status" else "Latest sync result", style = MaterialTheme.typography.titleSmall)
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        syncMessage,
+                        color = if (failed) MaterialTheme.colorScheme.error else TextSecondary,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
             }
         }
     }
 }
-
 
 private fun safeCloudErrorMessage(error: Throwable): String {
     val raw = error.message.orEmpty().lowercase()

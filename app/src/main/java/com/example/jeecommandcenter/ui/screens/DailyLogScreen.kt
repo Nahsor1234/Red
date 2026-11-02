@@ -1,5 +1,7 @@
 package com.example.jeecommandcenter.ui.screens
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -7,6 +9,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -22,6 +25,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.font.FontWeight
@@ -32,6 +39,8 @@ import com.example.jeecommandcenter.data.DailyLogEntry
 import com.example.jeecommandcenter.data.DailyLogRepository
 import com.example.jeecommandcenter.data.ReminderScheduler
 import com.example.jeecommandcenter.ui.components.JeeCard
+import com.example.jeecommandcenter.ui.components.JeePageHeader
+import com.example.jeecommandcenter.ui.components.SectionHeader
 import com.example.jeecommandcenter.ui.components.JeeTopBar
 import com.example.jeecommandcenter.ui.components.LinearStatBar
 import com.example.jeecommandcenter.ui.theme.*
@@ -121,28 +130,21 @@ fun DailyLogScreen(onBack: () -> Unit) {
             }
     }
     Scaffold(
-        containerColor = BgApp,
+        containerColor = BgAppBase,
         topBar = { JeeTopBar(title = "Daily Progress", onBack = onBack) }
     ) { padding ->
         Column(
-            Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp).verticalScroll(rememberScrollState()),
+            Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp).imePadding().verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            JeePageHeader(
+                title = "Study consistency",
+                subtitle = "Review your month and keep a short log for today.",
+                eyebrow = "DAILY PROGRESS"
+            )
             JeeCard {
-                Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    Text(
-                        "YOUR MONTH AT A GLANCE",
-                        color = TextMuted,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.1.sp
-                    )
-                    Text(
-                        "${visibleMonth.month.getDisplayName(TextStyle.FULL, Locale.getDefault())} ${visibleMonth.year}",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
+                SectionHeader("${visibleMonth.month.getDisplayName(TextStyle.FULL, Locale.getDefault())} ${visibleMonth.year}")
+                Text("Month summary · ${completedCount} completed days", color = TextSecondary, style = MaterialTheme.typography.bodyMedium)
                 Spacer(Modifier.height(14.dp))
                 Row(
                     Modifier.fillMaxWidth().heightIn(min = 96.dp),
@@ -234,7 +236,7 @@ fun DailyLogScreen(onBack: () -> Unit) {
                 Spacer(Modifier.height(8.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                     listOf("M", "T", "W", "T", "F", "S", "S").forEachIndexed { index, day ->
-                        Text(day, Modifier.weight(1f), color = TextMuted, fontSize = 11.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center, fontWeight = FontWeight.Medium)
+                        Text(day, Modifier.weight(1f), color = TextSecondary, fontSize = 11.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center, fontWeight = FontWeight.Medium)
                     }
                 }
                 Spacer(Modifier.height(4.dp))
@@ -252,24 +254,39 @@ fun DailyLogScreen(onBack: () -> Unit) {
                                     dateEntry.completed -> AccentGreen.copy(alpha = 0.14f)
                                     else -> BgCard.copy(alpha = 0.68f)
                                 }
+                                val animatedCellColor by animateColorAsState(
+                                    targetValue = cellColor,
+                                    animationSpec = tween(durationMillis = 160),
+                                    label = "calendarSelection"
+                                )
                                 val cellBorder = when {
                                     isSelected -> PrimaryLight
                                     isToday -> Primary.copy(alpha = 0.75f)
                                     else -> BgCardBorder.copy(alpha = 0.55f)
                                 }
+                                val accessibleDate = buildString {
+                                    append(date.format(DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy", Locale.getDefault())))
+                                    if (isToday) append(", today")
+                                    if (dateEntry.completed) append(", completed")
+                                    if (isSelected) append(", selected")
+                                }
                                 Column(
                                     Modifier.weight(1f)
-                                        .aspectRatio(0.92f)
+                                        .heightIn(min = 48.dp)
                                         .padding(1.dp)
                                         .clip(RoundedCornerShape(11.dp))
-                                        .background(cellColor)
+                                        .background(animatedCellColor)
                                         .border(1.dp, cellBorder, RoundedCornerShape(11.dp))
-                                        .clickable { selectedDate = date }
+                                        .selectable(selected = isSelected, role = Role.RadioButton) { selectedDate = date }
+                                        .semantics {
+                                            selected = isSelected
+                                            contentDescription = accessibleDate
+                                        }
                                         .padding(vertical = 4.dp),
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     verticalArrangement = Arrangement.Center
                                 ) {
-                                    Text(date.dayOfMonth.toString(), color = if (isSelected) PrimaryLight else TextPrimary, fontSize = 13.sp, fontWeight = if (isToday || isSelected) FontWeight.Bold else FontWeight.Medium)
+                                    Text(date.dayOfMonth.toString(), color = if (isSelected) PrimaryLight else TextPrimary, fontSize = 14.sp, fontWeight = if (isToday || isSelected) FontWeight.Bold else FontWeight.Medium)
                                     Spacer(Modifier.height(2.dp))
                                     if (dateEntry.completed) {
                                         Icon(
@@ -287,7 +304,7 @@ fun DailyLogScreen(onBack: () -> Unit) {
                     }
                 }
                 Spacer(Modifier.height(7.dp))
-                Text("Check = completed · outlined date = today", color = TextMuted, fontSize = 10.sp)
+                Text("Check = completed · outlined date = today · selected date = details below", color = TextSecondary, style = MaterialTheme.typography.bodySmall)
             }
 
             JeeCard {
@@ -295,10 +312,13 @@ fun DailyLogScreen(onBack: () -> Unit) {
                     Column(Modifier.weight(1f)) {
                         Text(selectedDate.format(DateTimeFormatter.ofPattern("EEE, d MMM yyyy", Locale.getDefault())), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                     }
-                    if (!selectedIsToday) {
-                        Surface(shape = RoundedCornerShape(8.dp), color = BgCardAlt) {
-                            Text(if (selectedDate.isAfter(today)) "Upcoming" else if (entry.completed) "Complete" else if (entry.notes.isNotBlank()) "Notes saved" else "No record", color = TextSecondary, fontSize = 10.sp, modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp))
-                        }
+                    Surface(shape = RoundedCornerShape(8.dp), color = if (selectedIsToday) BgFeature else BgCardAlt) {
+                        Text(
+                            if (selectedIsToday) "Today · editable" else if (selectedDate.isAfter(today)) "Upcoming · read-only" else if (entry.completed) "Complete · read-only" else if (entry.notes.isNotBlank()) "Notes saved · read-only" else "No record · read-only",
+                            color = if (selectedIsToday) TextPriorityBadge else TextSecondary,
+                            style = MaterialTheme.typography.labelMedium,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp)
+                        )
                     }
                 }
                 if (selectedIsToday) {
@@ -307,43 +327,43 @@ fun DailyLogScreen(onBack: () -> Unit) {
                         Checkbox(
                             checked = entry.completed,
                             onCheckedChange = { repository.updateTodayCompletion(it); refresh++ },
-                            colors = CheckboxDefaults.colors(checkedColor = Primary, checkmarkColor = BgApp, uncheckedColor = TextMuted)
+                            colors = CheckboxDefaults.colors(checkedColor = Primary, checkmarkColor = BgCard, uncheckedColor = TextMuted)
                         )
                         Column(Modifier.weight(1f)) {
-                            Text("I've completed my study today", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-                            Text("Tick only when you're done for today.", color = TextMuted, fontSize = 10.sp)
+                            Text("I've completed my study today", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyLarge)
+                            Text("Tick only when you're done for today.", color = TextSecondary, style = MaterialTheme.typography.bodySmall)
                         }
                     }
                 } else if (selectedDate.isAfter(today)) {
                     Spacer(Modifier.height(7.dp))
-                    Text("This date hasn't happened yet. You can view it, but can't prefill or edit it.", color = TextSecondary, fontSize = 11.sp, lineHeight = 16.sp)
+                    Text("This date hasn't happened yet. It is shown for reference only; you can't prefill or edit it.", color = TextSecondary, style = MaterialTheme.typography.bodyMedium)
                 }
                 Spacer(Modifier.height(7.dp))
-                Text("What did you study?", color = TextSecondary, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                Text(if (selectedIsToday) "What did you study today?" else "Study notes", color = TextPrimary, style = MaterialTheme.typography.titleSmall)
                 Spacer(Modifier.height(5.dp))
                 OutlinedTextField(
                     value = entry.notes,
                     onValueChange = { if (selectedIsToday) { repository.updateTodayNotes(it); refresh++ } },
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 128.dp, max = 220.dp),
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 128.dp, max = 240.dp),
                     minLines = 4,
                     maxLines = 8,
-                    placeholder = { Text(if (selectedIsToday) "Subjects, chapters, questions, revision..." else "No study notes saved for this date.", color = TextMuted, fontSize = 12.sp) },
+                    placeholder = { Text(if (selectedIsToday) "Subjects, chapters, questions, revision..." else "No study notes saved for this date.", color = TextMuted, style = MaterialTheme.typography.bodyMedium) },
                     readOnly = !selectedIsToday,
                     enabled = true,
-                    textStyle = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
+                    textStyle = MaterialTheme.typography.bodyMedium,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = Primary,
                         unfocusedBorderColor = BgCardBorder,
                         focusedTextColor = TextPrimary,
                         unfocusedTextColor = TextPrimary,
-                        focusedContainerColor = BgCard.copy(alpha = .7f),
-                        unfocusedContainerColor = BgCard.copy(alpha = .7f),
+                        focusedContainerColor = BgCard,
+                        unfocusedContainerColor = BgCard,
                         cursorColor = PrimaryLight
                     )
                 )
                 if (selectedIsToday) {
                     Spacer(Modifier.height(5.dp))
-                    Text("${entry.notes.length}/${DailyLogRepository.MAX_NOTE_LENGTH} characters · ${cloudBackupStatus ?: "Saved automatically on this device"}", color = if (cloudBackupStatus?.startsWith("Backed up") == true) AccentGreen else TextMuted, fontSize = 9.sp)
+                    Text("${entry.notes.length}/${DailyLogRepository.MAX_NOTE_LENGTH} characters · ${cloudBackupStatus ?: "Saved automatically on this device"}", color = if (cloudBackupStatus?.startsWith("Backed up") == true) Success else TextSecondary, style = MaterialTheme.typography.bodySmall)
                 }
             }
             Spacer(Modifier.height(4.dp))

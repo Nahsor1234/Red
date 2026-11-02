@@ -1,6 +1,14 @@
 package com.example.jeecommandcenter.ui.navigation
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.platform.LocalContext
@@ -67,9 +75,26 @@ fun AppRoot(initialTarget: String? = null, launchRequestId: Int = 0) {
     BackHandler(enabled = secondaryStack.isNotEmpty()) { popPage() }
     val screenKey = secondaryPage?.let { "secondary:" + it.name } ?: ("tab:" + selectedTab.name)
 
-    key(screenKey) {
-        saveableStateHolder.SaveableStateProvider(screenKey) {
-            val key = screenKey
+    AnimatedContent(
+        targetState = screenKey,
+        transitionSpec = {
+            val isTabSwitch = initialState.startsWith("tab:") && targetState.startsWith("tab:")
+            val isBack = initialState.startsWith("secondary:") &&
+                secondaryStack.none { "secondary:${it.name}" == initialState }
+            when {
+                isTabSwitch -> fadeIn(tween(180)) togetherWith fadeOut(tween(130))
+                isBack -> (fadeIn(tween(220, easing = FastOutSlowInEasing)) +
+                    slideInHorizontally(tween(220, easing = FastOutSlowInEasing)) { -it / 18 }) togetherWith
+                    (fadeOut(tween(170)) + slideOutHorizontally(tween(170, easing = FastOutSlowInEasing)) { it / 18 })
+                else -> (fadeIn(tween(240, easing = FastOutSlowInEasing)) +
+                    slideInHorizontally(tween(240, easing = FastOutSlowInEasing)) { it / 18 }) togetherWith
+                    (fadeOut(tween(170)) + slideOutHorizontally(tween(170, easing = FastOutSlowInEasing)) { -it / 18 })
+            }
+        },
+        label = "app-screen-transition"
+    ) { targetKey ->
+        saveableStateHolder.SaveableStateProvider(targetKey) {
+            val key = targetKey
 
             val targetSecondary = if (key.startsWith("secondary:")) SecondaryPage.valueOf(key.removePrefix("secondary:")) else null
             val targetTab = if (key.startsWith("tab:")) AppTab.valueOf(key.removePrefix("tab:")) else null
@@ -113,7 +138,7 @@ fun AppRoot(initialTarget: String? = null, launchRequestId: Int = 0) {
                 SecondaryPage.NOTIFICATIONS -> NotificationCenterScreen(::popPage) { openPage(SecondaryPage.NOTIFICATION_SETTINGS) }
                 SecondaryPage.NOTIFICATION_SETTINGS -> NotificationSettingsScreen(::popPage)
                 null -> when (targetTab ?: AppTab.HOME) {
-                    AppTab.HOME -> DashboardScreen(repo = repo, selectedTab = selectedTab, onTabSelected = ::selectTab, onAiClick = { openPage(SecondaryPage.AI_TUTOR) }, onOpenRevision = { openPage(SecondaryPage.REVISION) }, onOpenSettings = { openPage(SecondaryPage.SETTINGS) }, onOpenAssessment = { openPage(SecondaryPage.ASSESSMENT) }, onOpenMistakes = { openPage(SecondaryPage.MISTAKES) }, onOpenStudyTimer = { selectTab(AppTab.STATS) }, onOpenDailyLog = { openPage(SecondaryPage.DAILY_LOG) }, onOpenNotifications = { openPage(SecondaryPage.NOTIFICATIONS) })
+                    AppTab.HOME -> DashboardScreen(repo = repo, selectedTab = selectedTab, onTabSelected = ::selectTab, onAiClick = { openPage(SecondaryPage.AI_TUTOR) }, onOpenRevision = { openPage(SecondaryPage.REVISION) }, onOpenSettings = { openPage(SecondaryPage.SETTINGS) }, onOpenAssessment = { openPage(SecondaryPage.ASSESSMENT) }, onOpenMistakes = { openPage(SecondaryPage.MISTAKES) }, onOpenStudyTimer = { selectTab(AppTab.STATS) }, onOpenDailyLog = { openPage(SecondaryPage.DAILY_LOG) }, onOpenNotifications = { openPage(SecondaryPage.NOTIFICATIONS) }, onOpenChapter = { chapter -> selectedChapter = chapter; openPage(SecondaryPage.CHAPTER_DETAIL) })
                     AppTab.SYLLABUS -> SyllabusScreen(repo = repo, selectedTab = selectedTab, onTabSelected = ::selectTab, onAiClick = { openPage(SecondaryPage.AI_TUTOR) }, onOpenRevision = { openPage(SecondaryPage.REVISION) }, onOpenChapter = { chapter -> selectedChapter = chapter; openPage(SecondaryPage.CHAPTER_DETAIL) })
                     AppTab.AI -> AiTutorScreen(
                         context = context,

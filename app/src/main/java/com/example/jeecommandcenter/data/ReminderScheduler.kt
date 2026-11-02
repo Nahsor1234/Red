@@ -352,7 +352,7 @@ object ReminderNotificationPublisher {
         )
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification_sigma)
-            .setColor(android.graphics.Color.parseColor("#CAF592"))
+            .setColor(android.graphics.Color.parseColor("#8FAEFF"))
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
             .setContentTitle(title)

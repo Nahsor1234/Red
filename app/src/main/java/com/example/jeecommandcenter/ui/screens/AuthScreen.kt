@@ -1,10 +1,12 @@
 package com.example.jeecommandcenter.ui.screens
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PersonAdd
@@ -12,13 +14,15 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.jeecommandcenter.data.CloudJeeRepository
 import com.example.jeecommandcenter.ui.components.JeeCard
+import com.example.jeecommandcenter.ui.components.JeePageHeader
 import com.example.jeecommandcenter.ui.components.JeeTopBar
 import com.example.jeecommandcenter.ui.theme.*
 import kotlinx.coroutines.delay
@@ -37,6 +41,7 @@ fun AuthScreen(
 ) {
     val cloud = remember { CloudJeeRepository() }
     val scope = rememberCoroutineScope()
+    val focusManager = LocalFocusManager.current
     var mode by remember(initialMode) { mutableStateOf(initialMode.toInternal()) }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -46,9 +51,7 @@ fun AuthScreen(
     var message by remember { mutableStateOf<String?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
 
-    // When the user confirms the email in a browser, Supabase redirects back
-    // into Sigma JE. This also covers the case where the Auth screen is still
-    // visible while the confirmation happens on another app/browser.
+    // Poll only while confirmation is pending; a confirmed session completes this flow automatically.
     LaunchedEffect(waitingForConfirmation) {
         if (!waitingForConfirmation) return@LaunchedEffect
         val deadline = System.currentTimeMillis() + 120_000L
@@ -130,111 +133,128 @@ fun AuthScreen(
         topBar = { JeeTopBar(title = if (mode == AuthMode.SIGN_IN) "Sign in" else "Create account", onBack = onBack) }
     ) { padding ->
         Column(
-            Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .imePadding()
-                .padding(padding)
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).imePadding().padding(padding)
+                .padding(horizontal = 20.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
-            JeeCard(featured = true) {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("Sigma JE account", style = MaterialTheme.typography.headlineSmall)
-                    Text(
-                        if (mode == AuthMode.SIGN_IN)
-                            "Sign in to sync your progress, question attempts and syllabus state across devices."
-                        else
-                            "Create an account to keep your Sigma JE progress backed up in the cloud.",
-                        color = TextSecondary,
-                        fontSize = 12.sp
+            Column(Modifier.fillMaxWidth().widthIn(max = 520.dp).align(Alignment.CenterHorizontally), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+                JeePageHeader(
+                    title = if (mode == AuthMode.SIGN_IN) "Welcome back" else "Create your account",
+                    subtitle = if (mode == AuthMode.SIGN_IN)
+                        "Sign in to sync progress, question attempts and syllabus state across devices."
+                    else "Create an account to keep your Sigma JE progress backed up in the cloud.",
+                    eyebrow = "SIGMA JE · OPTIONAL CLOUD"
+                )
+
+                JeeCard(modifier = Modifier.animateContentSize()) {
+                    OutlinedTextField(
+                        value = email,
+                        onValueChange = { email = it; error = null },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        label = { Text("Email") },
+                        leadingIcon = { Icon(Icons.Filled.Email, contentDescription = null) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
+                        keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
+                        enabled = !busy,
+                        isError = error?.contains("email", ignoreCase = true) == true,
+                        supportingText = {
+                            error?.takeIf { it.contains("email", ignoreCase = true) }?.let { Text(it) }
+                        }
                     )
+                    Spacer(Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = password,
+                        onValueChange = { password = it; error = null },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        label = { Text("Password") },
+                        leadingIcon = { Icon(Icons.Filled.Lock, contentDescription = null) },
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Password,
+                            imeAction = if (mode == AuthMode.SIGN_UP) ImeAction.Next else ImeAction.Done
+                        ),
+                        keyboardActions = KeyboardActions(
+                            onNext = { focusManager.moveFocus(FocusDirection.Down) },
+                            onDone = { focusManager.clearFocus(); submit() }
+                        ),
+                        enabled = !busy,
+                        isError = error?.contains("password", ignoreCase = true) == true && error?.contains("match", ignoreCase = true) != true,
+                        supportingText = {
+                            error?.takeIf { it.contains("password", ignoreCase = true) && !it.contains("match", ignoreCase = true) }?.let { Text(it) }
+                        }
+                    )
+                    if (mode == AuthMode.SIGN_UP) {
+                        Spacer(Modifier.height(12.dp))
+                        OutlinedTextField(
+                            value = confirmPassword,
+                            onValueChange = { confirmPassword = it; error = null },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            label = { Text("Confirm password") },
+                            leadingIcon = { Icon(Icons.Filled.Lock, contentDescription = null) },
+                            visualTransformation = PasswordVisualTransformation(),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
+                            keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus(); submit() }),
+                            enabled = !busy,
+                            isError = error?.contains("match", ignoreCase = true) == true,
+                            supportingText = {
+                                error?.takeIf { it.contains("match", ignoreCase = true) }?.let { Text(it) }
+                            }
+                        )
+                    }
+
+                    error?.takeUnless {
+                        it.contains("email", ignoreCase = true) ||
+                            it.contains("password", ignoreCase = true) ||
+                            it.contains("match", ignoreCase = true)
+                    }?.let {
+                        Spacer(Modifier.height(12.dp))
+                        Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
+                    }
+                    message?.let {
+                        Spacer(Modifier.height(12.dp))
+                        Text(it, color = Success, style = MaterialTheme.typography.bodyMedium)
+                    }
+                    Spacer(Modifier.height(18.dp))
+                    Button(onClick = { focusManager.clearFocus(); submit() }, enabled = !busy, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)) {
+                        if (busy) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                        else {
+                            Icon(if (mode == AuthMode.SIGN_UP) Icons.Filled.PersonAdd else Icons.Filled.Lock, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text(if (mode == AuthMode.SIGN_IN) "Sign in" else "Create account")
+                        }
+                    }
+                    if (waitingForConfirmation) {
+                        Spacer(Modifier.height(8.dp))
+                        OutlinedButton(onClick = ::resendConfirmation, enabled = !busy, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                            Icon(Icons.Filled.Email, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Resend confirmation email")
+                        }
+                    }
                 }
-            }
 
-            OutlinedTextField(
-                value = email,
-                onValueChange = { email = it; error = null },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                label = { Text("Email") },
-                leadingIcon = { Icon(Icons.Filled.Email, null) },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                enabled = !busy
-            )
+                TextButton(
+                    onClick = {
+                        mode = if (mode == AuthMode.SIGN_IN) AuthMode.SIGN_UP else AuthMode.SIGN_IN
+                        waitingForConfirmation = false
+                        message = null
+                        error = null
+                    },
+                    enabled = !busy,
+                    modifier = Modifier.align(Alignment.CenterHorizontally).heightIn(min = 48.dp)
+                ) {
+                    Text(if (mode == AuthMode.SIGN_IN) "New to Sigma JE? Create an account" else "Already have an account? Sign in")
+                }
 
-            OutlinedTextField(
-                value = password,
-                onValueChange = { password = it; error = null },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                label = { Text("Password") },
-                leadingIcon = { Icon(Icons.Filled.Lock, null) },
-                visualTransformation = PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                enabled = !busy
-            )
-
-            if (mode == AuthMode.SIGN_UP) {
-                OutlinedTextField(
-                    value = confirmPassword,
-                    onValueChange = { confirmPassword = it; error = null },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    label = { Text("Confirm password") },
-                    leadingIcon = { Icon(Icons.Filled.Lock, null) },
-                    visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    enabled = !busy
+                Text(
+                    "An account is optional. Keep using Sigma JE offline; cloud sync is available after authentication.",
+                    color = TextMuted,
+                    style = MaterialTheme.typography.bodySmall
                 )
             }
-
-            error?.let { Text(it, color = Danger, fontSize = 12.sp) }
-            message?.let { Text(it, color = AccentGreen, fontSize = 12.sp) }
-
-            Button(
-                onClick = ::submit,
-                enabled = !busy,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                if (busy) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                else {
-                    Icon(if (mode == AuthMode.SIGN_UP) Icons.Filled.PersonAdd else Icons.Filled.Lock, null)
-                    Spacer(Modifier.width(8.dp))
-                    Text(if (mode == AuthMode.SIGN_IN) "Sign in" else "Create account")
-                }
-            }
-
-            if (waitingForConfirmation) {
-                OutlinedButton(
-                    onClick = ::resendConfirmation,
-                    enabled = !busy,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Filled.Email, null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Resend confirmation email")
-                }
-            }
-
-            TextButton(
-                onClick = {
-                    mode = if (mode == AuthMode.SIGN_IN) AuthMode.SIGN_UP else AuthMode.SIGN_IN
-                    waitingForConfirmation = false
-                    message = null
-                    error = null
-                },
-                enabled = !busy,
-                modifier = Modifier.align(Alignment.CenterHorizontally)
-            ) {
-                Text(if (mode == AuthMode.SIGN_IN) "New to Sigma JE? Create an account" else "Already have an account? Sign in")
-            }
-
-            Text(
-                "You can keep using Sigma JE offline without an account. Cloud sync is available after authentication.",
-                color = TextMuted,
-                fontSize = 10.sp
-            )
         }
     }
 }

@@ -20,6 +20,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -189,8 +191,9 @@ fun ChapterQuestionPracticeScreen(
             if (!loading && error == null && question != null) {
                 Column(
                     Modifier.fillMaxWidth()
-                        .background(BgAppBase.copy(alpha = .97f))
+                        .background(BgAppBase)
                         .navigationBarsPadding()
+                        .imePadding()
                         .padding(horizontal = 16.dp, vertical = 10.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
@@ -218,7 +221,8 @@ fun ChapterQuestionPracticeScreen(
                                 }
                             },
                             enabled = selectedIndex >= 0,
-                            modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp)
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = FocusAction, contentColor = TextPrimary)
                         ) {
                             Text("Check answer")
                         }
@@ -243,7 +247,8 @@ fun ChapterQuestionPracticeScreen(
                         Surface(
                             modifier = Modifier.size(48.dp)
                                 .clip(RoundedCornerShape(14.dp))
-                                .clickable { toggleBookmark(question.id) },
+                                .clickable { toggleBookmark(question.id) }
+                                .semantics { contentDescription = if (bookmarked) "Remove bookmark from question ${index + 1}" else "Bookmark question ${index + 1}" },
                             color = if (bookmarked) PrimarySoft else BgCard,
                             shape = RoundedCornerShape(14.dp),
                             border = BorderStroke(1.dp, if (bookmarked) Primary else BgCardBorder)
@@ -325,13 +330,18 @@ fun ChapterQuestionPracticeScreen(
                                 overflow = TextOverflow.Ellipsis
                             )
                             Text(
-                                "Question ${index + 1}/${questions.size}",
+                                "Question ${index + 1} of ${questions.size}",
+                                color = TextPrimary,
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text(
+                                if (submitted) "Answer checked" else if (selectedIndex >= 0) "Answer selected · not checked" else "Choose an answer to begin",
                                 color = TextSecondary,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Medium
+                                style = MaterialTheme.typography.bodySmall
                             )
                         }
-                        TextButton(onClick = { showQuestionPicker = true }) {
+                        TextButton(onClick = { showQuestionPicker = true }, modifier = Modifier.heightIn(min = 48.dp)) {
                             Icon(Icons.Filled.GridView, null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(5.dp))
                             Text("Jump")
@@ -541,7 +551,7 @@ fun ChapterQuestionPracticeScreen(
                     fontSize = 12.sp
                 )
                 LazyVerticalGrid(
-                    columns = GridCells.Fixed(5),
+                    columns = GridCells.Adaptive(minSize = 48.dp),
                     modifier = Modifier.fillMaxWidth().heightIn(min = 180.dp, max = 420.dp),
                     horizontalArrangement = Arrangement.spacedBy(9.dp),
                     verticalArrangement = Arrangement.spacedBy(9.dp),

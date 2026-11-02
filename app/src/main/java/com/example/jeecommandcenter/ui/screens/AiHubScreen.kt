@@ -1,37 +1,221 @@
 package com.example.jeecommandcenter.ui.screens
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.*
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Chat
+import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material.icons.filled.Insights
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Today
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.jeecommandcenter.data.*
-import com.example.jeecommandcenter.ui.theme.*
+import com.example.jeecommandcenter.data.AiOrchestrator
+import com.example.jeecommandcenter.data.AiResult
+import com.example.jeecommandcenter.data.AiSettingsRepository
+import com.example.jeecommandcenter.ui.components.JeeCard
+import com.example.jeecommandcenter.ui.components.JeePageHeader
+import com.example.jeecommandcenter.ui.components.SectionHeader
+import com.example.jeecommandcenter.ui.theme.AccentBlue
+import com.example.jeecommandcenter.ui.theme.BgApp
+import com.example.jeecommandcenter.ui.theme.Primary
+import com.example.jeecommandcenter.ui.theme.TextMuted
+import com.example.jeecommandcenter.ui.theme.TextSecondary
 import kotlinx.coroutines.launch
 
 @Composable
-fun AiHubScreen(context:android.content.Context,onBack:()->Unit,onOpenTutor:()->Unit,onOpenSettings:()->Unit){
- val settings=remember{AiSettingsRepository(context)};val orchestrator=remember{AiOrchestrator(context)};val scope=rememberCoroutineScope();val view=LocalView.current;var busy by remember{mutableStateOf(false)};var title by remember{mutableStateOf<String?>(null)};var result by remember{mutableStateOf("")};val config=settings.getConfig();val hasKey=settings.hasApiKey()
- fun run(t:String,a:suspend()->AiResult){if(!hasKey||busy)return;view.performHapticFeedback(android.view.HapticFeedbackConstants.CONTEXT_CLICK);busy=true;title=t;scope.launch{val r=a();result=if(r.success)r.text else(r.error?:"AI request failed.");busy=false}}
- Scaffold(containerColor=BgApp){p->LazyColumn(Modifier.fillMaxSize().padding(p).padding(horizontal=18.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){item{Spacer(Modifier.height(8.dp));Row(Modifier.fillMaxWidth(),Arrangement.SpaceBetween,Alignment.CenterVertically){Column{Text("AI study coach",style=MaterialTheme.typography.headlineSmall);Text("Analysis and actions from your real study data",color=TextMuted,fontSize=11.sp)};TextButton(onClick={view.performHapticFeedback(android.view.HapticFeedbackConstants.CONTEXT_CLICK);onOpenSettings()}){Text("Settings",fontSize=12.sp)}}}
- item{Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(BgCardAlt).border(JeeSurfaceTokens.borderWidth,BgCardBorder.copy(alpha=JeeSurfaceTokens.cardBorderAlpha),JeeShapes.medium).padding(17.dp)){Text("BASED ON YOUR STUDY DATA",color=TextSecondary,fontSize=11.sp);Spacer(Modifier.height(6.dp));Text(if(hasKey)"AI is ready" else "AI is optional",style=MaterialTheme.typography.titleLarge);Text(if(hasKey)"${config.provider.label} · ${config.model}" else "Configure a provider in Settings when you need AI.",color=TextMuted,fontSize=11.sp)}}
- item{Text("What do you want to understand?",style=MaterialTheme.typography.titleMedium)}
- item{AiAction("Analyze my preparation","Find weaknesses, gaps and recent patterns.",Icons.Filled.Insights,hasKey&&!busy){run("Performance analysis"){orchestrator.analyzePerformance()}}}
- item{AiAction("What should I study now?","Build a focused next-step plan from your data.",Icons.Filled.Today,hasKey&&!busy){run("Today's study plan"){orchestrator.buildDailyStudyPlan()}}}
- item{AiAction("Analyze my mistakes","Find recurring mistake patterns and chapters.",Icons.Filled.ErrorOutline,hasKey&&!busy){run("Mistake analysis"){orchestrator.explainMistakes()}}}
- item{AiAction("Ask the study coach","Chat about your preparation and context.",Icons.Filled.Chat,hasKey){view.performHapticFeedback(android.view.HapticFeedbackConstants.CONTEXT_CLICK);onOpenTutor()}}
- if(title!=null)item{Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(BgCard).border(JeeSurfaceTokens.borderWidth,BgCardBorder.copy(alpha=JeeSurfaceTokens.cardBorderAlpha),JeeShapes.medium).padding(15.dp)){Text(title!!,style=MaterialTheme.typography.titleMedium);Spacer(Modifier.height(8.dp));if(busy)LinearProgressIndicator(Modifier.fillMaxWidth(),color=AccentBlue)else Text(result,color=TextOnCard,fontSize=13.sp)}}
- if(!hasKey)item{Text("Provider, model and API key are managed in Settings. AI does not replace your stored study data.",color=TextMuted,fontSize=10.sp)};item{Spacer(Modifier.height(20.dp))}}}
+fun AiHubScreen(
+    context: android.content.Context,
+    onBack: () -> Unit,
+    onOpenTutor: () -> Unit,
+    onOpenSettings: () -> Unit
+) {
+    val settings = remember { AiSettingsRepository(context) }
+    val orchestrator = remember { AiOrchestrator(context) }
+    val scope = rememberCoroutineScope()
+    val view = LocalView.current
+    var busy by remember { mutableStateOf(false) }
+    var title by remember { mutableStateOf<String?>(null) }
+    var result by remember { mutableStateOf("") }
+    val config = settings.getConfig()
+    val hasKey = settings.hasApiKey()
+
+    fun run(actionTitle: String, action: suspend () -> AiResult) {
+        if (!hasKey || busy) return
+        view.performHapticFeedback(android.view.HapticFeedbackConstants.CONTEXT_CLICK)
+        busy = true
+        title = actionTitle
+        result = ""
+        scope.launch {
+            val response = action()
+            result = if (response.success) response.text else (response.error ?: "AI request failed.")
+            busy = false
+        }
+    }
+
+    Scaffold(containerColor = BgApp) { insets ->
+        LazyColumn(
+            Modifier.fillMaxSize().padding(insets).padding(horizontal = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            item {
+                Spacer(Modifier.height(8.dp))
+                JeePageHeader(
+                    title = "AI study coach",
+                    subtitle = "A provider-powered layer over your recorded preparation.",
+                    eyebrow = "OPTIONAL · AI",
+                    trailing = {
+                        OutlinedButton(onClick = {
+                            view.performHapticFeedback(android.view.HapticFeedbackConstants.CONTEXT_CLICK)
+                            onOpenSettings()
+                        }) {
+                            Icon(Icons.Filled.Settings, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Settings")
+                        }
+                    }
+                )
+            }
+            item {
+                JeeCard(featured = true, modifier = Modifier.animateContentSize()) {
+                    Text("READINESS", style = MaterialTheme.typography.labelMedium, color = TextSecondary, letterSpacing = 1.sp)
+                    Spacer(Modifier.height(7.dp))
+                    Text(
+                        if (hasKey) "Ready when you are" else "AI is optional",
+                        style = MaterialTheme.typography.headlineSmall
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        if (hasKey) "${config.provider.label} · ${config.model}"
+                        else "Add a provider and API key in Settings to use the coach. Your local study tools remain available.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextSecondary
+                    )
+                    if (!hasKey) {
+                        Spacer(Modifier.height(14.dp))
+                        Button(onClick = onOpenSettings, modifier = Modifier.fillMaxWidth()) {
+                        Icon(Icons.Filled.Settings, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Configure AI")
+                        }
+                    }
+                }
+            }
+            item { SectionHeader("Use your study data") }
+            item {
+                Text(
+                    "Each action asks the configured provider to analyze information already recorded in JeE.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextSecondary
+                )
+            }
+            item {
+                AiAction("Analyze my preparation", "Look for real strengths, gaps and recent patterns.", Icons.Filled.Insights, hasKey && !busy) {
+                    run("Preparation analysis") { orchestrator.analyzePerformance() }
+                }
+            }
+            item {
+                AiAction("What should I study now?", "Get a next-step suggestion based on your data.", Icons.Filled.Today, hasKey && !busy) {
+                    run("Today's study plan") { orchestrator.buildDailyStudyPlan() }
+                }
+            }
+            item {
+                AiAction("Analyze my mistakes", "Review recorded mistakes and recurring chapters.", Icons.Filled.ErrorOutline, hasKey && !busy) {
+                    run("Mistake analysis") { orchestrator.explainMistakes() }
+                }
+            }
+            item {
+                SectionHeader("Talk it through")
+                JeeCard {
+                    Text("Ask the study coach", style = MaterialTheme.typography.titleMedium)
+                    Spacer(Modifier.height(4.dp))
+                    Text("Open a conversation about your preparation. Existing study context is used by the coach; conversations require a configured provider.", style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
+                    Spacer(Modifier.height(12.dp))
+                    Button(
+                        onClick = {
+                            view.performHapticFeedback(android.view.HapticFeedbackConstants.CONTEXT_CLICK)
+                            onOpenTutor()
+                        },
+                        enabled = hasKey,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Filled.Chat, contentDescription = null)
+                        Spacer(Modifier.padding(horizontal = 2.dp))
+                        Text(if (hasKey) "Open tutor" else "Configure AI to continue")
+                    }
+                }
+            }
+            item {
+                AnimatedVisibility(visible = title != null, enter = fadeIn(), exit = fadeOut()) {
+                    JeeCard(modifier = Modifier.animateContentSize()) {
+                        Text(title.orEmpty(), style = MaterialTheme.typography.titleMedium)
+                        Spacer(Modifier.height(8.dp))
+                        if (busy) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp, color = AccentBlue)
+                                Text("Waiting for the configured provider…", style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
+                            }
+                        } else {
+                            Text(result, style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+                }
+            }
+            item { Spacer(Modifier.height(20.dp)) }
+        }
+    }
 }
-@Composable private fun AiAction(title:String,subtitle:String,icon:androidx.compose.ui.graphics.vector.ImageVector,enabled:Boolean,onClick:()->Unit){ElevatedCard(onClick=onClick,enabled=enabled,modifier=Modifier.fillMaxWidth(),colors=CardDefaults.elevatedCardColors(containerColor=BgCard)){ListItem(headlineContent={Text(title)},supportingContent={Text(subtitle)},leadingContent={Box(Modifier.size(42.dp).clip(RoundedCornerShape(13.dp)).background(AccentBlueSoft),Alignment.Center){Icon(icon,null,tint=if(enabled)AccentBlue else TextMuted,modifier=Modifier.size(21.dp))}},trailingContent={Icon(Icons.Filled.ChevronRight,null,tint=TextMuted)},colors=ListItemDefaults.colors(containerColor=Color.Transparent))}}
+
+@Composable
+private fun AiAction(
+    title: String,
+    subtitle: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    enabled: Boolean,
+    onClick: () -> Unit
+) {
+    JeeCard {
+        Row(
+            Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Icon(icon, contentDescription = null, tint = if (enabled) Primary else TextMuted)
+            Column(Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.height(3.dp))
+                Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
+            }
+            androidx.compose.material3.TextButton(onClick = onClick, enabled = enabled) { Text("Run") }
+        }
+    }
+}

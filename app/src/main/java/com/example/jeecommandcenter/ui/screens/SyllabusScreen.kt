@@ -1,6 +1,14 @@
 package com.example.jeecommandcenter.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
@@ -11,6 +19,9 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -36,6 +47,7 @@ fun SyllabusScreen(
 ) {
     var subject by remember { mutableStateOf("Physics") }
     var filter by remember { mutableStateOf("All") }
+    var query by remember { mutableStateOf("") }
     var refresh by remember { mutableIntStateOf(0) }
     var cloudChapters by remember { mutableStateOf<List<CloudChapter>>(emptyList()) }
     var cloudProgress by remember { mutableStateOf<Map<String, CloudChapterProgress>>(emptyMap()) }
@@ -94,7 +106,7 @@ fun SyllabusScreen(
             ?: 0f
     }
 
-    val models = if (cloudAvailable) {
+    val allModels = if (cloudAvailable) {
         cloudChapters.map { chapter ->
             JeeChapter(
                 chapter.id,
@@ -112,217 +124,201 @@ fun SyllabusScreen(
                 ?: JeeChapter(id, chapter.subject, chapter.number, chapter.name)
             model to chapter.progress
         }
-    }.filter { (chapter, progress) ->
-        when (filter) {
+    }
+
+    val models = allModels.filter { (chapter, progress) ->
+        val matchesStatus = when (filter) {
             "In progress" -> progress > 0f && progress < 1f
             "Done" -> progress >= 1f
             "Weak" -> weak.contains(chapter.id)
             else -> true
         }
+        matchesStatus && (query.isBlank() || chapter.name.contains(query.trim(), ignoreCase = true) ||
+            chapter.number.toString() == query.trim())
     }
 
-    val avg = if (models.isEmpty()) 0f else models.map { it.second }.average().toFloat()
-    val attention = models.firstOrNull { weak.contains(it.first.id) }
+    // Keep the subject summary stable while the user searches or changes a filter.
+    val avg = if (allModels.isEmpty()) 0f else allModels.map { it.second }.average().toFloat()
+    val completedCount = allModels.count { it.second >= 1f }
+    val activeCount = allModels.count { it.second > 0f && it.second < 1f }
+    val notStartedCount = allModels.count { it.second <= 0f }
+    val weakCount = allModels.count { weak.contains(it.first.id) }
+    val attention = allModels.firstOrNull { weak.contains(it.first.id) }
 
     Box(Modifier.fillMaxSize()) {
         Scaffold(
-            containerColor = BgApp.copy(alpha = 0f),
+            containerColor = BgApp,
             bottomBar = { AnimatedBottomNavBar(selectedTab, onTabSelected, visible = selectedTab != AppTab.AI) }
         ) { padding ->
-            Column(
-                Modifier.fillMaxSize()
-                    .padding(padding)
-                    .padding(horizontal = 18.dp)
+            LazyColumn(
+                Modifier.fillMaxSize().padding(padding).padding(horizontal = 20.dp),
+                contentPadding = PaddingValues(top = 12.dp, bottom = 120.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Spacer(Modifier.height(10.dp))
-
-                Row(
-                    Modifier.fillMaxWidth(),
-                    Arrangement.SpaceBetween,
-                    Alignment.CenterVertically
-                ) {
-                    Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("Syllabus", style = MaterialTheme.typography.headlineSmall)
-                            Spacer(Modifier.width(7.dp))
-                            Icon(
-                                if (cloudAvailable) Icons.Filled.Cloud else Icons.Filled.CloudOff,
-                                null,
-                                tint = if (cloudAvailable) PrimaryLight else TextMuted,
-                                modifier = Modifier.size(16.dp)
-                            )
+                item(key = "syllabus-header") {
+                    JeePageHeader(
+                        title = "Syllabus",
+                        eyebrow = "JEE 2027 · LEARNING",
+                        subtitle = "Build steady progress, one chapter at a time",
+                        trailing = {
+                            TextButton(onClick = onOpenRevision) {
+                                Text("Notes", color = PrimaryLight, style = MaterialTheme.typography.labelLarge)
+                            }
                         }
-                        cloudError?.let {
-                            Text("Offline syllabus · local fallback", color = TextMuted, fontSize = 9.sp)
-                        }
-                    }
-                    TextButton(onClick = onOpenRevision) {
-                        Text("Notes", fontSize = 12.sp)
-                    }
+                    )
                 }
-
-                Spacer(Modifier.height(12.dp))
-
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(listOf("Physics", "Chemistry", "Mathematics")) { value ->
-                        JeeFilterChip(value, value == subject) {
-                            subject = value
-                            filter = "All"
-                        }
-                    }
-                }
-
-                Spacer(Modifier.height(14.dp))
-
-                Column(
-                    Modifier.fillMaxWidth()
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(BgCardAlt)
-                        .border(
-                            JeeSurfaceTokens.borderWidth,
-                            BgCardBorder.copy(alpha = JeeSurfaceTokens.cardBorderAlpha),
-                            JeeShapes.medium
+                item(key = "syllabus-search") {
+                    OutlinedTextField(
+                        value = query,
+                        onValueChange = { query = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        placeholder = { Text("Search chapters by name or number") },
+                        leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+                        trailingIcon = {
+                            if (query.isNotEmpty()) IconButton(onClick = { query = "" }) {
+                                Icon(Icons.Filled.Close, contentDescription = "Clear chapter search")
+                            }
+                        },
+                        shape = JeeShapes.medium,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary,
+                            focusedContainerColor = BgCard, unfocusedContainerColor = BgCard,
+                            focusedBorderColor = Primary, unfocusedBorderColor = BgCardBorder,
+                            focusedPlaceholderColor = TextSecondary, unfocusedPlaceholderColor = TextSecondary,
+                            focusedLeadingIconColor = Primary, unfocusedLeadingIconColor = TextSecondary
                         )
-                        .padding(17.dp)
-                ) {
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        Arrangement.SpaceBetween,
-                        Alignment.CenterVertically
-                    ) {
-                        Column(Modifier.weight(1f)) {
-                            Text(subject.uppercase(), color = TextSecondary, fontSize = 12.sp)
-                            Text("${(avg * 100).toInt()}%", style = MaterialTheme.typography.displaySmall)
-                            Text(
-                                "${models.count { it.second >= 1f }} of ${models.size} chapters complete",
-                                color = TextMuted,
-                                fontSize = 12.sp
-                            )
-                        }
-                        Column(horizontalAlignment = Alignment.End) {
-                            Text(
-                                "${models.count { it.second > 0f && it.second < 1f }} active",
-                                color = PrimaryLight
-                            )
-                            Text(
-                                "${models.count { it.second == 0f }} not started",
-                                color = TextMuted,
-                                fontSize = 11.sp
-                            )
-                        }
-                    }
-                    Spacer(Modifier.height(10.dp))
-                    LinearStatBar(avg)
+                    )
                 }
-
-                Spacer(Modifier.height(14.dp))
-
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(listOf("All", "Weak", "In progress", "Done")) { value ->
-                        JeeFilterChip(value, value == filter) { filter = value }
+                item(key = "syllabus-subject") {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("SUBJECT", color = TextSecondary, style = MaterialTheme.typography.labelSmall)
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(listOf("Physics", "Chemistry", "Mathematics"), key = { it }) { value ->
+                                JeeFilterChip(value, value == subject) {
+                                    subject = value
+                                    filter = "All"
+                                    query = ""
+                                }
+                            }
+                        }
                     }
                 }
-
-                Spacer(Modifier.height(6.dp))
-
-                LazyColumn(
-                    Modifier.weight(1f),
-                    contentPadding = PaddingValues(bottom = 12.dp)
-                ) {
-                    if (filter == "All" && attention != null) {
-                        item {
-                            Column(
-                                Modifier.fillMaxWidth()
-                                    .clip(RoundedCornerShape(18.dp))
-                                    .background(BgCard)
-                                    .border(
-                                        JeeSurfaceTokens.borderWidth,
-                                        BgCardBorder.copy(alpha = JeeSurfaceTokens.cardBorderAlpha),
-                                        JeeShapes.medium
-                                    )
-                                    .padding(15.dp)
-                            ) {
-                                Text("NEXT ATTENTION", color = TextSecondary, fontSize = 11.sp)
-                                Text(attention.first.name, style = MaterialTheme.typography.titleMedium)
-                                Text(
-                                    "Low confidence, incomplete or weak chapter",
-                                    color = TextMuted,
-                                    fontSize = 11.sp
-                                )
-                                Spacer(Modifier.height(8.dp))
-                                LinearStatBar(attention.second, height = 5.dp)
+                item(key = "syllabus-progress") {
+                    JeeCard(modifier = Modifier.animateContentSize(animationSpec = tween(JeeMotion.layoutMillis))) {
+                        Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                Text("$subject progress", color = TextSecondary, style = MaterialTheme.typography.labelLarge)
+                                AnimatedContent(targetState = (avg * 100).toInt(), label = "syllabus-subject-progress") { percent ->
+                                    Text("$percent%", style = MaterialTheme.typography.headlineMedium)
+                                }
+                                Text("$completedCount of ${allModels.size} chapters complete", color = TextSecondary, style = MaterialTheme.typography.bodySmall)
                             }
-                            Spacer(Modifier.height(8.dp))
-                        }
-                    }
-
-                    items(models, key = { it.first.id }) { (chapter, progress) ->
-                        Row(
-                            Modifier.fillMaxWidth()
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(BgCard)
-                                .border(
-                                    1.dp,
-                                    BgCardBorder.copy(alpha = JeeSurfaceTokens.cardBorderAlpha),
-                                    RoundedCornerShape(16.dp)
-                                )
-                                .premiumClick { onOpenChapter(chapter) }
-                                .padding(horizontal = 14.dp, vertical = 12.dp),
-                            Arrangement.SpaceBetween,
-                            Alignment.CenterVertically
-                        ) {
-                            Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
-                                Box(
-                                    Modifier.size(13.dp)
-                                        .clip(CircleShape)
-                                        .background(if (progress >= 1f) AccentGreen else BgDivider),
-                                    Alignment.Center
-                                ) {
-                                    if (progress >= 1f) {
-                                        Icon(
-                                            Icons.Filled.Check,
-                                            null,
-                                            tint = AccentGreenDark,
-                                            modifier = Modifier.size(9.dp)
-                                        )
-                                    }
-                                }
-                                Spacer(Modifier.width(12.dp))
-                                Column {
-                                    Text(
-                                        "${chapter.number}. ${chapter.name}",
-                                        color = TextOnCard,
-                                        fontSize = 14.sp
-                                    )
-                                    Text(
-                                        "${(progress * 100).toInt()}% · ${chapter.estimatedMinutes} min",
-                                        color = TextMuted,
-                                        fontSize = 10.sp
-                                    )
-                                    Spacer(Modifier.height(5.dp))
-                                    LinearStatBar(
-                                        progress,
-                                        Modifier.width(120.dp),
-                                        height = 3.dp
-                                    )
-                                }
-                            }
-
-                            Column(horizontalAlignment = Alignment.End) {
-                                if (due.contains(chapter.id)) {
-                                    Text("Review due", color = AccentAmber, fontSize = 10.sp)
-                                } else if (weak.contains(chapter.id)) {
-                                    Text("Weak", color = PrimaryLight, fontSize = 10.sp)
-                                }
-                                Icon(
-                                    Icons.Filled.ChevronRight,
-                                    "Open chapter",
-                                    tint = TextMuted,
-                                    modifier = Modifier.size(18.dp)
-                                )
+                            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                Text("$activeCount in progress", color = PrimaryLight, style = MaterialTheme.typography.labelMedium)
+                                Text("$notStartedCount not started", color = TextSecondary, style = MaterialTheme.typography.labelSmall)
                             }
                         }
+                        Spacer(Modifier.height(12.dp))
+                        LinearStatBar(avg, height = 6.dp)
                         Spacer(Modifier.height(8.dp))
+                        Text("$weakCount weak · $completedCount complete", color = TextSecondary, style = MaterialTheme.typography.labelMedium)
+                    }
+                }
+                item(key = "syllabus-provenance") {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            if (cloudAvailable) Icons.Filled.Cloud else Icons.Filled.CloudOff,
+                            contentDescription = null,
+                            tint = if (cloudAvailable) Primary else TextSecondary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            when {
+                                cloudAvailable -> "Cloud progress · local progress remains available"
+                                cloudError != null -> "Cloud unavailable · showing local progress"
+                                else -> "Local progress · offline-ready"
+                            },
+                            modifier = Modifier.weight(1f), color = TextSecondary, style = MaterialTheme.typography.bodySmall
+                        )
+                        if (!cloudAvailable) {
+                            IconButton(onClick = { refreshCloud() }) {
+                                Icon(Icons.Filled.Refresh, contentDescription = "Retry cloud connection", tint = PrimaryLight)
+                            }
+                        }
+                    }
+                }
+                item(key = "syllabus-filters") {
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        item { JeeFilterChip("All ${allModels.size}", filter == "All") { filter = "All" } }
+                        item { JeeFilterChip("Weak $weakCount", filter == "Weak") { filter = "Weak" } }
+                        item { JeeFilterChip("In progress $activeCount", filter == "In progress") { filter = "In progress" } }
+                        item { JeeFilterChip("Done $completedCount", filter == "Done") { filter = "Done" } }
+                    }
+                }
+                item(key = "syllabus-chapter-heading") {
+                    Column {
+                        SectionHeader(title = "Chapters")
+                        Text("${models.size} shown", color = TextSecondary, style = MaterialTheme.typography.labelMedium)
+                    }
+                }
+                if (filter == "All" && query.isBlank() && attention != null) {
+                    item(key = "review-attention") {
+                        JeeCard {
+                            Text("NEXT TO REVIEW", color = PrimaryLight, style = MaterialTheme.typography.labelSmall)
+                            Spacer(Modifier.height(3.dp))
+                            Text(attention.first.name, style = MaterialTheme.typography.titleSmall)
+                            Text("Low confidence or incomplete progress", color = TextSecondary, style = MaterialTheme.typography.bodySmall)
+                            Spacer(Modifier.height(8.dp))
+                            LinearStatBar(attention.second, height = 4.dp)
+                        }
+                    }
+                }
+                if (models.isEmpty()) {
+                    item(key = "empty-chapters") {
+                        Column(Modifier.fillMaxWidth().padding(vertical = 28.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(if (allModels.isEmpty()) "No chapters available" else "No matching chapters", style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                if (allModels.isEmpty()) "No chapters were returned from the current source for ${subject.lowercase()}."
+                                else "Try another search or clear the selected filter.",
+                                color = TextSecondary, style = MaterialTheme.typography.bodyMedium
+                            )
+                            if (allModels.isNotEmpty()) TextButton(onClick = { query = ""; filter = "All" }) { Text("Clear search and filters") }
+                        }
+                    }
+                }
+                items(models, key = { it.first.id }) { (chapter, progress) ->
+                    Column(Modifier.fillMaxWidth().animateContentSize(animationSpec = tween(JeeMotion.standardMillis))) {
+                        Row(
+                            Modifier.fillMaxWidth().premiumClick { onOpenChapter(chapter) }
+                                .heightIn(min = 76.dp).padding(horizontal = 4.dp, vertical = 10.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                Modifier.size(28.dp).clip(CircleShape).background(if (progress >= 1f) Success else BgCardAlt),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (progress >= 1f) Icon(Icons.Filled.Check, "Completed", tint = BgCard, modifier = Modifier.size(16.dp))
+                                else Text("${chapter.number}", color = TextSecondary, style = MaterialTheme.typography.labelSmall)
+                            }
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                Text(chapter.name, color = TextPrimary, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium))
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    AnimatedContent(targetState = (progress * 100).toInt(), label = "syllabus-chapter-progress") { percent ->
+                                        Text("$percent%", color = TextSecondary, style = MaterialTheme.typography.labelMedium)
+                                    }
+                                    Text("${chapter.estimatedMinutes} min", color = TextMuted, style = MaterialTheme.typography.labelMedium)
+                                }
+                                LinearStatBar(progress, height = 4.dp)
+                            }
+                            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                if (due.contains(chapter.id)) Text("Review due", color = Warning, style = MaterialTheme.typography.labelSmall)
+                                else if (weak.contains(chapter.id)) Text("Weak", color = TextSecondary, style = MaterialTheme.typography.labelSmall)
+                                Icon(Icons.Filled.ChevronRight, "Open chapter", tint = TextMuted, modifier = Modifier.size(20.dp))
+                            }
+                        }
+                        HorizontalDivider(Modifier.padding(start = 40.dp), color = BgDivider.copy(alpha = .65f), thickness = 0.7.dp)
                     }
                 }
             }

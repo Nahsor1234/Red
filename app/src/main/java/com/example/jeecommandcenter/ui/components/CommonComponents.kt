@@ -2,6 +2,7 @@ package com.example.jeecommandcenter.ui.components
 
 import android.view.HapticFeedbackConstants
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.animateColorAsState
@@ -37,77 +38,239 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.progressBarRangeInfo
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.jeecommandcenter.ui.theme.*
 
-private fun mixHash(row: Int, col: Int, seed: Int): Int { var value = row * 1103515245 + col * 12345 + seed * 265443576; value = value xor (value ushr 16); value *= 224682251; value = value xor (value ushr 13); return value and Int.MAX_VALUE }
-
 @Composable
 fun JeeBackground(modifier: Modifier = Modifier) {
     Canvas(modifier.fillMaxSize()) {
-        val step = 62.dp.toPx(); val rows = (size.height / step).toInt() + 3; val cols = (size.width / step).toInt() + 3
-        for (row in 0 until rows) for (col in 0 until cols) {
-            val h = mixHash(row, col, 17); val h2 = mixHash(row, col, 43); val scale = 0.7f + (h % 40) / 100f; val alpha = 0.028f + (h2 % 26) / 1000f
-            val ox = ((mixHash(row, col, 71) % 35) - 17).dp.toPx(); val oy = ((mixHash(row, col, 97) % 31) - 15).dp.toPx(); val center = androidx.compose.ui.geometry.Offset(col * step + ox, row * step + oy); val s = scale * 11.dp.toPx(); val stroke = (0.8f + (h2 % 40) / 100f).dp.toPx(); val color = TextSecondary.copy(alpha = alpha)
-            fun line(a: androidx.compose.ui.geometry.Offset, b: androidx.compose.ui.geometry.Offset) = drawLine(color, a, b, strokeWidth = stroke)
-            fun ring(radius: Float, point: androidx.compose.ui.geometry.Offset = center) = drawCircle(color, radius = radius, center = point, style = androidx.compose.ui.graphics.drawscope.Stroke(width = stroke))
-            when (h % 12) {
-                0 -> { line(center.copy(x = center.x - s), center.copy(x = center.x + s)); line(center.copy(y = center.y + s), center.copy(y = center.y - s)); drawCircle(color, s * 0.16f, center.copy(x = center.x + s * 0.55f, y = center.y - s * 0.42f)) }
-                1 -> { val a = center.copy(x = center.x - s * .8f, y = center.y + s * .55f); val b = center.copy(x = center.x + s * .85f, y = center.y + s * .55f); val d = center.copy(x = center.x + s * .1f, y = center.y - s * .85f); line(a, b); line(b, d); line(d, a); line(d, center.copy(x = d.x, y = a.y)) }
-                2 -> { var last = center.copy(x = center.x - s); for (i in 1..10) { val next = center.copy(x = center.x - s + i * (s * .2f), y = center.y + kotlin.math.sin(i * .8f) * s * .45f); line(last, next); last = next } }
-                3 -> { val a = center.copy(x = center.x - s * .72f, y = center.y); val b = center.copy(x = center.x + s * .7f, y = center.y - s * .25f); val d = center.copy(x = center.x, y = center.y + s * .75f); line(a, b); line(a, d); line(b, d); drawCircle(color, s * .18f, a); drawCircle(color, s * .15f, b); drawCircle(color, s * .17f, d) }
-                4 -> { ring(s * .62f); ring(s * .35f); drawCircle(color, s * .09f, center); line(center.copy(x = center.x - s), center.copy(x = center.x + s)) }
-                5 -> { val pts = (0 until 6).map { i -> val angle = Math.toRadians((60 * i - 30).toDouble()); center.copy(x = center.x + kotlin.math.cos(angle).toFloat() * s * .72f, y = center.y + kotlin.math.sin(angle).toFloat() * s * .72f) }; pts.forEachIndexed { i, p -> line(p, pts[(i + 1) % pts.size]) }; ring(s * .22f) }
-                6 -> { val start = center.copy(x = center.x - s, y = center.y + s * .45f); val tip = center.copy(x = center.x + s, y = center.y - s * .35f); line(start, tip); line(tip, tip.copy(x = tip.x - s * .38f)); line(tip, tip.copy(x = tip.x - s * .12f, y = tip.y + s * .28f)) }
-                7 -> { val axisX = center.x - s * .8f; val axisY = center.y + s * .65f; line(center.copy(x = axisX, y = center.y - s), center.copy(x = axisX, y = axisY)); line(center.copy(x = axisX, y = axisY), center.copy(x = center.x + s, y = axisY)); var last = center.copy(x = axisX, y = center.y + s * .15f); for (i in 1..7) { val next = center.copy(x = axisX + i * (s * .25f), y = center.y + kotlin.math.cos(i * .55f) * s * .42f); line(last, next); last = next } }
-                8 -> { val left = center.copy(x = center.x - s); val right = center.copy(x = center.x + s); line(left, center.copy(x = center.x - s * .35f)); line(center.copy(x = center.x + s * .35f), right); line(center.copy(x = center.x - s * .35f, y = center.y - s * .3f), center.copy(x = center.x + s * .35f, y = center.y - s * .3f)); line(center.copy(x = center.x, y = center.y - s * .3f), center.copy(x = center.x, y = center.y + s * .3f)) }
-                9 -> { ring(s * .72f); ring(s * .36f); line(center.copy(x = center.x - s), center.copy(x = center.x + s)); line(center.copy(y = center.y - s), center.copy(y = center.y + s)) }
-                10 -> { val a = center.copy(x = center.x - s, y = center.y - s * .2f); val b = center.copy(x = center.x + s, y = center.y - s * .2f); line(a, b); line(a, a.copy(x = a.x + s * .32f, y = a.y - s * .28f)); line(a, a.copy(x = a.x + s * .32f, y = a.y + s * .28f)); line(b, b.copy(x = b.x - s * .32f, y = b.y - s * .28f)); line(b, b.copy(x = b.x - s * .32f, y = b.y + s * .28f)) }
-                else -> { val tl = center.copy(x = center.x - s * .7f, y = center.y - s * .45f); val tr = center.copy(x = center.x + s * .7f, y = center.y - s * .45f); val br = center.copy(x = center.x + s * .7f, y = center.y + s * .45f); val bl = center.copy(x = center.x - s * .7f, y = center.y + s * .45f); line(tl, tr); line(tr, br); line(br, bl); line(bl, tl); drawCircle(color, s * .12f, center) }
-            }
-        }
+        drawRect(Brush.verticalGradient(listOf(BgAppBase, Color(0xFFF0F4FB)), endY = size.height))
+        val glowRadius = size.width * 0.76f
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(Color(0xFFFFD5B8).copy(alpha = 0.24f), Color.Transparent),
+                center = Offset(size.width * 0.94f, size.height * 0.06f),
+                radius = glowRadius
+            ),
+            radius = glowRadius,
+            center = Offset(size.width * 0.94f, size.height * 0.06f)
+        )
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(Color(0xFFBBD0FF).copy(alpha = 0.18f), Color.Transparent),
+                center = Offset(size.width * 0.02f, size.height * 0.78f),
+                radius = glowRadius * 0.78f
+            ),
+            radius = glowRadius * 0.78f,
+            center = Offset(size.width * 0.02f, size.height * 0.78f)
+        )
     }
 }
 
 enum class AppTab { HOME, SYLLABUS, AI, TASKS, STATS }
 
-@Composable fun JeeCard(modifier: Modifier = Modifier, featured: Boolean = false, content: @Composable ColumnScope.() -> Unit) { val shape = if (featured) JeeShapes.large else JeeShapes.medium; Column(modifier.fillMaxWidth().clip(shape).background(if (featured) BgCardAlt else BgCard).border(JeeSurfaceTokens.borderWidth, BgCardBorder.copy(alpha = if (featured) JeeSurfaceTokens.featuredBorderAlpha else JeeSurfaceTokens.cardBorderAlpha), shape).padding(16.dp), content = content) }
-@Composable fun LinearStatBar(progress: Float, modifier: Modifier = Modifier, trackColor: Color = BgDivider, fillColor: Color = AccentBlue, height: androidx.compose.ui.unit.Dp = 5.dp) { val p by animateFloatAsState(progress.coerceIn(0f, 1f), animationSpec = tween(320), label = "progress"); Box(modifier.fillMaxWidth().height(height).clip(JeeShapes.pill).background(trackColor)) { Box(Modifier.fillMaxHeight().fillMaxWidth(p).clip(JeeShapes.pill).background(fillColor)) } }
-@Composable fun SectionHeader(title: String, actionLabel: String? = null, onActionClick: () -> Unit = {}) { Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), Arrangement.SpaceBetween, Alignment.CenterVertically) { Text(title, style = MaterialTheme.typography.titleMedium); if (actionLabel != null) Text(actionLabel, color = AccentBlueLight, fontSize = 12.sp, modifier = Modifier.premiumClick { onActionClick() }) } }
+@Composable
+fun JeeCard(modifier: Modifier = Modifier, featured: Boolean = false, content: @Composable ColumnScope.() -> Unit) {
+    val shape = if (featured) JeeShapes.large else JeeShapes.medium
+    val surfaceBrush = if (featured) {
+        Brush.linearGradient(listOf(Color.White, BgFeature))
+    } else {
+        Brush.linearGradient(listOf(BgCard, BgCard))
+    }
+    Column(
+        modifier.fillMaxWidth()
+            .shadow(if (featured) 12.dp else 4.dp, shape, clip = false)
+            .clip(shape)
+            .background(surfaceBrush)
+            .border(
+                JeeSurfaceTokens.borderWidth,
+                if (featured) BorderFeature else BgCardBorder,
+                shape
+            )
+            .padding(if (featured) JeeSpacing.xl else JeeSpacing.lg),
+        content = content
+    )
+}
+@Composable fun LinearStatBar(progress: Float, modifier: Modifier = Modifier, trackColor: Color = BgDivider, fillColor: Color = Primary, height: androidx.compose.ui.unit.Dp = 5.dp) { val p by animateFloatAsState(progress.coerceIn(0f, 1f), animationSpec = tween(320), label = "progress"); Box(modifier.fillMaxWidth().height(height).clip(JeeShapes.pill).background(trackColor).semantics { progressBarRangeInfo = ProgressBarRangeInfo(p, 0f..1f) }) { Box(Modifier.fillMaxHeight().fillMaxWidth(p).clip(JeeShapes.pill).background(fillColor)) } }
+@Composable fun SectionHeader(title: String, actionLabel: String? = null, onActionClick: () -> Unit = {}) { Row(Modifier.fillMaxWidth().padding(vertical = JeeSpacing.sm), Arrangement.SpaceBetween, Alignment.CenterVertically) { Text(title, style = MaterialTheme.typography.titleMedium); if (actionLabel != null) Text(actionLabel, style = MaterialTheme.typography.labelLarge.copy(color = PrimaryLight), modifier = Modifier.semantics { role = Role.Button }.premiumClick { onActionClick() }) } }
+
+@Composable
+fun JeePageHeader(
+    title: String,
+    subtitle: String? = null,
+    eyebrow: String? = null,
+    modifier: Modifier = Modifier,
+    trailing: (@Composable () -> Unit)? = null
+) {
+    Row(
+        modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.Bottom
+    ) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            eyebrow?.let {
+                Text(it, style = MaterialTheme.typography.labelSmall, color = PrimaryLight, letterSpacing = 1.sp)
+            }
+            Text(title, style = MaterialTheme.typography.headlineLarge)
+            subtitle?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
+        }
+        trailing?.invoke()
+    }
+}
 data class TaskItem(val id: String, val title: String, val subtitle: String, val duration: String, val done: Boolean = false, val inProgress: Boolean = false)
-@Composable fun TaskRow(task: TaskItem, onToggle: (String) -> Unit, onClick: () -> Unit = {}) { val alpha by animateFloatAsState(if (task.done) .62f else 1f, label = "task-alpha"); val check by animateColorAsState(if (task.done) AccentGreen else Color.Transparent, label = "task-check"); val scale by animateFloatAsState(if (task.done) .985f else 1f, animationSpec = tween(180), label = "task-scale"); Row(Modifier.fillMaxWidth().graphicsLayer(alpha = alpha, scaleX = scale, scaleY = scale).premiumClick(onClick = onClick).padding(vertical = 11.dp), verticalAlignment = Alignment.CenterVertically) { Box(Modifier.size(21.dp).clip(RoundedCornerShape(7.dp)).background(check).border(1.dp, if (task.done) AccentGreen else BgCardBorder, RoundedCornerShape(7.dp)).premiumClick(haptic = if (!task.done) HapticFeedbackConstants.KEYBOARD_TAP else HapticFeedbackConstants.VIRTUAL_KEY) { onToggle(task.id) }, Alignment.Center) { if (task.done) Icon(Icons.Filled.Check, null, tint = AccentGreenDark, modifier = Modifier.size(14.dp)) }; Spacer(Modifier.width(12.dp)); Column(Modifier.weight(1f)) { Text(task.title, color = TextOnCard, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium), textDecoration = if (task.done) TextDecoration.LineThrough else TextDecoration.None); if (task.subtitle.isNotEmpty()) Text(task.subtitle, color = TextSecondary, style = MaterialTheme.typography.bodySmall) }; Text(task.duration, color = TextMuted, style = MaterialTheme.typography.labelMedium) } }
-@Composable fun JeeFilterChip(label: String, selected: Boolean, onClick: () -> Unit) { FilterChip(selected = selected, onClick = onClick, label = { Text(label, fontSize = 12.sp, fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal) }, shape = JeeShapes.pill, colors = FilterChipDefaults.filterChipColors(containerColor = BgCard, labelColor = TextSecondary, selectedContainerColor = AccentBlue, selectedLabelColor = Color(0xFF17120A))) }
+@Composable
+fun TaskRow(
+    task: TaskItem,
+    onToggle: (String) -> Unit,
+    onClick: () -> Unit = {},
+    expressiveMotion: Boolean = false
+) {
+    val alpha by animateFloatAsState(
+        if (task.done) 0.62f else 1f,
+        animationSpec = tween(300),
+        label = "task-alpha"
+    )
+    val check by animateColorAsState(
+        if (task.done) Success else Color.Transparent,
+        animationSpec = tween(300),
+        label = "task-check"
+    )
+    val scale by animateFloatAsState(
+        if (task.done) 0.985f else 1f,
+        animationSpec = tween(300),
+        label = "task-scale"
+    )
+    val checkScale by animateFloatAsState(
+        targetValue = if (task.done) 1f else 0.72f,
+        animationSpec = spring(dampingRatio = 0.6f, stiffness = Spring.StiffnessMedium),
+        label = "task-check-scale"
+    )
+    Row(
+        Modifier.fillMaxWidth()
+            .graphicsLayer(alpha = alpha, scaleX = scale, scaleY = scale)
+            .then(if (expressiveMotion) Modifier.animateContentSize() else Modifier)
+            .semantics { role = Role.Button }
+            .premiumClick(onClick = onClick)
+            .padding(vertical = 8.dp),
+        verticalAlignment = if (expressiveMotion) Alignment.Top else Alignment.CenterVertically
+    ) {
+        Box(
+            Modifier.then(if (expressiveMotion) Modifier.padding(top = 2.dp) else Modifier).size(48.dp)
+                .semantics {
+                    role = Role.Checkbox
+                    contentDescription = "Mark ${task.title} complete"
+                    stateDescription = if (task.done) "Completed" else "Not completed"
+                }
+                .premiumClick(
+                    haptic = if (!task.done) HapticFeedbackConstants.KEYBOARD_TAP
+                    else HapticFeedbackConstants.VIRTUAL_KEY,
+                    onClick = { onToggle(task.id) }
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Box(
+                Modifier.size(20.dp)
+                    .clip(JeeShapes.small)
+                    .background(check)
+                    .border(1.dp, if (task.done) Success else BgCardBorder, JeeShapes.small),
+                contentAlignment = Alignment.Center
+            ) {
+                if (task.done) {
+                    Icon(
+                        Icons.Filled.Check,
+                        null,
+                        tint = SuccessOnFill,
+                        modifier = Modifier.size(14.dp).graphicsLayer(scaleX = checkScale, scaleY = checkScale)
+                    )
+                }
+            }
+        }
+        Spacer(Modifier.width(JeeSpacing.md))
+        Column(Modifier.weight(1f)) {
+            Text(
+                task.title,
+                color = TextOnCard,
+                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                textDecoration = if (task.done) TextDecoration.LineThrough else TextDecoration.None
+            )
+            if (task.subtitle.isNotEmpty()) {
+                Text(task.subtitle, color = TextSecondary, style = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = "tnum"))
+            }
+        }
+        Text(task.duration, color = TextMuted, style = MaterialTheme.typography.labelMedium.copy(fontFeatureSettings = "tnum"))
+    }
+}
+
+@Composable
+fun JeeFilterChip(label: String, selected: Boolean, onClick: () -> Unit) {
+    val container by animateColorAsState(
+        if (selected) Primary else BgCardAlt,
+        animationSpec = tween(JeeMotion.standardMillis),
+        label = "filter-chip-container"
+    )
+    val foreground by animateColorAsState(
+        if (selected) Color.White else TextSecondary,
+        animationSpec = tween(JeeMotion.standardMillis),
+        label = "filter-chip-foreground"
+    )
+    FilterChip(
+        selected = selected,
+        onClick = onClick,
+        label = {
+            Text(
+                label,
+                style = MaterialTheme.typography.labelMedium.copy(
+                    color = foreground,
+                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium
+                )
+            )
+        },
+        shape = JeeShapes.pill,
+        border = FilterChipDefaults.filterChipBorder(
+            enabled = true,
+            selected = selected,
+            borderColor = BgCardBorder,
+            selectedBorderColor = Primary.copy(alpha = 0.62f)
+        ),
+        colors = FilterChipDefaults.filterChipColors(
+            containerColor = BgCardAlt,
+            labelColor = TextSecondary,
+            selectedContainerColor = container,
+            selectedLabelColor = foreground
+        )
+    )
+}
 
 private enum class NavVisual { HOME, SYLLABUS, AI, TASKS, TIMER }
 
 @Composable
 fun BottomNavBar(selected: AppTab, onTabSelected: (AppTab) -> Unit) {
     val view = LocalView.current
-    Box(
-        Modifier
-            .fillMaxWidth()
-            .navigationBarsPadding()
-            .padding(horizontal = 28.dp)
-            .padding(bottom = 4.dp),
-        contentAlignment = Alignment.Center
+    Surface(
+        modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 18.dp, vertical = 7.dp)
+            .shadow(14.dp, JeeShapes.pill, clip = false),
+        color = BgCard,
+        shape = JeeShapes.pill,
+        border = androidx.compose.foundation.BorderStroke(1.dp, BgCardBorder)
     ) {
         Row(
-            Modifier
-                .fillMaxWidth()
-                .height(60.dp)
-                .shadow(10.dp, JeeShapes.pill, clip = false)
-                .clip(JeeShapes.pill)
-                .background(BgCard.copy(alpha = .94f))
-                .border(1.dp, BgCardBorder.copy(alpha = .95f), JeeShapes.pill)
-                .padding(horizontal = 4.dp, vertical = 3.dp),
+            Modifier.fillMaxWidth().height(76.dp).padding(horizontal = 7.dp, vertical = 5.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             NavIconSlot(NavVisual.HOME, selected == AppTab.HOME, Modifier.weight(1f)) {
@@ -147,7 +310,21 @@ private fun RowScope.NavIconSlot(
     onClick: () -> Unit
 ) {
     val interaction = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-    val contentColor = if (selected) PrimaryLight else TextSecondary
+    val contentColor by animateColorAsState(
+        if (selected) Primary else TextMuted,
+        animationSpec = tween(JeeMotion.standardMillis),
+        label = "navigation-content-color"
+    )
+    val indicatorColor by animateColorAsState(
+        if (selected) PrimarySoft else Color.Transparent,
+        animationSpec = tween(JeeMotion.standardMillis),
+        label = "navigation-indicator-color"
+    )
+    val iconScale by animateFloatAsState(
+        if (selected) 1.04f else 1f,
+        animationSpec = spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessMedium),
+        label = "navigation-icon-scale"
+    )
     val icon = when (visual) {
         NavVisual.HOME -> Icons.Filled.Home
         NavVisual.SYLLABUS -> Icons.Filled.MenuBook
@@ -160,7 +337,7 @@ private fun RowScope.NavIconSlot(
         NavVisual.SYLLABUS -> "Syllabus"
         NavVisual.AI -> "AI"
         NavVisual.TASKS -> "Tasks"
-        NavVisual.TIMER -> "Timer"
+        NavVisual.TIMER -> "Focus"
     }
 
     Column(
@@ -174,31 +351,32 @@ private fun RowScope.NavIconSlot(
                 role = Role.Tab,
                 onClick = onClick
             )
-            .padding(top = 7.dp, bottom = 0.dp),
+            .padding(horizontal = 1.dp, vertical = 2.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = contentColor,
-            modifier = Modifier.size(22.dp)
-        )
+        Box(
+            Modifier
+                .clip(JeeShapes.pill)
+                .background(indicatorColor)
+                .padding(horizontal = 12.dp, vertical = 4.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = contentColor,
+                modifier = Modifier.size(22.dp).graphicsLayer(scaleX = iconScale, scaleY = iconScale)
+            )
+        }
         Spacer(Modifier.height(3.dp))
         Text(
             text = label,
             color = contentColor,
-            fontSize = 10.sp,
+            fontSize = 9.sp,
             lineHeight = 11.sp,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
             maxLines = 1
         )
         Spacer(Modifier.height(2.dp))
-        Box(
-            Modifier
-                .size(4.dp)
-                .clip(RoundedCornerShape(50))
-                .background(if (selected) PrimaryLight else Color.Transparent)
-        )
     }
 }

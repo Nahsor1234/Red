@@ -3,21 +3,20 @@ package com.example.jeecommandcenter.ui.screens
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.jeecommandcenter.data.BackupRepository
 import com.example.jeecommandcenter.ui.components.*
 import com.example.jeecommandcenter.ui.theme.*
@@ -46,54 +45,94 @@ fun SettingsScreen(onBack: () -> Unit, onOpenAnalytics: () -> Unit, onOpenAiSett
     }
 
     Scaffold(containerColor = BgApp, topBar = { JeeTopBar(title = "Settings", onBack = onBack) }) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            SettingsCard("Cloud sync", "Supabase connection and cloud syllabus status", Icons.Filled.Cloud, onOpenCloudAccount)
-            SettingsCard("Analytics", "Real performance and study metrics", Icons.Filled.Insights, onOpenAnalytics)
+        Column(
+            Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            JeePageHeader(
+                title = "Make JeE yours",
+                subtitle = "Choose what to connect, and keep control of your study data.",
+                eyebrow = "PREFERENCES"
+            )
+
+            SectionHeader(title = "Account & sync")
+            SettingsCard("Cloud account", "Optional sync and cloud syllabus access", Icons.Filled.Cloud, onOpenCloudAccount)
+
+            SectionHeader(title = "Study tools")
+            SettingsCard("Notifications", "Study routine and Daily Progress reminders", Icons.Filled.Notifications, onOpenNotifications)
+            SettingsCard("Analytics", "Review stored study and performance metrics", Icons.Filled.Insights, onOpenAnalytics)
             SettingsCard("AI configuration", "Provider, model and API key", Icons.Filled.AutoAwesome, onOpenAiSettings)
-            SettingsCard("Notifications", "Daily study and Daily Log reminders", Icons.Filled.Notifications, onOpenNotifications)
-            Spacer(Modifier.height(8.dp))
-            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(BgCard).border(JeeSurfaceTokens.borderWidth,BgCardBorder.copy(alpha=JeeSurfaceTokens.cardBorderAlpha),JeeShapes.medium).padding(14.dp)) {
+
+            SectionHeader(title = "Data protection")
+            JeeCard(modifier = Modifier.animateContentSize()) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Filled.Security, "Data protection", tint = AccentGreen, modifier = Modifier.size(20.dp))
+                    Icon(Icons.Filled.Security, contentDescription = null, tint = Success, modifier = Modifier.size(22.dp))
                     Spacer(Modifier.width(10.dp))
-                    Text("Data protection", style = MaterialTheme.typography.titleMedium)
+                    Text("Local backup", style = MaterialTheme.typography.titleMedium)
                 }
-                Spacer(Modifier.height(4.dp))
-                Text("Export and restore local JeE history. API keys remain in Android Keystore and are never exported.", color = TextMuted, fontSize = 11.sp)
-                Spacer(Modifier.height(10.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = { exportLauncher.launch("jee-backup.json") }, modifier = Modifier.weight(1f)) { Text("Export") }
-                    OutlinedButton(onClick = { importLauncher.launch(arrayOf("application/json", "text/*")) }, modifier = Modifier.weight(1f)) { Text("Restore") }
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    "Export or restore your local JeE history. API keys remain in Android Keystore and are never included.",
+                    color = TextSecondary,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Spacer(Modifier.height(14.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedButton(
+                        onClick = { exportLauncher.launch("jee-backup.json") },
+                        modifier = Modifier.weight(1f).heightIn(min = 48.dp)
+                    ) { Text("Export backup") }
+                    OutlinedButton(
+                        onClick = { importLauncher.launch(arrayOf("application/json", "text/*")) },
+                        modifier = Modifier.weight(1f).heightIn(min = 48.dp)
+                    ) { Text("Restore backup") }
                 }
                 if (backup.hasRecoveryPoint()) {
-                    Spacer(Modifier.height(6.dp))
-                    TextButton(onClick = {
-                        backup.recoverLastKnownGood().fold(
-                            onSuccess = { backupStatus = "Previous data restored from the local recovery point." },
-                            onFailure = { backupStatus = "Recovery failed: ${it.message ?: "unknown error"}" }
-                        )
-                    }) { Text("Recover previous data") }
-                }
-                backupStatus?.let {
                     Spacer(Modifier.height(4.dp))
-                    Text(it, color = TextMuted, fontSize = 10.sp)
+                    TextButton(
+                        onClick = {
+                            backup.recoverLastKnownGood().fold(
+                                onSuccess = { backupStatus = "Previous data restored from the local recovery point." },
+                                onFailure = { backupStatus = "Recovery failed: ${it.message ?: "unknown error"}" }
+                            )
+                        },
+                        modifier = Modifier.heightIn(min = 48.dp)
+                    ) { Text("Recover previous data") }
+                }
+                backupStatus?.let { status ->
+                    val failed = status.startsWith("Export failed") || status.startsWith("Import failed") || status.startsWith("Recovery failed")
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        status,
+                        color = if (failed) MaterialTheme.colorScheme.error else Success,
+                        style = MaterialTheme.typography.bodySmall
+                    )
                 }
             }
-            Spacer(Modifier.height(8.dp))
-            Text("JeE works offline. AI is optional and never replaces the local revision, planner, analytics, or backup systems.", color = TextMuted, fontSize = 11.sp)
+
+            Text(
+                "JeE works offline. AI is optional and does not replace local revision, planning, analytics or backup.",
+                color = TextMuted,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
+            )
         }
     }
 }
 
 @Composable
 private fun SettingsCard(title: String, subtitle: String, icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit) {
-    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(BgCard).border(JeeSurfaceTokens.borderWidth,BgCardBorder.copy(alpha=JeeSurfaceTokens.cardBorderAlpha),JeeShapes.medium).premiumClick(onClick).padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-        Icon(icon, title, tint = AccentBlueLight, modifier = Modifier.size(22.dp))
-        Spacer(Modifier.width(14.dp))
-        Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.titleMedium)
-            Text(subtitle, color = TextMuted, fontSize = 11.sp)
+    JeeCard(modifier = Modifier.semantics { role = Role.Button }.premiumClick(onClick)) {
+        Row(Modifier.fillMaxWidth().heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(icon, contentDescription = null, tint = Primary, modifier = Modifier.size(24.dp))
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(title, style = MaterialTheme.typography.titleMedium)
+                Text(subtitle, color = TextSecondary, style = MaterialTheme.typography.bodySmall)
+            }
+            Spacer(Modifier.width(8.dp))
+            Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = TextMuted)
         }
-        Icon(Icons.Filled.ChevronRight, "Open $title", tint = TextMuted)
     }
 }
