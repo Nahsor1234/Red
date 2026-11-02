@@ -429,7 +429,13 @@ private fun ResultContent(modifier: Modifier, attempt: TestAttemptRecord, onRest
                 HorizontalDivider(color = BgDivider)
                 Text("${attempt.correctCount} correct · ${attempt.incorrectCount} incorrect · ${attempt.skippedCount} skipped", color = TextPrimary, style = MaterialTheme.typography.bodyLarge)
                 Text("${attempt.attemptedCount} attempted of ${attempt.questionCount} questions", color = TextSecondary, style = MaterialTheme.typography.bodyMedium)
-                Text("Duration · ${formatTestDuration(attempt.durationSec)}", color = TextSecondary, style = MaterialTheme.typography.bodyMedium)
+                val durationMinutes = attempt.durationSec / 60
+                val durationRemainder = attempt.durationSec % 60
+                Text(
+                    if (durationMinutes > 0) "Duration · ${durationMinutes}m ${durationRemainder}s" else "Duration · ${durationRemainder}s",
+                    color = TextSecondary,
+                    style = MaterialTheme.typography.bodyMedium
+                )
             }
         }
         item {

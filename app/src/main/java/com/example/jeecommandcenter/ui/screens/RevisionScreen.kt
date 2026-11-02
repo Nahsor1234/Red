@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.jeecommandcenter.data.RevisionNote
 import com.example.jeecommandcenter.data.RevisionNotesRepository
+import com.example.jeecommandcenter.ui.components.JeePageHeader
 import com.example.jeecommandcenter.ui.components.JeeTopBar
 import com.example.jeecommandcenter.ui.theme.*
 import kotlinx.coroutines.delay
