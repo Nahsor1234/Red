@@ -9,6 +9,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
@@ -21,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
@@ -97,82 +100,76 @@ fun TasksScreen(
             )
         }
     ) { padding ->
-        Column(
+        LazyColumn(
             Modifier.fillMaxSize().padding(padding).padding(horizontal = JeeSpacing.lg)
+                .animateContentSize(animationSpec = tween(JeeMotion.layoutMillis)),
+            verticalArrangement = Arrangement.spacedBy(JeeSpacing.sm),
+            contentPadding = PaddingValues(top = JeeSpacing.md, bottom = 128.dp)
         ) {
-            Spacer(Modifier.height(JeeSpacing.md))
-            JeeCard(modifier = Modifier.animateContentSize(animationSpec = tween(JeeMotion.layoutMillis))) {
-                Text(
-                    "YOUR STUDY PLAN",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = PrimaryLight,
-                    letterSpacing = 1.15.sp
+            item {
+                JeePageHeader(
+                    title = "Tasks",
+                    subtitle = "Plan and track your study blocks.",
+                    eyebrow = "STUDY PLAN"
                 )
-                Row(
-                    Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("Tasks", style = MaterialTheme.typography.headlineMedium)
-                    Text("${(progress * 100).toInt()}%", color = PrimaryLight,
-                        style = MaterialTheme.typography.titleMedium.copy(fontFeatureSettings = "tnum"))
-                }
-                AnimatedContent(
-                    targetState = "$remainingCount remaining · $completedCount completed",
-                    label = "task-summary"
-                ) { summary -> Text(summary, color = TextSecondary, style = MaterialTheme.typography.bodySmall) }
-                Spacer(Modifier.height(JeeSpacing.md))
-                LinearStatBar(progress, height = 6.dp, fillColor = Primary)
             }
-            Spacer(Modifier.height(JeeSpacing.md))
-
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(JeeSpacing.sm),
-                contentPadding = PaddingValues(bottom = JeeSpacing.xs)
-            ) {
-                items(
-                    listOf(
-                        "All" to all.size,
-                        "Today" to today.size,
-                        "Upcoming" to upcoming.size,
-                        "Completed" to completed.size
+            item {
+                JeeCard(modifier = Modifier.animateContentSize(animationSpec = tween(JeeMotion.layoutMillis))) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text("Progress", color = TextSecondary, style = MaterialTheme.typography.labelMedium)
+                            AnimatedContent(
+                                targetState = "$remainingCount remaining · $completedCount completed",
+                                label = "task-summary"
+                            ) { summary -> Text(summary, color = TextPrimary, style = MaterialTheme.typography.titleMedium) }
+                        }
+                        Text("${(progress * 100).toInt()}%", color = PrimaryLight,
+                            style = MaterialTheme.typography.titleLarge.copy(fontFeatureSettings = "tnum"))
+                    }
+                    Spacer(Modifier.height(JeeSpacing.md))
+                    LinearStatBar(progress, height = 6.dp, fillColor = Primary)
+                    if (all.isEmpty()) {
+                        Text("Your list is empty. Add a task when you are ready to plan.",
+                            color = TextSecondary, style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(top = JeeSpacing.sm))
+                    }
+                }
+            }
+            item { SectionHeader("Browse tasks") }
+            item {
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(JeeSpacing.sm)) {
+                    items(listOf("All" to all.size, "Today" to today.size, "Upcoming" to upcoming.size,
+                        "Completed" to completed.size)) { (label, count) ->
+                        JeeFilterChip("$label · $count", label == filter) { filter = label }
+                    }
+                }
+            }
+            item {
+                AnimatedContent(targetState = filter, label = "task-filter-details") { active ->
+                    Text(
+                        when (active) {
+                            "Today" -> "Showing unfinished tasks scheduled for today."
+                            "Upcoming" -> "Showing unfinished tasks scheduled for later."
+                            "Completed" -> "Showing all completed tasks."
+                            else -> "Showing every task, grouped by schedule and completion."
+                        },
+                        color = TextSecondary,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.fillMaxWidth().padding(bottom = JeeSpacing.xs)
                     )
-                ) { (label, count) ->
-                    JeeFilterChip("$label $count", label == filter) { filter = label }
                 }
             }
-
-            AnimatedContent(targetState = filter, label = "task-filter-details") { active ->
-                Text(
-                    when (active) {
-                        "Today" -> "Tasks planned for today"
-                        "Upcoming" -> "Tasks without a today schedule"
-                        "Completed" -> "Finished study tasks"
-                        else -> "Your study task list"
-                    },
-                    color = TextSecondary,
-                    style = MaterialTheme.typography.labelMedium,
-                    modifier = Modifier.padding(top = JeeSpacing.xs, bottom = JeeSpacing.xs)
-                )
-            }
-
-            LazyColumn(
-                Modifier.weight(1f).animateContentSize(animationSpec = tween(JeeMotion.layoutMillis)),
-                contentPadding = PaddingValues(bottom = 120.dp)
-            ) {
-                if (filter == "All") {
-                    taskGroup("Today", today, ::toggleWithUndo, { selectedTask = it })
-                    taskGroup("Upcoming", upcoming, ::toggleWithUndo, { selectedTask = it })
-                    if (completed.isNotEmpty()) {
-                        taskGroup("Completed", completed, ::toggleWithUndo, { selectedTask = it })
-                    }
-                    if (all.isEmpty()) item { EmptyTaskState() }
-                } else if (visible.isEmpty()) {
-                    item { EmptyTaskState() }
-                } else {
-                    items(visible, key = { it.id }) { task ->
-                        TaskListItem(task, onToggle = { toggleWithUndo(task) }, onOpen = { selectedTask = task })
-                    }
+            if (filter == "All") {
+                taskGroup("Today", today, ::toggleWithUndo, { selectedTask = it })
+                taskGroup("Upcoming", upcoming, ::toggleWithUndo, { selectedTask = it })
+                taskGroup("Completed", completed, ::toggleWithUndo, { selectedTask = it })
+                if (all.isEmpty()) item { EmptyTaskState() }
+            } else if (visible.isEmpty()) {
+                item { EmptyTaskState() }
+            } else {
+                items(visible, key = { it.id }) { task ->
+                    TaskListItem(task, onToggle = { toggleWithUndo(task) }, onOpen = { selectedTask = task })
                 }
             }
         }
@@ -270,7 +267,7 @@ private fun TaskListItem(task: AppTask, onToggle: () -> Unit, onOpen: () -> Unit
                     contentAlignment = Alignment.Center
                 ) {
                     AnimatedContent(targetState = task.done, label = "task-check-transition") { done ->
-                        if (done) Icon(Icons.Filled.Check, null, tint = SuccessDark, modifier = Modifier.size(14.dp))
+                        if (done) Icon(Icons.Filled.Check, null, tint = SuccessOnFill, modifier = Modifier.size(14.dp))
                         else Spacer(Modifier.size(14.dp))
                     }
                 }
@@ -311,6 +308,7 @@ private fun EmptyTaskState() {
 @Composable
 private fun AddTaskDialog(repo: JeeRepository, onDone: () -> Unit) {
     val subjects = listOf("Physics", "Chemistry", "Mathematics")
+    val maxDialogHeight = LocalConfiguration.current.screenHeightDp.dp * 0.84f
     var title by remember { mutableStateOf("") }
     var subject by remember { mutableStateOf("Physics") }
     var duration by remember { mutableStateOf("30") }
@@ -319,7 +317,8 @@ private fun AddTaskDialog(repo: JeeRepository, onDone: () -> Unit) {
 
     androidx.compose.ui.window.Dialog(onDismissRequest = onDone) {
         Column(
-            Modifier.fillMaxWidth().widthIn(max = 420.dp).wrapContentHeight()
+            Modifier.fillMaxWidth().widthIn(max = 420.dp).heightIn(max = maxDialogHeight)
+                .imePadding().verticalScroll(rememberScrollState())
                 .clip(JeeShapes.large).background(BgCardAlt)
                 .border(1.dp, BgCardBorder, JeeShapes.large)
                 .padding(horizontal = JeeSpacing.lg, vertical = JeeSpacing.md)
@@ -370,7 +369,8 @@ private fun AddTaskDialog(repo: JeeRepository, onDone: () -> Unit) {
             }
             Spacer(Modifier.height(JeeSpacing.md))
             HorizontalDivider(color = BgDivider)
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().heightIn(min = 48.dp), horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically) {
                 TextButton(onClick = onDone) { Text("Cancel") }
                 val minutes = duration.toIntOrNull()
                 Button(

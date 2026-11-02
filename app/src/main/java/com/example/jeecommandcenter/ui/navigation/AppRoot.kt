@@ -7,6 +7,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
@@ -77,8 +78,18 @@ fun AppRoot(initialTarget: String? = null, launchRequestId: Int = 0) {
     AnimatedContent(
         targetState = screenKey,
         transitionSpec = {
-            (fadeIn(tween(280)) + slideInHorizontally(tween(280)) { it / 24 }) togetherWith
-                (fadeOut(tween(220)) + slideOutHorizontally(tween(220)) { -it / 24 })
+            val isTabSwitch = initialState.startsWith("tab:") && targetState.startsWith("tab:")
+            val isBack = initialState.startsWith("secondary:") &&
+                secondaryStack.none { "secondary:${it.name}" == initialState }
+            when {
+                isTabSwitch -> fadeIn(tween(180)) togetherWith fadeOut(tween(130))
+                isBack -> (fadeIn(tween(220, easing = FastOutSlowInEasing)) +
+                    slideInHorizontally(tween(220, easing = FastOutSlowInEasing)) { -it / 18 }) togetherWith
+                    (fadeOut(tween(170)) + slideOutHorizontally(tween(170, easing = FastOutSlowInEasing)) { it / 18 })
+                else -> (fadeIn(tween(240, easing = FastOutSlowInEasing)) +
+                    slideInHorizontally(tween(240, easing = FastOutSlowInEasing)) { it / 18 }) togetherWith
+                    (fadeOut(tween(170)) + slideOutHorizontally(tween(170, easing = FastOutSlowInEasing)) { -it / 18 })
+            }
         },
         label = "app-screen-transition"
     ) { targetKey ->

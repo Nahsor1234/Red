@@ -3,6 +3,7 @@ package com.example.jeecommandcenter
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -34,7 +35,16 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         // Reconcile stored reminders with AlarmManager whenever the app starts.
         ReminderScheduler(applicationContext).scheduleAll()
-        enableEdgeToEdge()
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.light(
+                android.graphics.Color.TRANSPARENT,
+                android.graphics.Color.TRANSPARENT
+            ),
+            navigationBarStyle = SystemBarStyle.light(
+                android.graphics.Color.TRANSPARENT,
+                android.graphics.Color.TRANSPARENT
+            )
+        )
         handleSupabaseAuthIntent(intent)
         launchTarget = intent?.getStringExtra(EXTRA_OPEN_TARGET)
         if (launchTarget != null) launchRequestId++

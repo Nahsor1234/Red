@@ -60,11 +60,11 @@ import com.example.jeecommandcenter.ui.theme.*
 @Composable
 fun JeeBackground(modifier: Modifier = Modifier) {
     Canvas(modifier.fillMaxSize()) {
-        drawRect(Brush.verticalGradient(listOf(BgAppBase, Color(0xFF0D1420)), endY = size.height))
-        val glowRadius = size.width * 0.82f
+        drawRect(Brush.verticalGradient(listOf(BgAppBase, Color(0xFFF0F4FB)), endY = size.height))
+        val glowRadius = size.width * 0.76f
         drawCircle(
             brush = Brush.radialGradient(
-                colors = listOf(Primary.copy(alpha = 0.105f), Color.Transparent),
+                colors = listOf(Color(0xFFFFD5B8).copy(alpha = 0.24f), Color.Transparent),
                 center = Offset(size.width * 0.94f, size.height * 0.06f),
                 radius = glowRadius
             ),
@@ -73,7 +73,7 @@ fun JeeBackground(modifier: Modifier = Modifier) {
         )
         drawCircle(
             brush = Brush.radialGradient(
-                colors = listOf(Color(0xFF2D6E87).copy(alpha = 0.055f), Color.Transparent),
+                colors = listOf(Color(0xFFBBD0FF).copy(alpha = 0.18f), Color.Transparent),
                 center = Offset(size.width * 0.02f, size.height * 0.78f),
                 radius = glowRadius * 0.78f
             ),
@@ -89,20 +89,18 @@ enum class AppTab { HOME, SYLLABUS, AI, TASKS, STATS }
 fun JeeCard(modifier: Modifier = Modifier, featured: Boolean = false, content: @Composable ColumnScope.() -> Unit) {
     val shape = if (featured) JeeShapes.large else JeeShapes.medium
     val surfaceBrush = if (featured) {
-        Brush.linearGradient(listOf(Color(0xFF1B2B45), BgCardAlt, BgCard))
+        Brush.linearGradient(listOf(Color.White, BgFeature))
     } else {
-        Brush.linearGradient(listOf(BgCard, Color(0xFF101925)))
+        Brush.linearGradient(listOf(BgCard, BgCard))
     }
     Column(
         modifier.fillMaxWidth()
-            .shadow(if (featured) 16.dp else 6.dp, shape, clip = false)
+            .shadow(if (featured) 12.dp else 4.dp, shape, clip = false)
             .clip(shape)
             .background(surfaceBrush)
             .border(
                 JeeSurfaceTokens.borderWidth,
-                (if (featured) Primary else BgCardBorder).copy(
-                    alpha = if (featured) JeeSurfaceTokens.featuredBorderAlpha * 0.56f else JeeSurfaceTokens.cardBorderAlpha
-                ),
+                if (featured) BorderFeature else BgCardBorder,
                 shape
             )
             .padding(if (featured) JeeSpacing.xl else JeeSpacing.lg),
@@ -110,7 +108,31 @@ fun JeeCard(modifier: Modifier = Modifier, featured: Boolean = false, content: @
     )
 }
 @Composable fun LinearStatBar(progress: Float, modifier: Modifier = Modifier, trackColor: Color = BgDivider, fillColor: Color = Primary, height: androidx.compose.ui.unit.Dp = 5.dp) { val p by animateFloatAsState(progress.coerceIn(0f, 1f), animationSpec = tween(320), label = "progress"); Box(modifier.fillMaxWidth().height(height).clip(JeeShapes.pill).background(trackColor).semantics { progressBarRangeInfo = ProgressBarRangeInfo(p, 0f..1f) }) { Box(Modifier.fillMaxHeight().fillMaxWidth(p).clip(JeeShapes.pill).background(fillColor)) } }
-@Composable fun SectionHeader(title: String, actionLabel: String? = null, onActionClick: () -> Unit = {}) { Row(Modifier.fillMaxWidth().padding(vertical = JeeSpacing.sm), Arrangement.SpaceBetween, Alignment.CenterVertically) { Text(title, style = MaterialTheme.typography.titleMedium); if (actionLabel != null) Text(actionLabel, style = MaterialTheme.typography.labelMedium.copy(color = PrimaryLight), modifier = Modifier.semantics { role = Role.Button }.premiumClick { onActionClick() }) } }
+@Composable fun SectionHeader(title: String, actionLabel: String? = null, onActionClick: () -> Unit = {}) { Row(Modifier.fillMaxWidth().padding(vertical = JeeSpacing.sm), Arrangement.SpaceBetween, Alignment.CenterVertically) { Text(title, style = MaterialTheme.typography.titleMedium); if (actionLabel != null) Text(actionLabel, style = MaterialTheme.typography.labelLarge.copy(color = PrimaryLight), modifier = Modifier.semantics { role = Role.Button }.premiumClick { onActionClick() }) } }
+
+@Composable
+fun JeePageHeader(
+    title: String,
+    subtitle: String? = null,
+    eyebrow: String? = null,
+    modifier: Modifier = Modifier,
+    trailing: (@Composable () -> Unit)? = null
+) {
+    Row(
+        modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.Bottom
+    ) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            eyebrow?.let {
+                Text(it, style = MaterialTheme.typography.labelSmall, color = PrimaryLight, letterSpacing = 1.sp)
+            }
+            Text(title, style = MaterialTheme.typography.headlineLarge)
+            subtitle?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
+        }
+        trailing?.invoke()
+    }
+}
 data class TaskItem(val id: String, val title: String, val subtitle: String, val duration: String, val done: Boolean = false, val inProgress: Boolean = false)
 @Composable
 fun TaskRow(
@@ -125,7 +147,7 @@ fun TaskRow(
         label = "task-alpha"
     )
     val check by animateColorAsState(
-        if (task.done) (if (expressiveMotion) Primary else Success) else Color.Transparent,
+        if (task.done) Success else Color.Transparent,
         animationSpec = tween(300),
         label = "task-check"
     )
@@ -166,14 +188,14 @@ fun TaskRow(
                 Modifier.size(20.dp)
                     .clip(JeeShapes.small)
                     .background(check)
-                    .border(1.dp, if (task.done && expressiveMotion) Primary else if (task.done) Success else BgCardBorder, JeeShapes.small),
+                    .border(1.dp, if (task.done) Success else BgCardBorder, JeeShapes.small),
                 contentAlignment = Alignment.Center
             ) {
                 if (task.done) {
                     Icon(
                         Icons.Filled.Check,
                         null,
-                        tint = SuccessDark,
+                        tint = SuccessOnFill,
                         modifier = Modifier.size(14.dp).graphicsLayer(scaleX = checkScale, scaleY = checkScale)
                     )
                 }
@@ -198,12 +220,12 @@ fun TaskRow(
 @Composable
 fun JeeFilterChip(label: String, selected: Boolean, onClick: () -> Unit) {
     val container by animateColorAsState(
-        if (selected) Primary else BgCard,
+        if (selected) Primary else BgCardAlt,
         animationSpec = tween(JeeMotion.standardMillis),
         label = "filter-chip-container"
     )
     val foreground by animateColorAsState(
-        if (selected) BgAppBase else TextSecondary,
+        if (selected) Color.White else TextSecondary,
         animationSpec = tween(JeeMotion.standardMillis),
         label = "filter-chip-foreground"
     )
@@ -219,7 +241,7 @@ fun JeeFilterChip(label: String, selected: Boolean, onClick: () -> Unit) {
                 )
             )
         },
-        shape = JeeShapes.small,
+        shape = JeeShapes.pill,
         border = FilterChipDefaults.filterChipBorder(
             enabled = true,
             selected = selected,
@@ -227,7 +249,7 @@ fun JeeFilterChip(label: String, selected: Boolean, onClick: () -> Unit) {
             selectedBorderColor = Primary.copy(alpha = 0.62f)
         ),
         colors = FilterChipDefaults.filterChipColors(
-            containerColor = BgCard,
+            containerColor = BgCardAlt,
             labelColor = TextSecondary,
             selectedContainerColor = container,
             selectedLabelColor = foreground
@@ -241,14 +263,14 @@ private enum class NavVisual { HOME, SYLLABUS, AI, TASKS, TIMER }
 fun BottomNavBar(selected: AppTab, onTabSelected: (AppTab) -> Unit) {
     val view = LocalView.current
     Surface(
-        modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp)
-            .shadow(18.dp, JeeShapes.large, clip = false),
-        color = BgCard.copy(alpha = 0.97f),
-        shape = JeeShapes.large,
+        modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 18.dp, vertical = 7.dp)
+            .shadow(14.dp, JeeShapes.pill, clip = false),
+        color = BgCard,
+        shape = JeeShapes.pill,
         border = androidx.compose.foundation.BorderStroke(1.dp, BgCardBorder)
     ) {
         Row(
-            Modifier.fillMaxWidth().height(70.dp).padding(horizontal = 8.dp, vertical = 5.dp),
+            Modifier.fillMaxWidth().height(76.dp).padding(horizontal = 7.dp, vertical = 5.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             NavIconSlot(NavVisual.HOME, selected == AppTab.HOME, Modifier.weight(1f)) {
@@ -289,7 +311,7 @@ private fun RowScope.NavIconSlot(
 ) {
     val interaction = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     val contentColor by animateColorAsState(
-        if (selected) PrimaryLight else TextSecondary,
+        if (selected) Primary else TextMuted,
         animationSpec = tween(JeeMotion.standardMillis),
         label = "navigation-content-color"
     )
@@ -299,7 +321,7 @@ private fun RowScope.NavIconSlot(
         label = "navigation-indicator-color"
     )
     val iconScale by animateFloatAsState(
-        if (selected) 1.08f else 1f,
+        if (selected) 1.04f else 1f,
         animationSpec = spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessMedium),
         label = "navigation-icon-scale"
     )
@@ -315,7 +337,7 @@ private fun RowScope.NavIconSlot(
         NavVisual.SYLLABUS -> "Syllabus"
         NavVisual.AI -> "AI"
         NavVisual.TASKS -> "Tasks"
-        NavVisual.TIMER -> "Timer"
+        NavVisual.TIMER -> "Focus"
     }
 
     Column(
@@ -329,7 +351,7 @@ private fun RowScope.NavIconSlot(
                 role = Role.Tab,
                 onClick = onClick
             )
-            .padding(top = 7.dp, bottom = 0.dp),
+            .padding(horizontal = 1.dp, vertical = 2.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
@@ -337,7 +359,7 @@ private fun RowScope.NavIconSlot(
             Modifier
                 .clip(JeeShapes.pill)
                 .background(indicatorColor)
-                .padding(horizontal = 10.dp, vertical = 5.dp)
+                .padding(horizontal = 12.dp, vertical = 4.dp)
         ) {
             Icon(
                 imageVector = icon,
@@ -350,7 +372,7 @@ private fun RowScope.NavIconSlot(
         Text(
             text = label,
             color = contentColor,
-            fontSize = 10.sp,
+            fontSize = 9.sp,
             lineHeight = 11.sp,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
             maxLines = 1

@@ -2,33 +2,33 @@ package com.example.jeecommandcenter.ui.theme
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
-import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
-private val JeeDarkColorScheme = darkColorScheme(
+private val JeeLightColorScheme = lightColorScheme(
     primary = Primary,
-    onPrimary = BgAppBase,
+    onPrimary = Color.White,
     primaryContainer = PrimarySoft,
     onPrimaryContainer = PrimaryLight,
-    secondary = PrimaryLight,
-    onSecondary = BgAppBase,
-    secondaryContainer = BgCardAlt,
-    onSecondaryContainer = TextPrimary,
-    tertiary = PrimaryLight,
-    onTertiary = BgAppBase,
-    tertiaryContainer = BgCardAlt,
-    onTertiaryContainer = TextPrimary,
+    secondary = FocusAction,
+    onSecondary = OnFocusAction,
+    secondaryContainer = FocusActionSoft,
+    onSecondaryContainer = OnFocusAction,
+    tertiary = Success,
+    onTertiary = Color.White,
+    tertiaryContainer = Color(0xFFE4F4EC),
+    onTertiaryContainer = SuccessDark,
     background = BgAppBase,
     onBackground = TextPrimary,
-    surface = BgAppBase,
+    surface = BgCard,
     onSurface = TextPrimary,
-    surfaceVariant = BgCard,
+    surfaceVariant = BgCardAlt,
     onSurfaceVariant = TextSecondary,
     outline = BgCardBorder,
-    outlineVariant = BgCardBorder,
+    outlineVariant = BgDivider,
     error = Danger,
-    onError = Color.Black
+    onError = Color.White
 )
 
 private val JeeMaterialShapes = Shapes(
@@ -40,7 +40,7 @@ private val JeeMaterialShapes = Shapes(
 @Composable
 fun JeePrepTheme(content: @Composable () -> Unit) {
     MaterialTheme(
-        colorScheme = JeeDarkColorScheme,
+        colorScheme = JeeLightColorScheme,
         typography = AppTypography,
         shapes = JeeMaterialShapes,
         content = content

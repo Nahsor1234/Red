@@ -42,6 +42,7 @@ import java.time.format.TextStyle
 import java.time.temporal.ChronoUnit
 import java.util.Locale
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
 
@@ -78,16 +79,25 @@ fun DashboardScreen(
     val learning = remember { LearningRepository(context) }
     val intelligence = remember { JeeIntelligence(repo, learning) }
     var snapshot by remember { mutableStateOf<DashboardSnapshot?>(null) }
+    var snapshotError by remember { mutableStateOf(false) }
 
     LaunchedEffect(refresh) {
-        snapshot = withContext(Dispatchers.Default) {
-            DashboardSnapshot(
-                tasks = repo.getTasks(),
-                todayMinutes = repo.getTodayMinutes(),
-                goalMinutes = repo.getDailyGoalMinutes(),
-                priorities = intelligence.dailyPriorities(3),
-                weak = intelligence.weakChapters(1).firstOrNull()
-            )
+        snapshot = null
+        snapshotError = false
+        try {
+            snapshot = withContext(Dispatchers.Default) {
+                DashboardSnapshot(
+                    tasks = repo.getTasks(),
+                    todayMinutes = repo.getTodayMinutes(),
+                    goalMinutes = repo.getDailyGoalMinutes(),
+                    priorities = intelligence.dailyPriorities(3),
+                    weak = intelligence.weakChapters(1).firstOrNull()
+                )
+            }
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            snapshotError = true
         }
     }
 
@@ -150,39 +160,21 @@ fun DashboardScreen(
             ) {
                 Spacer(Modifier.height(JeeSpacing.sm))
 
-                // Header: utility actions remain available without competing with the study action.
-                Row(
-                    Modifier.fillMaxWidth().heightIn(min = 104.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text(
-                            "JEE MAIN 2027  /  STUDY OVERVIEW",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = PrimaryLight,
-                            letterSpacing = 1.15.sp
-                        )
-                        Text(
-                            greeting,
-                            style = MaterialTheme.typography.headlineMedium,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Text(
-                            "JEE MAIN 2027 · $daysToJee days to Session 1",
-                            style = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = "tnum"),
-                            color = TextSecondary
-                        )
-                    }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = onOpenNotifications) {
-                            Icon(Icons.Filled.Notifications, "Notifications", tint = TextSecondary)
-                        }
-                        IconButton(onClick = onOpenSettings) {
-                            Icon(Icons.Filled.Settings, "Settings", tint = TextPrimary)
+                JeePageHeader(
+                    title = greeting,
+                    subtitle = "JEE Main 2027 · $daysToJee days to Session 1",
+                    eyebrow = "STUDY OVERVIEW",
+                    trailing = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            IconButton(onClick = onOpenNotifications) {
+                                Icon(Icons.Filled.Notifications, "Notifications", tint = TextSecondary)
+                            }
+                            IconButton(onClick = onOpenSettings) {
+                                Icon(Icons.Filled.Settings, "Settings", tint = TextPrimary)
+                            }
                         }
                     }
-                }
+                )
 
                 Spacer(Modifier.height(JeeSpacing.md))
 
@@ -214,16 +206,20 @@ fun DashboardScreen(
                     when {
                         snapshot == null -> {
                             Text(
-                                "Preparing your study overview…",
+                                if (snapshotError) "Your study overview could not be loaded." else "Preparing your study overview…",
                                 color = TextSecondary,
                                 style = MaterialTheme.typography.bodyMedium
                             )
-                            Spacer(Modifier.height(JeeSpacing.sm))
-                            LinearProgressIndicator(
-                                modifier = Modifier.fillMaxWidth(),
-                                color = TextSecondary,
-                                trackColor = BgDivider
-                            )
+                            if (snapshotError) {
+                                TextButton(onClick = { refresh++ }) { Text("Try again") }
+                            } else {
+                                Spacer(Modifier.height(JeeSpacing.sm))
+                                LinearProgressIndicator(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    color = TextSecondary,
+                                    trackColor = BgDivider
+                                )
+                            }
                         }
                         focus != null -> {
                             AnimatedContent(targetState = focus.title, label = "home-focus-title") { title ->
@@ -317,10 +313,16 @@ fun DashboardScreen(
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Filled.PlayArrow, null, Modifier.size(18.dp))
                             Spacer(Modifier.width(JeeSpacing.sm))
-                            Text(if (focus == null && nextTask == null) "Open study timer" else "Start focused session")
+                            Text("Open Focus")
                             Spacer(Modifier.weight(1f))
                         }
                     }
+                    Text(
+                        "Opens Focus. This recommendation is not transferred as session context.",
+                        color = TextSecondary,
+                        style = MaterialTheme.typography.labelSmall,
+                        modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = JeeSpacing.xs)
+                    )
                 }
 
                 Spacer(Modifier.height(JeeSpacing.md))
@@ -328,9 +330,11 @@ fun DashboardScreen(
                 JeeCard(modifier = Modifier.animateContentSize(animationSpec = tween(JeeMotion.layoutMillis))) {
                     if (snapshot == null) {
                         Text(
-                            "Loading today's study data…",
+                            if (snapshotError) "Today's study data is unavailable. Try reloading the overview above."
+                            else "Loading today's study data…",
                             color = TextSecondary,
-                            style = MaterialTheme.typography.bodySmall
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(vertical = JeeSpacing.sm)
                         )
                     } else {
                         Row(horizontalArrangement = Arrangement.spacedBy(JeeSpacing.lg)) {

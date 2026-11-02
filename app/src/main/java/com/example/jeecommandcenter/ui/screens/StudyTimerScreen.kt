@@ -30,6 +30,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.progressBarRangeInfo
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -39,6 +43,7 @@ import com.example.jeecommandcenter.ui.components.*
 import com.example.jeecommandcenter.ui.theme.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.util.Locale
@@ -79,9 +84,18 @@ fun StudyTimerScreen(
 
     var sessions by remember { mutableStateOf<List<StudySession>>(emptyList()) }
     var sessionsLoaded by remember { mutableStateOf(false) }
+    var sessionsLoadFailed by remember { mutableStateOf(false) }
     LaunchedEffect(refresh) {
-        sessions = withContext(Dispatchers.IO) { repo.getSessions() }
-        sessionsLoaded = true
+        sessionsLoadFailed = false
+        try {
+            sessions = withContext(Dispatchers.IO) { repo.getSessions() }
+            sessionsLoaded = true
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            sessionsLoaded = true
+            sessionsLoadFailed = true
+        }
     }
 
     val todayDate = LocalDate.now().toString()
@@ -128,20 +142,15 @@ fun StudyTimerScreen(
             contentPadding = PaddingValues(top = JeeSpacing.md, bottom = 120.dp)
         ) {
             item {
-                Column {
-                    Text(
-                        "FOCUS STUDIO",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = PrimaryLight,
-                        letterSpacing = 1.15.sp
-                    )
-                    Text("Focus", style = MaterialTheme.typography.headlineMedium)
-                    Text(
-                        if (sessionsLoaded) "$todayMinutes min studied today" else "Loading study total…",
-                        color = TextSecondary,
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
+                JeePageHeader(
+                    title = "Focus",
+                    subtitle = when {
+                        !sessionsLoaded -> "Loading study total…"
+                        sessionsLoadFailed -> "Today's study total is unavailable"
+                        else -> "$todayMinutes min studied today"
+                    },
+                    eyebrow = "STUDY TIMER"
+                )
             }
             item {
                 Row(Modifier.fillMaxWidth().heightIn(min = 56.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -250,38 +259,112 @@ fun StudyTimerScreen(
                 }
             }
             item {
-                Box(Modifier.fillMaxWidth().height(272.dp), contentAlignment = Alignment.Center) {
-                    val fraction = if (total > 0) remaining.toFloat() / total else 0f
-                    val animatedFraction by animateFloatAsState(
-                        fraction.coerceIn(0f, 1f),
-                        animationSpec = tween(JeeMotion.timerProgressMillis),
-                        label = "focus-ring-progress"
-                    )
-                    Canvas(Modifier.size(240.dp)) {
-                        val stroke = Stroke(10.dp.toPx(), cap = StrokeCap.Round)
-                        drawArc(BgDivider, -90f, 360f, false, style = stroke)
-                        drawArc(Primary, -90f, 360f * animatedFraction, false, style = stroke)
-                    }
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            String.format(Locale.US, "%02d:%02d", remaining / 60, remaining % 60),
-                            style = MaterialTheme.typography.headlineLarge.copy(fontSize = 32.sp,
-                                fontFamily = FontFamily.Monospace,
-                                fontFeatureSettings = "tnum"
-                            ),
-                            fontWeight = FontWeight.Bold
+                val stateLabel = when {
+                    running -> "Focusing"
+                    remaining == 0 -> "Complete"
+                    remaining < total -> "Paused"
+                    else -> "Ready"
+                }
+                JeeCard(featured = true) {
+                    BoxWithConstraints(Modifier.fillMaxWidth()) {
+                        val dialSize = maxWidth.coerceAtMost(260.dp)
+                        val wideLayout = maxWidth >= 520.dp
+                        val elapsed = if (total > 0) ((total - remaining).toFloat() / total).coerceIn(0f, 1f) else 0f
+                        val animatedFraction by animateFloatAsState(
+                            elapsed,
+                            animationSpec = tween(JeeMotion.timerProgressMillis),
+                            label = "focus-ring-progress"
                         )
-                        AnimatedContent(
-                            targetState = when {
-                                running -> "Focusing"
-                                remaining == 0 -> "Session complete"
-                                remaining < total -> "Paused"
-                                else -> "Ready"
-                            },
-                            label = "focus-state"
-                        ) { state ->
-                            Text(state, color = if (running) PrimaryLight else TextSecondary,
-                                style = MaterialTheme.typography.labelMedium)
+                        @Composable fun TimerDial() {
+                            Box(Modifier.size(dialSize), contentAlignment = Alignment.Center) {
+                                Canvas(
+                                    Modifier.fillMaxSize().semantics {
+                                        contentDescription = "Session progress"
+                                        progressBarRangeInfo = ProgressBarRangeInfo(animatedFraction, 0f..1f)
+                                    }
+                                ) {
+                                    val stroke = Stroke(10.dp.toPx(), cap = StrokeCap.Round)
+                                    drawArc(BgDivider, -90f, 360f, false, style = stroke)
+                                    drawArc(FocusAction, -90f, 360f * animatedFraction, false, style = stroke)
+                                }
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text(
+                                        String.format(Locale.US, "%02d:%02d", remaining / 60, remaining % 60),
+                                        style = MaterialTheme.typography.headlineLarge.copy(
+                                            fontSize = 32.sp,
+                                            fontFamily = FontFamily.Monospace,
+                                            fontFeatureSettings = "tnum"
+                                        ),
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    AnimatedContent(targetState = stateLabel, label = "focus-state") { state ->
+                                        Text(
+                                            state,
+                                            color = if (running) FocusAction else TextSecondary,
+                                            style = MaterialTheme.typography.labelLarge
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        @Composable fun PrimaryAction(modifier: Modifier = Modifier) {
+                            Button(
+                                onClick = {
+                                    val wasRunning = running
+                                    if (wasRunning) {
+                                        remaining = ceil((end - System.currentTimeMillis()).coerceAtLeast(0L) / 1000.0)
+                                            .toInt().coerceIn(0, total)
+                                        running = false
+                                        end = 0L
+                                        repo.pauseTimer(total, remaining)
+                                    } else {
+                                        if (remaining <= 0) remaining = total
+                                        repo.startTimer(total, remaining)
+                                        end = System.currentTimeMillis() + remaining * 1000L
+                                        running = true
+                                    }
+                                    view.performHapticFeedback(
+                                        if (wasRunning) HapticFeedbackConstants.KEYBOARD_TAP else HapticFeedbackConstants.CONTEXT_CLICK
+                                    )
+                                },
+                                modifier = modifier.heightIn(min = 52.dp),
+                                shape = JeeShapes.medium,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = FocusAction,
+                                    contentColor = OnFocusAction
+                                )
+                            ) {
+                                AnimatedContent(targetState = running, label = "focus-primary-action") { active ->
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(if (active) Icons.Filled.Pause else Icons.Filled.PlayArrow, null)
+                                        Spacer(Modifier.width(JeeSpacing.sm))
+                                        Text(
+                                            when {
+                                                active -> "Pause session"
+                                                remaining < total && remaining > 0 -> "Resume session"
+                                                remaining == 0 -> "Start again"
+                                                else -> "Start focus session"
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        if (wideLayout) {
+                            Row(
+                                Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(JeeSpacing.xl),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                TimerDial()
+                                PrimaryAction(Modifier.weight(1f).fillMaxWidth())
+                            }
+                        } else {
+                            Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                                TimerDial()
+                                Spacer(Modifier.height(JeeSpacing.md))
+                                PrimaryAction(Modifier.fillMaxWidth())
+                            }
                         }
                     }
                 }
@@ -302,49 +385,14 @@ fun StudyTimerScreen(
                     modifier = Modifier.padding(top = JeeSpacing.xs))
             }
             item {
-                Button(
-                    onClick = {
-                        val wasRunning = running
-                        if (wasRunning) {
-                            remaining = ceil((end - System.currentTimeMillis()).coerceAtLeast(0L) / 1000.0)
-                                .toInt().coerceIn(0, total)
-                            running = false
-                            end = 0L
-                            repo.pauseTimer(total, remaining)
-                        } else {
-                            if (remaining <= 0) remaining = total
-                            repo.startTimer(total, remaining)
-                            end = System.currentTimeMillis() + remaining * 1000L
-                            running = true
-                        }
-                        view.performHapticFeedback(
-                            if (wasRunning) HapticFeedbackConstants.KEYBOARD_TAP else HapticFeedbackConstants.CONTEXT_CLICK
-                        )
-                    },
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
-                    shape = JeeShapes.medium
-                ) {
-                    AnimatedContent(targetState = running, label = "focus-primary-action") { active ->
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(if (active) Icons.Filled.Pause else Icons.Filled.PlayArrow, null)
-                            Spacer(Modifier.width(JeeSpacing.sm))
-                            Text(
-                                when {
-                                    active -> "Pause session"
-                                    remaining < total && remaining > 0 -> "Resume session"
-                                    remaining == 0 -> "Start again"
-                                    else -> "Start focus session"
-                                }
-                            )
-                        }
-                    }
-                }
-            }
-            item {
                 JeeCard {
                     SectionHeader("Recent sessions")
                     if (!sessionsLoaded) {
                         Text("Loading sessions…", color = TextSecondary, style = MaterialTheme.typography.bodySmall)
+                    } else if (sessionsLoadFailed) {
+                        Text("Session history could not be loaded.", color = TextSecondary,
+                            style = MaterialTheme.typography.bodySmall)
+                        TextButton(onClick = { refresh++ }) { Text("Try again") }
                     } else if (recentSessions.isEmpty()) {
                         Text(
                             "Completed focus sessions will appear here.",

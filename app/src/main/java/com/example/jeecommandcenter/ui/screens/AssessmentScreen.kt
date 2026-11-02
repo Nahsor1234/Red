@@ -40,6 +40,7 @@ fun AssessmentScreen(learning: LearningRepository, jee: JeeRepository, onBack: (
     var selected by remember { mutableIntStateOf(-1) }
     var answered by remember { mutableStateOf(false) }
     var correct by remember { mutableIntStateOf(0) }
+    var resultRecord by remember { mutableStateOf<TestAttemptRecord?>(null) }
     var startedAt by remember { mutableLongStateOf(0L) }
     var questionStartedAt by remember { mutableLongStateOf(0L) }
     var testId by remember { mutableStateOf("") }
@@ -52,7 +53,7 @@ fun AssessmentScreen(learning: LearningRepository, jee: JeeRepository, onBack: (
 
     fun startWith(list: List<Question>) {
         if (list.isEmpty()) return
-        testId = UUID.randomUUID().toString(); questions = list; index = 0; selected = -1; answered = false; correct = 0; startedAt = System.currentTimeMillis(); questionStartedAt = startedAt; state = AssessmentState.RUNNING
+        testId = UUID.randomUUID().toString(); questions = list; index = 0; selected = -1; answered = false; correct = 0; resultRecord = null; startedAt = System.currentTimeMillis(); questionStartedAt = startedAt; state = AssessmentState.RUNNING
     }
     fun start() {
         if (loadingQuestions) return
@@ -130,28 +131,28 @@ fun AssessmentScreen(learning: LearningRepository, jee: JeeRepository, onBack: (
             val subjectAttempted = subjectQuestions.count { (attemptsByQuestion[it.id]?.selectedIndex ?: -1) >= 0 }
             subjectCorrect to subjectAttempted
         }
-        learning.saveTestAttempt(
-            TestAttemptRecord(
-                id = testId,
-                mode = mode,
-                startedAt = startedAt,
-                completedAt = System.currentTimeMillis(),
-                questionCount = questions.size,
-                correctCount = correctCount,
-                score = scoreValue.roundToInt(),
-                totalMarks = totalMarks,
-                durationSec = duration,
-                subjectBreakdown = breakdown,
-                attemptedCount = attemptedCount,
-                incorrectCount = incorrectCount,
-                skippedCount = skippedCount
-            )
+        val completedAttempt = TestAttemptRecord(
+            id = testId,
+            mode = mode,
+            startedAt = startedAt,
+            completedAt = System.currentTimeMillis(),
+            questionCount = questions.size,
+            correctCount = correctCount,
+            score = scoreValue.roundToInt(),
+            totalMarks = totalMarks,
+            durationSec = duration,
+            subjectBreakdown = breakdown,
+            attemptedCount = attemptedCount,
+            incorrectCount = incorrectCount,
+            skippedCount = skippedCount
         )
+        learning.saveTestAttempt(completedAttempt)
+        resultRecord = completedAttempt
         correct = correctCount
         state = AssessmentState.RESULT
     }
 
-    Scaffold(containerColor = BgApp, topBar = {
+    Scaffold(containerColor = BgAppBase, topBar = {
         JeeTopBar(
             title = when (state) { AssessmentState.SETUP -> "Tests & Mocks"; AssessmentState.RUNNING -> if (mode == TestMode.MOCK) "Starter mock" else "Practice test"; AssessmentState.RESULT -> "Test results" },
             onBack = onBack,
@@ -173,7 +174,9 @@ fun AssessmentScreen(learning: LearningRepository, jee: JeeRepository, onBack: (
                     QuestionContent(Modifier.padding(padding), question, index, questions.size, selected, answered, remaining, { if (!answered) selected = it }, { if (!answered && selected >= 0) { val record = learning.saveQuestionAttempt(testId, question, selected, ((System.currentTimeMillis() - questionStartedAt) / 1000).toInt()); if (record.correct) correct++ else jee.flagChapterWeak(question.chapterId); answered = true } }, { if (index + 1 >= questions.size) finish() else { index++; selected = -1; answered = false; questionStartedAt = System.currentTimeMillis() } })
                 }
             }
-            AssessmentState.RESULT -> ResultContent(Modifier.padding(padding), correct, questions.size, { state = AssessmentState.SETUP }, onOpenMistakes)
+            AssessmentState.RESULT -> resultRecord?.let { attempt ->
+                ResultContent(Modifier.padding(padding), attempt, { state = AssessmentState.SETUP }, onOpenMistakes)
+            }
         }
     }
 
@@ -205,34 +208,97 @@ private fun SetupContent(
     loadingQuestions: Boolean,
     loadMessage: String?
 ) {
-    LazyColumn(modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        item { Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(BgCardAlt).border(JeeSurfaceTokens.borderWidth,BgCardBorder.copy(alpha=JeeSurfaceTokens.cardBorderAlpha),JeeShapes.medium).padding(16.dp)) { Text("Tests & Mocks", style = MaterialTheme.typography.titleLarge); Spacer(Modifier.height(6.dp)); Text("Build a short practice test, take a starter mock, or create a quiz with AI. Your attempts feed your progress and Mistake Bank.", color = TextMuted, fontSize = 11.sp) } }
-        item { Text("Mode", color = TextSecondary, fontSize = 12.sp); Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { JeeFilterChip("Practice", mode == TestMode.PRACTICE) { onMode(TestMode.PRACTICE) }; JeeFilterChip("Starter mock", mode == TestMode.MOCK) { onMode(TestMode.MOCK) } } }
-        if (mode == TestMode.PRACTICE) item { Text("Subject", color = TextSecondary, fontSize = 12.sp); Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { listOf("Physics", "Chemistry", "Mathematics").forEach { JeeFilterChip(it, subject == it) { onSubject(it) } } } }
+    LazyColumn(
+        modifier.fillMaxSize().padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        contentPadding = PaddingValues(top = 12.dp, bottom = 28.dp)
+    ) {
         item {
-            Button(
-                onClick = onStart,
-                enabled = !loadingQuestions,
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = AccentBlue)
-            ) {
-                if (loadingQuestions) {
-                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Loading questions…")
+            JeePageHeader(
+                title = "Choose your assessment",
+                subtitle = "A short, focused run through the question bank.",
+                eyebrow = "TESTS & MOCKS"
+            )
+        }
+        item {
+            JeeCard(featured = true) {
+                SectionHeader("Set the scope")
+                Text("Assessment type", color = TextSecondary, style = MaterialTheme.typography.bodyMedium)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    JeeFilterChip("Practice", mode == TestMode.PRACTICE) { onMode(TestMode.PRACTICE) }
+                    JeeFilterChip("Starter mock", mode == TestMode.MOCK) { onMode(TestMode.MOCK) }
+                }
+                if (mode == TestMode.PRACTICE) {
+                    Spacer(Modifier.height(12.dp))
+                    Text("Subject", color = TextSecondary, style = MaterialTheme.typography.bodyMedium)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf("Physics", "Chemistry", "Mathematics").forEach { name ->
+                            JeeFilterChip(name, subject == name) { onSubject(name) }
+                        }
+                    }
+                    Spacer(Modifier.height(6.dp))
+                    Text("5 questions · 60 seconds per question", color = TextMuted, style = MaterialTheme.typography.bodySmall)
                 } else {
-                    Icon(Icons.Filled.PlayArrow, null)
-                    Spacer(Modifier.width(7.dp))
-                    Text(if (mode == TestMode.MOCK) "Start 10-question mock" else "Start 5-question practice")
+                    Spacer(Modifier.height(8.dp))
+                    Text("Mixed subjects · 10 questions · 90 seconds per question", color = TextMuted, style = MaterialTheme.typography.bodySmall)
                 }
             }
-            if (!loadingQuestions && !loadMessage.isNullOrBlank()) {
-                Text(loadMessage, color = TextSecondary, fontSize = 11.sp)
+        }
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(
+                    onClick = onStart,
+                    enabled = !loadingQuestions,
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = FocusAction, contentColor = OnFocusAction)
+                ) {
+                    if (loadingQuestions) {
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Loading available questions…")
+                    } else {
+                        Icon(Icons.Filled.PlayArrow, contentDescription = null)
+                        Spacer(Modifier.width(7.dp))
+                        Text(if (mode == TestMode.MOCK) "Start starter mock" else "Start ${subject.lowercase()} practice")
+                    }
+                }
+                if (!loadMessage.isNullOrBlank()) {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = JeeShapes.medium,
+                        color = BgCardAlt
+                    ) {
+                        Text(loadMessage, modifier = Modifier.padding(12.dp), color = TextSecondary, style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
             }
         }
-        item { OutlinedButton(onClick = onCreateAi, enabled = aiAvailable, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Filled.AutoAwesome, null); Spacer(Modifier.width(7.dp)); Text(if (aiAvailable) "Create quiz with AI" else "Configure AI to create quiz") } }
-        item { OutlinedButton(onClick = onOpenMistakes, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Filled.ErrorOutline, null); Spacer(Modifier.width(7.dp)); Text("Open Mistake Bank") } }
-        item { Text("AI quiz generation uses the configured provider and returns structured questions for the existing assessment flow.", color = TextMuted, fontSize = 10.sp) }
+        item {
+            JeeCard {
+                SectionHeader("Other ways to review")
+                OutlinedButton(
+                    onClick = onCreateAi,
+                    enabled = aiAvailable,
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
+                ) {
+                    Icon(Icons.Filled.AutoAwesome, contentDescription = null)
+                    Spacer(Modifier.width(7.dp))
+                    Text(if (aiAvailable) "Create quiz with AI" else "Configure AI to create a quiz")
+                }
+                if (!aiAvailable) {
+                    Text("AI quiz creation requires a configured provider. Standard assessments use available cloud questions and the local question bank.", color = TextMuted, style = MaterialTheme.typography.bodySmall)
+                } else {
+                    Text("Generated questions enter the same assessment flow.", color = TextMuted, style = MaterialTheme.typography.bodySmall)
+                }
+                Spacer(Modifier.height(4.dp))
+                OutlinedButton(onClick = onOpenMistakes, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                    Icon(Icons.Filled.ErrorOutline, contentDescription = null)
+                    Spacer(Modifier.width(7.dp))
+                    Text("Open Mistake Bank")
+                }
+            }
+        }
+        item { Spacer(Modifier.height(4.dp)) }
     }
 }
 
@@ -251,78 +317,83 @@ private fun QuestionContent(
 ) {
     LazyColumn(
         modifier.fillMaxSize().padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-        contentPadding = PaddingValues(top = 12.dp, bottom = 24.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = PaddingValues(top = 12.dp, bottom = 28.dp)
     ) {
         item {
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
-            ) {
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    Text(question.chapter, color = PrimaryLight, fontSize = 13.sp, maxLines = 1)
-                    Text("Question ${questionIndex + 1}/$total", color = TextSecondary, fontSize = 13.sp)
+            JeeCard {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        Text("Question ${questionIndex + 1} of $total", style = MaterialTheme.typography.titleMedium)
+                        Text("${question.subject} · ${question.chapter}", color = TextSecondary, style = MaterialTheme.typography.bodyMedium)
+                    }
+                    Surface(shape = JeeShapes.pill, color = if (remaining <= 10) BgPriority else BgCardAlt) {
+                        Text(
+                            "${remaining}s left",
+                            modifier = Modifier.padding(horizontal = 13.dp, vertical = 9.dp),
+                            color = if (remaining <= 10) TextPriorityBadge else TextPrimary,
+                            style = MaterialTheme.typography.labelLarge
+                        )
+                    }
                 }
-                Text(
-                    "${remaining}s",
-                    color = if (remaining <= 10) AccentAmber else TextSecondary,
-                    fontSize = 13.sp
+                Spacer(Modifier.height(12.dp))
+                LinearStatBar((questionIndex + 1).toFloat() / total.coerceAtLeast(1), height = 6.dp)
+                Spacer(Modifier.height(8.dp))
+                Text("${question.marks} marks · −${question.negativeMarks} for an incorrect answer", color = TextMuted, style = MaterialTheme.typography.bodySmall)
+            }
+        }
+        item {
+            SectionHeader("Question")
+            SharedQuestionPromptCard(question.prompt)
+        }
+        items(question.options.indices.toList(), key = { it }) { optionIndex ->
+            Column {
+                if (optionIndex == 0) SectionHeader("Choose one answer")
+                SharedQuestionOptionRow(
+                    optionText = question.options[optionIndex],
+                    selected = selected == optionIndex,
+                    submitted = answered,
+                    isCorrectOption = optionIndex == question.correctIndex,
+                    onClick = { onSelect(optionIndex) }
                 )
             }
-            LinearProgressIndicator(
-                progress = { (questionIndex + 1).toFloat() / total.coerceAtLeast(1) },
-                modifier = Modifier.fillMaxWidth().padding(top = 4.dp).height(4.dp).clip(RoundedCornerShape(99.dp)),
-                color = Primary,
-                trackColor = BgDivider
-            )
-        }
-        item { SharedQuestionPromptCard(question.prompt) }
-        items(question.options.indices.toList(), key = { it }) { optionIndex ->
-            SharedQuestionOptionRow(
-                optionText = question.options[optionIndex],
-                selected = selected == optionIndex,
-                submitted = answered,
-                isCorrectOption = optionIndex == question.correctIndex,
-                onClick = { onSelect(optionIndex) }
-            )
         }
         if (answered) {
             item {
                 val isCorrect = selected == question.correctIndex
-                Column(
-                    Modifier.fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(BgCardAlt)
-                        .border(1.dp, if (isCorrect) Primary.copy(alpha = .85f) else Danger.copy(alpha = .85f), RoundedCornerShape(16.dp))
-                        .padding(15.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        if (isCorrect) "Correct answer" else "Answer Review",
-                        color = if (isCorrect) PrimaryLight else AccentAmber,
-                        style = MaterialTheme.typography.titleMedium
-                    )
+                JeeCard(featured = true) {
+                    Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                        Icon(
+                            if (isCorrect) Icons.Filled.CheckCircle else Icons.Filled.ErrorOutline,
+                            contentDescription = null,
+                            tint = if (isCorrect) Success else Danger,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(Modifier.width(9.dp))
+                        Text(if (isCorrect) "Correct" else "Review the answer", style = MaterialTheme.typography.titleMedium, color = if (isCorrect) Success else Danger)
+                    }
+                    Spacer(Modifier.height(8.dp))
                     MathMarkdownText(
                         "Your answer: " + (question.options.getOrNull(selected) ?: "Not answered"),
-                        modifier = Modifier.fillMaxWidth(),
-                        color = TextSecondary,
-                        fontSize = 12.sp,
-                        lineHeight = 17.sp
+                        modifier = Modifier.fillMaxWidth(), color = TextSecondary,
+                        fontSize = MaterialTheme.typography.bodyMedium.fontSize,
+                        lineHeight = MaterialTheme.typography.bodyMedium.lineHeight
                     )
                     MathMarkdownText(
                         "Correct answer: " + (question.options.getOrNull(question.correctIndex) ?: "Unavailable"),
-                        modifier = Modifier.fillMaxWidth(),
-                        color = PrimaryLight,
-                        fontSize = 12.sp,
-                        lineHeight = 17.sp
+                        modifier = Modifier.fillMaxWidth(), color = PrimaryLight,
+                        fontSize = MaterialTheme.typography.bodyMedium.fontSize,
+                        lineHeight = MaterialTheme.typography.bodyMedium.lineHeight
                     )
+                    Spacer(Modifier.height(4.dp))
+                    SectionHeader("Explanation")
                     if (question.explanation.isNotBlank()) {
-                        MathMarkdownText(question.explanation, modifier = Modifier.fillMaxWidth(), color = TextPrimary.copy(alpha = .94f), fontSize = 13.sp, lineHeight = 19.sp)
+                        MathMarkdownText(question.explanation, modifier = Modifier.fillMaxWidth(), color = TextPrimary, fontSize = MaterialTheme.typography.bodyLarge.fontSize, lineHeight = MaterialTheme.typography.bodyLarge.lineHeight)
                     } else {
-                        Text("No explanation is available for this question.", color = TextMuted, fontSize = 12.sp)
+                        Text("No explanation is available for this question.", color = TextMuted, style = MaterialTheme.typography.bodyMedium)
                     }
-                    Button(onClick = onNext, modifier = Modifier.fillMaxWidth()) {
+                    Spacer(Modifier.height(8.dp))
+                    Button(onClick = onNext, modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp), colors = ButtonDefaults.buttonColors(containerColor = FocusAction, contentColor = OnFocusAction)) {
                         Text(if (questionIndex + 1 == total) "Finish test" else "Next question")
                     }
                 }
@@ -332,7 +403,8 @@ private fun QuestionContent(
                 Button(
                     onClick = onSubmit,
                     enabled = selected >= 0,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp)
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = FocusAction, contentColor = OnFocusAction)
                 ) { Text("Check answer") }
             }
         }
@@ -340,8 +412,36 @@ private fun QuestionContent(
 }
 
 @Composable
-private fun ResultContent(modifier: Modifier, correct: Int, total: Int, onRestart: () -> Unit, onMistakes: () -> Unit) {
-    Column(modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) { Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(BgCardAlt).border(JeeSurfaceTokens.borderWidth,BgCardBorder.copy(alpha=JeeSurfaceTokens.cardBorderAlpha),JeeShapes.medium).padding(18.dp)) { Text("Test complete", style = MaterialTheme.typography.titleLarge); Spacer(Modifier.height(8.dp)); Text("$correct / $total correct", style = MaterialTheme.typography.headlineMedium); Text(if (total == 0) "No questions recorded" else "${(correct * 100) / total}% accuracy", color = TextSecondary, fontSize = 12.sp) }; Button(onClick = onMistakes, modifier = Modifier.fillMaxWidth()) { Text("Review mistakes") }; OutlinedButton(onClick = onRestart, modifier = Modifier.fillMaxWidth()) { Text("Take another test") } }
+private fun ResultContent(modifier: Modifier, attempt: TestAttemptRecord, onRestart: () -> Unit, onMistakes: () -> Unit) {
+    LazyColumn(
+        modifier.fillMaxSize().padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        contentPadding = PaddingValues(top = 12.dp, bottom = 28.dp)
+    ) {
+        item { JeePageHeader(title = "Assessment complete", subtitle = "Your responses have been recorded.", eyebrow = "RESULT") }
+        item {
+            JeeCard(featured = true) {
+                Text("Recorded score", color = TextSecondary, style = MaterialTheme.typography.bodyMedium)
+                Row(verticalAlignment = androidx.compose.ui.Alignment.Bottom) {
+                    Text("${attempt.score}", style = MaterialTheme.typography.displaySmall, color = PrimaryLight)
+                    Text(" / ${attempt.totalMarks} marks", modifier = Modifier.padding(start = 6.dp, bottom = 8.dp), color = TextSecondary, style = MaterialTheme.typography.bodyLarge)
+                }
+                HorizontalDivider(color = BgDivider)
+                Text("${attempt.correctCount} correct · ${attempt.incorrectCount} incorrect · ${attempt.skippedCount} skipped", color = TextPrimary, style = MaterialTheme.typography.bodyLarge)
+                Text("${attempt.attemptedCount} attempted of ${attempt.questionCount} questions", color = TextSecondary, style = MaterialTheme.typography.bodyMedium)
+                Text("Duration · ${formatTestDuration(attempt.durationSec)}", color = TextSecondary, style = MaterialTheme.typography.bodyMedium)
+            }
+        }
+        item {
+            JeeCard {
+                SectionHeader("Continue your review")
+                Text("Review saved mistakes or start another assessment from the setup screen.", color = TextSecondary, style = MaterialTheme.typography.bodyMedium)
+                Spacer(Modifier.height(12.dp))
+                Button(onClick = onMistakes, modifier = Modifier.fillMaxWidth().heightIn(min = 50.dp)) { Text("Review mistakes") }
+                OutlinedButton(onClick = onRestart, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text("Take another test") }
+            }
+        }
+    }
 }
 
 private fun CloudQuestion.toAssessmentQuestion() = Question(

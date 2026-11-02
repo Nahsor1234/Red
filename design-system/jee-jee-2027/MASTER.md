@@ -1,66 +1,69 @@
-# JeE JEE 2027 — UI Design System
+# JeE JEE 2027 — Product UI System
 
-**Product:** Offline-first JEE 2027 preparation command center for students who need a calm, focused study workflow. Native Android app using Kotlin and Jetpack Compose + Material 3. **Direction:** Midnight focus studio with Swiss-style hierarchy: precise typography, deliberate negative space, cool-blue focus cues, and success green only for completed work.
+**Platform:** Native Android, Kotlin, Jetpack Compose + Material 3. **Product:** Offline-first JEE preparation command center. **Direction:** Light-first editorial study workspace, borrowing the skill-verified Minimalism & Swiss style. Use crisp paper surfaces, dark ink hierarchy, blue for navigation/learning state, and warm orange for the primary focus action. Do not confuse a design-system change with a screen redesign: every flow needs its own information hierarchy and adaptive interaction model.
 
-## Product rules
+## Product invariants
 
-- Dashboard values must come from stored study/task data. Never seed fake tasks, study totals, progress or streaks.
-- Keep the experience useful offline. Do not add cloud dependency for UI polish.
-- Make the next relevant action easy to find: resume a real task, start a focus block, review a weak chapter, or inspect actual study progress.
-- Avoid shame-based streaks, urgency theater, excessive decoration and childlike gamification.
+- Preserve SharedPreferences/JSON data, repository calls, callback contracts, route/back-stack behavior, input validation, and existing real stored metrics.
+- Keep study and note-taking useful offline. Cloud-dependent catalog questions and optional AI/sync must clearly say when network/provider availability is required.
+- Never add seeded tasks, sessions, goals, test results, analytics, mistakes, or chat history.
+- Make learning actions obvious, but don't imply unsupported behavior: the dashboard timer CTA selects the timer tab and currently does not transfer focus context; Notes are not a spaced-repetition scheduler; practice has no scored result unless stored assessment records provide it.
 
 ## Visual tokens
 
 | Role | Value |
 |---|---|
-| App background | `#0A0F17` |
-| Card surface | `#111B29` |
-| Raised/featured surface | `#172438` |
-| Card border | `#29384C` |
-| Divider/track | `#263448` |
-| Primary focus blue | `#8FAEFF` |
-| Light blue accent | `#BFD1FF` |
-| Soft blue surface | `#202F4B` |
-| Success green | `#63D6A2` |
-| Warning | `#F4C56D` |
-| Destructive | `#FF7285` |
-| Main text | `#F3F6FC` |
-| Secondary text | `#A8B5C7` |
-| Muted text | `#8493A7` |
+| App background | `#F6F7FB` |
+| Main surface | `#FFFFFF` |
+| Soft secondary surface | `#EEF2F8` |
+| Borders / dividers | `#E0E6F0` / `#E4E9F1` |
+| Main ink | `#192436` |
+| Secondary ink | `#536176` |
+| Muted ink | `#66758A` |
+| Navigation / learning blue | `#2563EB` |
+| Deep blue for text on light surfaces | `#1D4ED8` |
+| Soft selected blue | `#E7EEFF` |
+| Primary focus CTA orange | `#EA580C` (dark text `#172033`) |
+| Warm focus surface | `#FFF4EA` |
+| Success | `#16805D` |
+| Warning | `#B45309` |
+| Error | `#B42318` |
 
-Use blue for selected navigation, focus actions, active progress and information emphasis. Use green for success/completion only. Keep secondary text readable against the darkest card surface. Avoid colored text on a similarly bright fill; primary buttons use dark foreground text.
+System sans-serif is used for native rendering and offline availability; use clear weight/size hierarchy and tabular numerals for time/counts. Primary type: 16sp body, 13–14sp supporting text, 20–28sp screen/section heads. Don't render essential information as tiny metadata. Spacing: 4 / 8 / 12 / 16 / 24 / 32dp. Controls 14dp corners, standard cards 20dp, featured panels 28dp. Navigation outer shape is a true circle/capsule, not a rounded rectangle.
 
-## Typography and layout
+## Layout and component rules
 
-- Use Android system sans-serif (`FontFamily.SansSerif`) to preserve offline behavior and native rendering. Use tabular numerals for time, durations, counts and progress values.
-- Use a compact hierarchy: display for rare hero moments; headline for screen titles; title for section/card labels; body for instructions; labels for metadata and eyebrow text. Avoid all-caps for long text; reserve tracked uppercase for short overlines such as “FOCUS STUDIO”.
-- Keep mobile content single-column and scrollable, respect system insets, and maintain at least 48dp touch targets with 8dp between adjacent targets.
-- Base spacing: 4 / 8 / 12 / 18 / 26 / 34dp. Shapes: 12dp controls, 18dp cards, 24dp featured surfaces, pill chips.
+- Rebuild screen information hierarchy: each screen has one dominant purpose, an explicit heading, useful grouping, and fewer competing cards. White-space, alignment and type—not extra borders—establish sections.
+- Use white raised surfaces over `#F6F7FB`, very subtle elevation, quiet one-pixel outlines and occasional warm feature surfaces. Avoid dark glass, neon, heavy shadows and tile wallpaper.
+- Main tab navigation is a floating capsule: 16–20dp horizontal inset, safe-area-aware bottom inset, fully rounded ends, five labelled destinations, a quiet selected pill inside, and a full-slot target at least 48dp high. Keep tab labels; ensure content clears the capsule.
+- Preserve Material touch feedback, clear focus states, accessible semantics and independent nested actions. Use at least 48dp targets and 8dp separation where possible.
+- Use adaptive `LazyColumn`/`LazyVerticalGrid` for collections, safe-area/IME-aware forms and pinned actions only when they remain reachable at large text scales.
+- Empty, loading, failed, disabled, no-data and true-zero states are distinct. Label data provenance when local fallback/cloud/network matters.
 
-## Surfaces and effects
+## Motion
 
-- Use a near-black navy base with two extremely subtle ambient blue/cyan radial glows. Do not use tiled science doodles, noisy textures, or competing gradients.
-- Standard cards use a restrained dark tonal gradient, one-pixel low-contrast border, and modest elevation. Featured focus cards may use a slightly brighter blue-navy gradient and a soft accent border.
-- Keep decorative blur/shadow inexpensive. Reserve the strongest surface emphasis for the next action and active focus timer.
-- Inputs and dialogs use the same surfaces, shapes, borders, and focus blue. Show clear pressed, selected, disabled and error states.
+- Compose state motion uses approximately 140ms fast, 210ms standard and 280ms layout timings with standard easing/spring only for small selection feedback.
+- Tab changes use a restrained low-distance fade/shared-axis; drill-in routes push/pop directionally. Keep screen state and back behavior stable.
+- Animate only actual state changes: focus selection, question movement, progress, completion, save/sync, sheet transitions. Preserve final text/values and avoid unstable reordering or focus theft.
+- Timer ring updates smoothly while remaining text changes on its existing tick. AI streaming follows only when reader is already at the bottom; don't animate/reparse an entire transcript per chunk.
+- Respect Android system animation scale; no infinite pulses, decorative parallax, overshoot spectacle, or motion that delays study actions.
 
-## Motion and interaction
+## Screen-by-screen structure
 
-- Use short, purposeful Compose transitions: 160ms fast feedback, ~220ms state changes, ~300ms layout changes. Use spring motion only for small selection/press feedback.
-- Animate progress changes, task completion, filter selection, timer state and screen transitions; preserve state and keep final values readable without motion.
-- Respect Android system animation/reduced-motion preferences. Avoid infinite pulses, parallax, auto-advancing carousels, and animation that delays a study action.
-- Provide haptic feedback only for meaningful actions; retain semantics, content descriptions and screen-reader state descriptions. Use Material controls and accessible hit areas.
-
-## Screen patterns
-
-- **Dashboard:** Greeting and exam context → one recommended/selected study focus with a clear timer CTA → today’s persisted study/goal summary → daily consistency and today’s tasks → weak-chapter attention when real evidence exists.
-- **Syllabus:** Subject selection → subject progress from actual chapter data → compact status filters and search → chapter rows with transparent completion/confidence status.
-- **Tasks:** Remaining/completed summary → filters → grouped, scannable tasks → obvious add action. Completion is reversible and acknowledged.
-- **Focus timer:** Session context, accessible timer ring, clear start/pause/reset actions, compact duration presets, actual recent sessions. Do not animate the ring continuously when paused.
-- **Analytics/revision/AI/settings:** Reuse the same background, card language, typography, top bar and navigation. Data visualizations must distinguish measured values from estimates and handle empty states honestly.
+- **Home:** Compact greeting/context → one clear next-study-action panel → real daily goal/study summary → consistency and a short Today task list → weak chapter only when real signal exists.
+- **Tasks:** Completed/remaining summary → truthful filters/count scopes → Today/Upcoming/Completed groups → independent check and details targets → reachable add-task form.
+- **Focus:** Session context → responsive progress ring/time → large start/pause/resume action → duration presets/custom → real recent sessions.
+- **Syllabus:** Subject → succinct progress → persistent search and filters → dominant chapter list with actual completion/weak/due/time metadata.
+- **Chapter:** Chapter/mastery summary → real question availability and practice CTA → topic checklist; do not pretend generic checkpoint copy is lesson content.
+- **Practice:** Question progress → readable math prompt/options → result/explanation → stable safe-area action dock and accessible jump/bookmark surfaces.
+- **Notes:** Local notes library with search and one create action; editor preserves existing autosave/tags. Do not call it scheduled revision.
+- **Mistakes:** Real unresolved count/import status → scannable mistake records → reveal saved solution → type/resolve actions; no fabricated answers.
+- **Assessment:** Setup → one question at a time → truthful completion summary/history. Preserve question pools, attempt calculations, negative marks and existing records.
+- **Analytics:** Existing metrics, review, readable 14-day activity, subjects, chapter evidence, mistake patterns; distinguish no baseline from measured zero.
+- **Daily log:** Month/consistency summary → accessible calendar → selected-day details; only today is editable/completable; separate local save and cloud backup.
+- **AI:** Clear readiness, study-data actions and coach entry; readable grouped transcript, keyboard-safe composer and reader-aware streaming; history is local and settings retain secret safety.
+- **Settings/account/notifications:** Group destinations by purpose; distinguish optional account/cloud from offline use; make permission, channel, sync, backup and schedule states precise and actions independently accessible.
 
 ## Avoid
 
-- Generic marketing patterns such as testimonials/carousels in the study workflow.
-- Decorative glass blur, neon glow, oversized gradients, random color per card, emoji icons, confetti, fake streaks, fake metrics or text below accessible contrast.
-- Relying on color alone for states; use labels/icons/semantics as well.
+Token-only recolors; squarish full-width bottom nav; generic productivity clutter; data and labels below legibility; repeated bordered cards with equal emphasis; hidden or misleading action outcomes; fake data; inaccessible nested click targets; focus CTAs implying context transfer; high-motion loops; new cloud requirements, permissions, data schemas or features without user approval.

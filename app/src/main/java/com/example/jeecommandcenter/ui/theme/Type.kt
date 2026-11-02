@@ -9,94 +9,19 @@ import androidx.compose.ui.unit.sp
 private val AppFont = FontFamily.SansSerif
 
 val AppTypography = Typography(
-    displayLarge = TextStyle(
-        fontFamily = AppFont,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 34.sp,
-        color = TextPrimary
-    ),
-    displayMedium = TextStyle(
-        fontFamily = AppFont,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 30.sp,
-        color = TextPrimary
-    ),
-    displaySmall = TextStyle(
-        fontFamily = AppFont,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 28.sp,
-        color = TextPrimary
-    ),
-    headlineLarge = TextStyle(
-        fontFamily = AppFont,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 26.sp,
-        color = TextPrimary
-    ),
-    headlineMedium = TextStyle(
-        fontFamily = AppFont,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 23.sp,
-        color = TextPrimary
-    ),
-    headlineSmall = TextStyle(
-        fontFamily = AppFont,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 21.sp,
-        color = TextPrimary
-    ),
-    titleLarge = TextStyle(
-        fontFamily = AppFont,
-        fontWeight = FontWeight.Medium,
-        fontSize = 20.sp,
-        color = TextPrimary
-    ),
-    titleMedium = TextStyle(
-        fontFamily = AppFont,
-        fontWeight = FontWeight.Medium,
-        fontSize = 16.sp,
-        color = TextPrimary
-    ),
-    titleSmall = TextStyle(
-        fontFamily = AppFont,
-        fontWeight = FontWeight.Medium,
-        fontSize = 14.sp,
-        color = TextPrimary
-    ),
-    bodyLarge = TextStyle(
-        fontFamily = AppFont,
-        fontWeight = FontWeight.Normal,
-        fontSize = 16.sp,
-        color = TextOnCard
-    ),
-    bodyMedium = TextStyle(
-        fontFamily = AppFont,
-        fontWeight = FontWeight.Normal,
-        fontSize = 14.sp,
-        color = TextSecondary
-    ),
-    bodySmall = TextStyle(
-        fontFamily = AppFont,
-        fontWeight = FontWeight.Normal,
-        fontSize = 12.sp,
-        color = TextSecondary
-    ),
-    labelLarge = TextStyle(
-        fontFamily = AppFont,
-        fontWeight = FontWeight.Medium,
-        fontSize = 14.sp,
-        color = TextOnCard
-    ),
-    labelMedium = TextStyle(
-        fontFamily = AppFont,
-        fontWeight = FontWeight.Medium,
-        fontSize = 12.sp,
-        color = TextSecondary
-    ),
-    labelSmall = TextStyle(
-        fontFamily = AppFont,
-        fontWeight = FontWeight.Normal,
-        fontSize = 11.sp,
-        color = TextMuted
-    )
+    displayLarge = TextStyle(fontFamily = AppFont, fontWeight = FontWeight.Bold, fontSize = 38.sp, color = TextPrimary),
+    displayMedium = TextStyle(fontFamily = AppFont, fontWeight = FontWeight.Bold, fontSize = 32.sp, color = TextPrimary),
+    displaySmall = TextStyle(fontFamily = AppFont, fontWeight = FontWeight.Bold, fontSize = 28.sp, color = TextPrimary),
+    headlineLarge = TextStyle(fontFamily = AppFont, fontWeight = FontWeight.Bold, fontSize = 26.sp, color = TextPrimary),
+    headlineMedium = TextStyle(fontFamily = AppFont, fontWeight = FontWeight.SemiBold, fontSize = 23.sp, color = TextPrimary),
+    headlineSmall = TextStyle(fontFamily = AppFont, fontWeight = FontWeight.SemiBold, fontSize = 20.sp, color = TextPrimary),
+    titleLarge = TextStyle(fontFamily = AppFont, fontWeight = FontWeight.SemiBold, fontSize = 20.sp, color = TextPrimary),
+    titleMedium = TextStyle(fontFamily = AppFont, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, color = TextPrimary),
+    titleSmall = TextStyle(fontFamily = AppFont, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = TextPrimary),
+    bodyLarge = TextStyle(fontFamily = AppFont, fontWeight = FontWeight.Normal, fontSize = 16.sp, color = TextPrimary),
+    bodyMedium = TextStyle(fontFamily = AppFont, fontWeight = FontWeight.Normal, fontSize = 14.sp, color = TextSecondary),
+    bodySmall = TextStyle(fontFamily = AppFont, fontWeight = FontWeight.Normal, fontSize = 13.sp, color = TextSecondary),
+    labelLarge = TextStyle(fontFamily = AppFont, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = TextPrimary),
+    labelMedium = TextStyle(fontFamily = AppFont, fontWeight = FontWeight.Medium, fontSize = 12.sp, color = TextSecondary),
+    labelSmall = TextStyle(fontFamily = AppFont, fontWeight = FontWeight.Medium, fontSize = 11.sp, color = TextMuted)
 )
