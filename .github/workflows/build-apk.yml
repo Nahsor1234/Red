@@ -67,6 +67,23 @@ jobs:
           fi
           echo "Loaded keystore fingerprint verified."
 
+      # Fork PRs lack the repository's permanent signing secret. Use a disposable
+      # key solely for validation; PR artifacts are never published as releases.
+      - name: Create temporary signing key for pull-request builds
+        if: ${{ github.event_name == 'pull_request' }}
+        run: |
+          mkdir -p "$HOME/.android"
+          keytool -genkeypair -v \
+            -keystore "$HOME/.android/debug.keystore" \
+            -storepass android \
+            -keypass android \
+            -alias androiddebugkey \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US" \
+            -noprompt
+
       - name: Build APK
         run: gradle assembleDebug --stacktrace
 
