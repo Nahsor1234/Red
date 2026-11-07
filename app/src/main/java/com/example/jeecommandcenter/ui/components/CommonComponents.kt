@@ -9,6 +9,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -45,8 +46,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalView
@@ -123,6 +127,35 @@ fun LinearStatBar(
                     drawRoundRect(fillColor, size = Size(width, size.height), cornerRadius = CornerRadius(size.height / 2f))
                 }
             }
+    )
+}
+
+/** Circular progress. The animated sweep is read in the draw phase, so it never re-lays out. */
+@Composable
+fun ProgressRing(
+    progress: Float,
+    modifier: Modifier = Modifier,
+    diameter: Dp = 96.dp,
+    strokeWidth: Dp = 9.dp,
+    trackColor: Color = BgDivider,
+    color: Color = Primary,
+    content: @Composable BoxScope.() -> Unit = {}
+) {
+    val animated = animateFloatAsState(progress.coerceIn(0f, 1f), animationSpec = tween(600), label = "ring")
+    Box(
+        modifier
+            .size(diameter)
+            .drawBehind {
+                val stroke = strokeWidth.toPx()
+                val inset = stroke / 2f
+                val arc = Size(size.width - stroke, size.height - stroke)
+                drawArc(trackColor, 0f, 360f, false, Offset(inset, inset), arc, style = Stroke(stroke))
+                if (animated.value > 0f) {
+                    drawArc(color, -90f, 360f * animated.value, false, Offset(inset, inset), arc, style = Stroke(stroke, cap = StrokeCap.Round))
+                }
+            },
+        contentAlignment = Alignment.Center,
+        content = content
     )
 }
 
