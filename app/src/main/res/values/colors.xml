@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Only what XML needs (window background, launcher icon). Compose colors live in ui/theme/Color.kt. -->
-    <color name="cc_background">#0E1120</color>
-    <color name="cc_primary">#F2B65A</color>
+    <color name="cc_background">#151719</color>
+    <color name="cc_primary">#D4DCE1</color>
 </resources>

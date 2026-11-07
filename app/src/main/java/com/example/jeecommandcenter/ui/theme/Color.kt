@@ -1,34 +1,45 @@
 package com.example.jeecommandcenter.ui.theme
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 
-// "Ink & Lamp" palette: deep blue-black ink surfaces lit by a warm amber accent.
-// All text/surface pairs below meet WCAG AA (4.5:1) for normal text.
+// Brand palette. These six values are the only source colors in the app; every other
+// token below is a tonal variation derived from them with lerp().
+val PaletteBackground = Color(0xFF151719)
+val PaletteSurface = Color(0xFF24282B)
+val PalettePrimary = Color(0xFFA7B3BC)
+val PaletteSecondary = Color(0xFF858F97)
+val PaletteAccent = Color(0xFFD4DCE1)
+val PaletteText = Color(0xFFEDF0F2)
 
-// Surfaces, darkest to lightest.
-val BgAppBase = Color(0xFF0E1120)
+// Surfaces, darkest to lightest. Cards, dialogs and sheets are tonal (no borders needed).
+val BgAppBase = PaletteBackground
 /** Screen scaffolds are transparent; the root surface in MainActivity paints [BgAppBase]. */
 val BgApp = Color.Transparent
-val BgCard = Color(0xFF161A2C)
-val BgCardAlt = Color(0xFF1F2438)
-val BgCardHigh = Color(0xFF2A3150)
-val BgCardBorder = Color(0xFF2C3354)
+val BgCard = PaletteSurface
+val BgCardAlt = lerp(PaletteSurface, PaletteText, 0.05f)
+val BgCardHigh = lerp(PaletteSurface, PaletteText, 0.10f)
+val BgCardBorder = lerp(PaletteSurface, PaletteText, 0.12f)
 val BgDivider = BgCardHigh
-/** Visible outline for interactive controls (3:1 against card surfaces). */
-val OutlineStrong = Color(0xFF6B7499)
+/** Selected / active container: surface lifted toward Primary. */
+val PrimarySoft = lerp(PaletteSurface, PalettePrimary, 0.18f)
+val PrimaryContainerTone = lerp(PaletteSurface, PalettePrimary, 0.26f)
+/** Visible outline for interactive controls (3:1 against Surface). */
+val OutlineStrong = lerp(PaletteSurface, PaletteText, 0.38f)
 
 // Text.
-val TextPrimary = Color(0xFFECEFFA)
-val TextSecondary = Color(0xFFB0B7D3)
-val TextMuted = Color(0xFF8790B3)
+val TextPrimary = PaletteText
+val TextSecondary = PalettePrimary
+/** Secondary lifted 25% toward Text so small captions keep 4.5:1 on raised surfaces. */
+val TextMuted = lerp(PaletteSecondary, PaletteText, 0.25f)
 
 // Accents.
-val Primary = Color(0xFFF2B65A)
-val PrimaryLight = Color(0xFFFFD594)
-val PrimarySoft = Color(0xFF332A1A)
-val OnPrimary = Color(0xFF2A1A00)
-val Success = Color(0xFF5FD3A1)
-val OnSuccess = Color(0xFF06281B)
-val Warning = Color(0xFFF2C94C)
-val Danger = Color(0xFFF2777F)
-val OnDanger = Color(0xFF2E0A0D)
+val Primary = PalettePrimary
+val PrimaryLight = PaletteAccent
+val OnPrimary = PaletteBackground
+
+// Status is carried by brightness, labels and icons rather than extra hues.
+val Success = PaletteAccent
+val OnSuccess = PaletteBackground
+val Warning = PaletteText
+val Danger = PaletteText

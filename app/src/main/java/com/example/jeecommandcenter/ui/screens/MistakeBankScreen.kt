@@ -1,12 +1,11 @@
 package com.example.jeecommandcenter.ui.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -54,11 +53,11 @@ fun MistakeBankScreen(learning: LearningRepository, onBack: () -> Unit, onOpenTu
     }) { padding ->
         LazyColumn(Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             if (mistakes.isEmpty()) {
-                item { Column(Modifier.fillMaxWidth().clip(JeeShapes.medium).background(BgCard).border(JeeSurfaceTokens.borderWidth,BgCardBorder.copy(alpha=JeeSurfaceTokens.cardBorderAlpha),JeeShapes.medium).padding(18.dp)) { Text("No unresolved mistakes", style = MaterialTheme.typography.titleMedium); Text("Incorrect answers from Chapter Practice, Tests & Mocks, and supported quizzes appear here automatically.", color = TextMuted, fontSize = 12.sp) } }
+                item { Column(Modifier.fillMaxWidth().clip(JeeShapes.medium).background(BgCard).padding(18.dp)) { Text("No unresolved mistakes", style = MaterialTheme.typography.titleMedium); Text("Incorrect answers from Chapter Practice, Tests & Mocks, and supported quizzes appear here automatically.", color = TextMuted, fontSize = 12.sp) } }
             } else items(mistakes, key = { it.id }) { mistake -> MistakeCard(mistake, learning) { refresh++ } }
             item {
                 Button(onClick = onOpenTutor, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Primary)) {
-                    Icon(Icons.Filled.AutoAwesome, null); Spacer(Modifier.width(7.dp)); Text("Ask AI about my mistakes")
+                    Icon(Icons.Rounded.AutoAwesome, null); Spacer(Modifier.width(7.dp)); Text("Ask AI about my mistakes")
                 }
             }
             item { Spacer(Modifier.height(24.dp)) }
@@ -72,7 +71,7 @@ private fun MistakeCard(mistake: MistakeRecord, learning: LearningRepository, on
     val chapterName = JeeCatalog.find(mistake.chapterId)?.name ?: mistake.chapterId.replace("_", " ").replaceFirstChar { it.uppercase() }
     val sourceLabel = when (mistake.source.lowercase()) { "practice" -> "Chapter Practice"; "assessment" -> "Tests & Mocks"; else -> mistake.source.replaceFirstChar { it.uppercase() } }
     var typeMenu by remember { mutableStateOf(false) }
-    Column(Modifier.fillMaxWidth().clip(JeeShapes.medium).background(BgCard).border(JeeSurfaceTokens.borderWidth,BgCardBorder.copy(alpha=JeeSurfaceTokens.cardBorderAlpha),JeeShapes.medium).padding(14.dp)) {
+    Column(Modifier.fillMaxWidth().clip(JeeShapes.medium).background(BgCard).padding(14.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Column(Modifier.weight(1f)) { Text(mistake.subject + " · " + chapterName + " · " + sourceLabel, color = PrimaryLight, fontSize = 11.sp); Spacer(Modifier.height(4.dp)); MathMarkdownText(mistake.questionPrompt, modifier = Modifier.fillMaxWidth(), color = TextPrimary, fontSize = MaterialTheme.typography.titleMedium.fontSize, lineHeight = MaterialTheme.typography.titleMedium.lineHeight) }
             Text("×" + mistake.count, color = if (mistake.count >= 2) Warning else TextMuted)

@@ -2,10 +2,10 @@ package com.example.jeecommandcenter.ui.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CloudDone
-import androidx.compose.material.icons.filled.CloudOff
-import androidx.compose.material.icons.filled.Logout
-import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.rounded.CloudDone
+import androidx.compose.material.icons.rounded.CloudOff
+import androidx.compose.material.icons.rounded.Logout
+import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -77,7 +77,7 @@ fun CloudAccountScreen(
             JeeCard(featured = true) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        if (connected) Icons.Filled.CloudDone else Icons.Filled.CloudOff,
+                        if (connected) Icons.Rounded.CloudDone else Icons.Rounded.CloudOff,
                         null,
                         tint = if (connected) Primary else Danger,
                         modifier = Modifier.size(28.dp)
@@ -131,7 +131,7 @@ fun CloudAccountScreen(
                     enabled = !loading && !syncing,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Icon(Icons.Filled.Sync, null)
+                    Icon(Icons.Rounded.Sync, null)
                     Spacer(Modifier.width(8.dp))
                     Text("Sync now")
                 }
@@ -156,7 +156,7 @@ fun CloudAccountScreen(
                     enabled = !loading && !syncing,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Icon(Icons.Filled.Logout, null)
+                    Icon(Icons.Rounded.Logout, null)
                     Spacer(Modifier.width(8.dp))
                     Text("Sign out")
                 }

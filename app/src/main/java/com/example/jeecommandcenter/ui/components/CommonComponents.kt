@@ -18,24 +18,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AssignmentTurnedIn
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.MenuBook
-import androidx.compose.material.icons.filled.Timer
-import androidx.compose.material.icons.outlined.AssignmentTurnedIn
-import androidx.compose.material.icons.outlined.AutoAwesome
-import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.MenuBook
-import androidx.compose.material.icons.outlined.Timer
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
@@ -51,8 +38,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
@@ -61,29 +46,17 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.jeecommandcenter.ui.theme.BgCard
 import com.example.jeecommandcenter.ui.theme.BgCardAlt
-import com.example.jeecommandcenter.ui.theme.BgCardBorder
 import com.example.jeecommandcenter.ui.theme.BgDivider
 import com.example.jeecommandcenter.ui.theme.JeeShapes
-import com.example.jeecommandcenter.ui.theme.JeeSurfaceTokens
 import com.example.jeecommandcenter.ui.theme.OnPrimary
 import com.example.jeecommandcenter.ui.theme.OnSuccess
 import com.example.jeecommandcenter.ui.theme.OutlineStrong
 import com.example.jeecommandcenter.ui.theme.Primary
 import com.example.jeecommandcenter.ui.theme.PrimaryLight
-import com.example.jeecommandcenter.ui.theme.PrimarySoft
 import com.example.jeecommandcenter.ui.theme.Success
 import com.example.jeecommandcenter.ui.theme.TextMuted
 import com.example.jeecommandcenter.ui.theme.TextPrimary
 import com.example.jeecommandcenter.ui.theme.TextSecondary
-
-/** Top-level destinations. STATS is the study timer. */
-enum class AppTab(val label: String, val selectedIcon: ImageVector, val icon: ImageVector) {
-    HOME("Home", Icons.Filled.Home, Icons.Outlined.Home),
-    SYLLABUS("Syllabus", Icons.Filled.MenuBook, Icons.Outlined.MenuBook),
-    AI("AI", Icons.Filled.AutoAwesome, Icons.Outlined.AutoAwesome),
-    TASKS("Tasks", Icons.Filled.AssignmentTurnedIn, Icons.Outlined.AssignmentTurnedIn),
-    STATS("Timer", Icons.Filled.Timer, Icons.Outlined.Timer)
-}
 
 /** Standard content container. [featured] raises the surface and warms the border. */
 @Composable
@@ -93,13 +66,11 @@ fun JeeCard(
     content: @Composable ColumnScope.() -> Unit
 ) {
     val shape = if (featured) JeeShapes.large else JeeShapes.medium
-    val border = if (featured) Primary.copy(alpha = 0.35f) else BgCardBorder.copy(alpha = JeeSurfaceTokens.cardBorderAlpha)
     Column(
         modifier
             .fillMaxWidth()
             .clip(shape)
             .background(if (featured) BgCardAlt else BgCard)
-            .border(JeeSurfaceTokens.borderWidth, border, shape)
             .padding(16.dp),
         content = content
     )
@@ -214,7 +185,7 @@ fun TaskCheckbox(done: Boolean, modifier: Modifier = Modifier, onToggle: () -> U
                 .border(1.5.dp, if (done) Success else OutlineStrong, RoundedCornerShape(7.dp)),
             contentAlignment = Alignment.Center
         ) {
-            if (done) Icon(Icons.Filled.Check, contentDescription = null, tint = OnSuccess, modifier = Modifier.size(15.dp))
+            if (done) Icon(Icons.Rounded.Check, contentDescription = null, tint = OnSuccess, modifier = Modifier.size(15.dp))
         }
     }
 }
@@ -258,32 +229,4 @@ fun JeeFilterChip(label: String, selected: Boolean, onClick: () -> Unit) {
             selectedLabelColor = OnPrimary
         )
     )
-}
-
-@Composable
-fun BottomNavBar(selected: AppTab, onTabSelected: (AppTab) -> Unit) {
-    val view = LocalView.current
-    NavigationBar(containerColor = BgCard, contentColor = TextSecondary, tonalElevation = 0.dp) {
-        AppTab.entries.forEach { tab ->
-            val isSelected = tab == selected
-            NavigationBarItem(
-                selected = isSelected,
-                onClick = {
-                    if (!isSelected) {
-                        view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-                        onTabSelected(tab)
-                    }
-                },
-                icon = { Icon(if (isSelected) tab.selectedIcon else tab.icon, contentDescription = null) },
-                label = { Text(tab.label, style = MaterialTheme.typography.labelMedium) },
-                colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = PrimaryLight,
-                    selectedTextColor = PrimaryLight,
-                    indicatorColor = PrimarySoft,
-                    unselectedIconColor = TextSecondary,
-                    unselectedTextColor = TextSecondary
-                )
-            )
-        }
-    }
 }

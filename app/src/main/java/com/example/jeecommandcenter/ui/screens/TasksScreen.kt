@@ -1,12 +1,12 @@
 package com.example.jeecommandcenter.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -53,7 +53,7 @@ fun TasksScreen(repo: JeeRepository) {
                 contentColor = OnPrimary,
                 shape = JeeShapes.medium
             ) {
-                Icon(Icons.Filled.Add, contentDescription = null)
+                Icon(Icons.Rounded.Add, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
                 Text("Add task", style = MaterialTheme.typography.labelLarge)
             }
@@ -70,7 +70,7 @@ fun TasksScreen(repo: JeeRepository) {
                     Text("$openCount open · $plannedMinutes min planned", style = MaterialTheme.typography.bodySmall)
                 }
                 IconButton(onClick = { refresh++ }) {
-                    Icon(Icons.Filled.Refresh, "Refresh", tint = TextSecondary)
+                    Icon(Icons.Rounded.Refresh, "Refresh", tint = TextSecondary)
                 }
             }
             Spacer(Modifier.height(12.dp))
@@ -78,14 +78,16 @@ fun TasksScreen(repo: JeeRepository) {
                 items(TaskFilters) { value -> JeeFilterChip(value, value == filter) { filter = value } }
             }
             Spacer(Modifier.height(12.dp))
-            if (filter != "All") {
-                val count = visible.size
-                JeeCard(featured = true) {
-                    Text(filter, style = MaterialTheme.typography.labelLarge, color = PrimaryLight)
-                    Text("$count ${if (count == 1) "task" else "tasks"}", style = MaterialTheme.typography.titleLarge)
-                    Text("${visible.sumOf { it.durationMin }} minutes planned", style = MaterialTheme.typography.labelMedium)
+            AnimatedVisibility(visible = filter != "All") {
+                Column {
+                    val count = visible.size
+                    JeeCard(featured = true) {
+                        Text(filter, style = MaterialTheme.typography.labelLarge, color = PrimaryLight)
+                        Text("$count ${if (count == 1) "task" else "tasks"}", style = MaterialTheme.typography.titleLarge)
+                        Text("${visible.sumOf { it.durationMin }} minutes planned", style = MaterialTheme.typography.labelMedium)
+                    }
+                    Spacer(Modifier.height(4.dp))
                 }
-                Spacer(Modifier.height(4.dp))
             }
             LazyColumn(
                 Modifier.weight(1f),
@@ -164,7 +166,6 @@ private fun TaskListItem(task: AppTask, onOpen: (AppTask) -> Unit, onToggle: (Ap
             .fillMaxWidth()
             .clip(JeeShapes.medium)
             .background(BgCard)
-            .border(1.dp, BgCardBorder.copy(alpha = JeeSurfaceTokens.cardBorderAlpha), JeeShapes.medium)
             .premiumClick { onOpen(task) }
             .padding(start = 6.dp, end = 14.dp, top = 6.dp, bottom = 6.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -190,7 +191,7 @@ private fun TaskListItem(task: AppTask, onOpen: (AppTask) -> Unit, onToggle: (Ap
                 }
             }
         }
-        Icon(Icons.Filled.ChevronRight, "Open task", tint = TextMuted)
+        Icon(Icons.Rounded.ChevronRight, "Open task", tint = TextMuted)
     }
 }
 
@@ -201,7 +202,7 @@ private fun LazyListScope.emptyTaskState() {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            Icon(Icons.Filled.AssignmentTurnedIn, null, tint = TextMuted, modifier = Modifier.size(36.dp))
+            Icon(Icons.Rounded.AssignmentTurnedIn, null, tint = TextMuted, modifier = Modifier.size(36.dp))
             Text("Nothing here yet", style = MaterialTheme.typography.titleMedium)
             Text("Add a task when you know what you want to study.", style = MaterialTheme.typography.bodySmall)
         }
@@ -233,7 +234,6 @@ private fun AddTaskDialog(repo: JeeRepository, onDone: () -> Unit) {
                 .wrapContentHeight()
                 .clip(JeeShapes.large)
                 .background(BgCardAlt)
-                .border(1.dp, BgCardBorder.copy(alpha = .9f), JeeShapes.large)
                 .padding(horizontal = 20.dp, vertical = 18.dp)
         ) {
             Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
@@ -241,7 +241,7 @@ private fun AddTaskDialog(repo: JeeRepository, onDone: () -> Unit) {
                     Text("Add task", style = MaterialTheme.typography.headlineSmall)
                     Text("Create a focused study block", style = MaterialTheme.typography.bodySmall)
                 }
-                IconButton(onClick = onDone) { Icon(Icons.Filled.Close, "Close") }
+                IconButton(onClick = onDone) { Icon(Icons.Rounded.Close, "Close") }
             }
             Spacer(Modifier.height(14.dp))
             FieldLabel("Task")
@@ -297,7 +297,7 @@ private fun AddTaskDialog(repo: JeeRepository, onDone: () -> Unit) {
                     onClick = { minutes?.let { repo.addTask(title.trim(), subject, it, due, null, activity); onDone() } },
                     shape = JeeShapes.medium
                 ) {
-                    Icon(Icons.Filled.Add, null, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Rounded.Add, null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
                     Text("Add task")
                 }

@@ -13,7 +13,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -172,12 +172,12 @@ fun ChapterQuestionPracticeScreen(
                             onClick = { showBookmarkedQuestions = true },
                             enabled = chapterBookmarkCount > 0
                         ) {
-                            Icon(Icons.Filled.Bookmark, null, modifier = Modifier.size(17.dp))
+                            Icon(Icons.Rounded.Bookmark, null, modifier = Modifier.size(17.dp))
                             Spacer(Modifier.width(3.dp))
                             Text("Saved $chapterBookmarkCount", fontSize = 11.sp, maxLines = 1)
                         }
                         TextButton(onClick = ::openCurrentQuestionInAi, enabled = question != null) {
-                            Icon(Icons.Filled.AutoAwesome, null, modifier = Modifier.size(17.dp))
+                            Icon(Icons.Rounded.AutoAwesome, null, modifier = Modifier.size(17.dp))
                             Spacer(Modifier.width(3.dp))
                             Text("AI Tutor", fontSize = 11.sp, maxLines = 1)
                         }
@@ -235,7 +235,7 @@ fun ChapterQuestionPracticeScreen(
                             modifier = Modifier.weight(1f).height(48.dp),
                             contentPadding = PaddingValues(horizontal = 5.dp)
                         ) {
-                            Icon(Icons.Filled.ChevronLeft, null, modifier = Modifier.size(18.dp))
+                            Icon(Icons.Rounded.ChevronLeft, null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(2.dp))
                             Text("Previous", maxLines = 1, fontSize = 12.sp)
                         }
@@ -250,7 +250,7 @@ fun ChapterQuestionPracticeScreen(
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Icon(
-                                    if (bookmarked) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder,
+                                    if (bookmarked) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
                                     contentDescription = if (bookmarked) "Remove bookmark" else "Bookmark question",
                                     tint = if (bookmarked) PrimaryLight else TextSecondary,
                                     modifier = Modifier.size(21.dp)
@@ -268,7 +268,7 @@ fun ChapterQuestionPracticeScreen(
                             Text(if (index < questions.lastIndex) "Next" else "Finish", maxLines = 1, fontSize = 12.sp)
                             Spacer(Modifier.width(2.dp))
                             Icon(
-                                if (index < questions.lastIndex) Icons.Filled.ChevronRight else Icons.Filled.Check,
+                                if (index < questions.lastIndex) Icons.Rounded.ChevronRight else Icons.Rounded.Check,
                                 null,
                                 modifier = Modifier.size(18.dp)
                             )
@@ -332,7 +332,7 @@ fun ChapterQuestionPracticeScreen(
                             )
                         }
                         TextButton(onClick = { showQuestionPicker = true }) {
-                            Icon(Icons.Filled.GridView, null, modifier = Modifier.size(18.dp))
+                            Icon(Icons.Rounded.GridView, null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(5.dp))
                             Text("Jump")
                         }
@@ -370,7 +370,7 @@ fun ChapterQuestionPracticeScreen(
                             Column(Modifier.padding(15.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(
-                                        if (correct) Icons.Filled.CheckCircle else Icons.Filled.ErrorOutline,
+                                        if (correct) Icons.Rounded.CheckCircle else Icons.Rounded.ErrorOutline,
                                         null,
                                         tint = if (correct) PrimaryLight else Danger,
                                         modifier = Modifier.size(21.dp)
@@ -396,7 +396,7 @@ fun ChapterQuestionPracticeScreen(
                                                 verticalAlignment = Alignment.CenterVertically,
                                                 horizontalArrangement = Arrangement.spacedBy(4.dp)
                                             ) {
-                                                Icon(Icons.Filled.Flag, null, tint = PrimaryLight, modifier = Modifier.size(14.dp))
+                                                Icon(Icons.Rounded.Flag, null, tint = PrimaryLight, modifier = Modifier.size(14.dp))
                                                 Text(
                                                     selectedMistakeType?.let(::mistakeTypeLabel) ?: "Tag mistake",
                                                     color = TextPrimary,
@@ -423,9 +423,9 @@ fun ChapterQuestionPracticeScreen(
                                         .padding(horizontal = 13.dp, vertical = 9.dp)
                                 ) {
                                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                        Icon(Icons.Filled.AutoAwesome, null, tint = PrimaryLight, modifier = Modifier.size(16.dp))
+                                        Icon(Icons.Rounded.AutoAwesome, null, tint = PrimaryLight, modifier = Modifier.size(16.dp))
                                         Text("Discuss with AI Tutor", color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-                                        Icon(Icons.Filled.ArrowForward, null, tint = TextSecondary, modifier = Modifier.size(14.dp))
+                                        Icon(Icons.Rounded.ArrowForward, null, tint = TextSecondary, modifier = Modifier.size(14.dp))
                                     }
                                 }
                             }
@@ -507,12 +507,12 @@ fun ChapterQuestionPracticeScreen(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                                 ) {
-                                    Icon(Icons.Filled.Bookmark, null, tint = PrimaryLight)
+                                    Icon(Icons.Rounded.Bookmark, null, tint = PrimaryLight)
                                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                                         Text("Question ${questionIndex + 1}", fontWeight = FontWeight.SemiBold)
                                         Text(savedQuestion.prompt, color = TextSecondary, fontSize = 12.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
                                     }
-                                    Icon(Icons.Filled.ChevronRight, null, tint = TextSecondary)
+                                    Icon(Icons.Rounded.ChevronRight, null, tint = TextSecondary)
                                 }
                             }
                         }
@@ -584,7 +584,7 @@ fun ChapterQuestionPracticeScreen(
                                 )
                                 if (paletteBookmark) {
                                     Icon(
-                                        Icons.Filled.Bookmark,
+                                        Icons.Rounded.Bookmark,
                                         null,
                                         tint = if (questionIndex == index) BgAppBase else PrimaryLight,
                                         modifier = Modifier.align(Alignment.TopEnd).padding(4.dp).size(12.dp)
@@ -604,7 +604,7 @@ fun ChapterQuestionPracticeScreen(
                         Text("Checked", color = TextSecondary, fontSize = 11.sp)
                     }
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                        Icon(Icons.Filled.Bookmark, null, tint = PrimaryLight, modifier = Modifier.size(12.dp))
+                        Icon(Icons.Rounded.Bookmark, null, tint = PrimaryLight, modifier = Modifier.size(12.dp))
                         Text("Bookmarked", color = TextSecondary, fontSize = 11.sp)
                     }
                 }

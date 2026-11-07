@@ -25,16 +25,16 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Alarm
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Today
+import androidx.compose.material.icons.rounded.Alarm
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Notifications
+import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Today
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -222,7 +222,7 @@ private fun NotificationManagementScreen(onBack: () -> Unit) {
                             "Test was blocked. Check notification permission and the Sigma JEE reminders channel."
                         }
                     }) {
-                        Icon(Icons.Filled.Notifications, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Rounded.Notifications, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(6.dp))
                         Text("Send test notification")
                     }
@@ -258,7 +258,7 @@ private fun NotificationManagementScreen(onBack: () -> Unit) {
                         }
                         Spacer(Modifier.height(10.dp))
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Filled.Alarm, contentDescription = null, tint = PrimaryLight, modifier = Modifier.size(18.dp))
+                            Icon(Icons.Rounded.Alarm, contentDescription = null, tint = PrimaryLight, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(7.dp))
                             Text(
                                 formatReminderTime(nextUpcoming.at.hour, nextUpcoming.at.minute),
@@ -293,7 +293,7 @@ private fun NotificationManagementScreen(onBack: () -> Unit) {
                         contentColor = BgAppBase
                     )
                 ) {
-                    Icon(Icons.Filled.Add, contentDescription = "Add reminder", modifier = Modifier.size(23.dp))
+                    Icon(Icons.Rounded.Add, contentDescription = "Add reminder", modifier = Modifier.size(23.dp))
                 }
             }
 
@@ -310,7 +310,7 @@ private fun NotificationManagementScreen(onBack: () -> Unit) {
             if (!notificationsAllowed || !appNotificationsEnabled || !reminderChannelEnabled) {
                 JeeCard {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Filled.Notifications, null, tint = PrimaryLight, modifier = Modifier.size(22.dp))
+                        Icon(Icons.Rounded.Notifications, null, tint = PrimaryLight, modifier = Modifier.size(22.dp))
                         Spacer(Modifier.width(10.dp))
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                             Text("Notification delivery is blocked", fontWeight = FontWeight.SemiBold)
@@ -343,7 +343,7 @@ private fun NotificationManagementScreen(onBack: () -> Unit) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !exactAlarmsAllowed) {
                 JeeCard {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Filled.Alarm, null, tint = PrimaryLight, modifier = Modifier.size(22.dp))
+                        Icon(Icons.Rounded.Alarm, null, tint = PrimaryLight, modifier = Modifier.size(22.dp))
                         Spacer(Modifier.width(10.dp))
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                             Text("Precise alarm access is off", fontWeight = FontWeight.SemiBold)
@@ -423,22 +423,22 @@ private fun CustomReminderActions(
     var menuExpanded by remember(reminder.id) { mutableStateOf(false) }
     Box {
         IconButton(onClick = { menuExpanded = true }, modifier = Modifier.size(30.dp)) {
-            Icon(Icons.Filled.MoreVert, contentDescription = "Reminder options", tint = TextSecondary, modifier = Modifier.size(19.dp))
+            Icon(Icons.Rounded.MoreVert, contentDescription = "Reminder options", tint = TextSecondary, modifier = Modifier.size(19.dp))
         }
         DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
             DropdownMenuItem(
                 text = { Text("Edit") },
-                leadingIcon = { Icon(Icons.Filled.Edit, null) },
+                leadingIcon = { Icon(Icons.Rounded.Edit, null) },
                 onClick = { menuExpanded = false; onEdit() }
             )
             DropdownMenuItem(
                 text = { Text(if (reminder.enabled) "Turn off" else "Turn on") },
-                leadingIcon = { Icon(Icons.Filled.Notifications, null) },
+                leadingIcon = { Icon(Icons.Rounded.Notifications, null) },
                 onClick = { menuExpanded = false; onToggleEnabled(!reminder.enabled) }
             )
             DropdownMenuItem(
                 text = { Text("Delete") },
-                leadingIcon = { Icon(Icons.Filled.Delete, null, tint = Danger) },
+                leadingIcon = { Icon(Icons.Rounded.Delete, null, tint = Danger) },
                 onClick = { menuExpanded = false; onDelete() }
             )
         }
@@ -455,17 +455,17 @@ private fun SystemReminderActions(
     var expanded by remember(title) { mutableStateOf(false) }
     Box {
         IconButton(onClick = { expanded = true }, modifier = Modifier.size(30.dp)) {
-            Icon(Icons.Filled.MoreVert, contentDescription = "$title options", tint = TextSecondary, modifier = Modifier.size(19.dp))
+            Icon(Icons.Rounded.MoreVert, contentDescription = "$title options", tint = TextSecondary, modifier = Modifier.size(19.dp))
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             DropdownMenuItem(
                 text = { Text("Change time") },
-                leadingIcon = { Icon(Icons.Filled.Alarm, null) },
+                leadingIcon = { Icon(Icons.Rounded.Alarm, null) },
                 onClick = { expanded = false; onChangeTime() }
             )
             DropdownMenuItem(
                 text = { Text(if (enabled) "Turn off" else "Turn on") },
-                leadingIcon = { Icon(Icons.Filled.Notifications, null) },
+                leadingIcon = { Icon(Icons.Rounded.Notifications, null) },
                 onClick = { expanded = false; onToggle(!enabled) }
             )
         }
@@ -781,7 +781,7 @@ private fun CustomReminderDialog(
                         Text("Add it to your study routine.", color = TextSecondary, fontSize = 12.sp)
                     }
                     IconButton(onClick = onDismiss) {
-                        Icon(Icons.Filled.Close, contentDescription = "Close reminder editor", tint = TextMuted)
+                        Icon(Icons.Rounded.Close, contentDescription = "Close reminder editor", tint = TextMuted)
                     }
                 }
 
@@ -816,7 +816,7 @@ private fun CustomReminderDialog(
                             onClick = { repeatMode = CustomReminder.REPEAT_DAILY },
                             label = { Text("Daily") },
                             leadingIcon = if (repeatMode == CustomReminder.REPEAT_DAILY) {
-                                { Icon(Icons.Filled.CheckCircle, null, modifier = Modifier.size(16.dp)) }
+                                { Icon(Icons.Rounded.CheckCircle, null, modifier = Modifier.size(16.dp)) }
                             } else null
                         )
                         FilterChip(
@@ -824,7 +824,7 @@ private fun CustomReminderDialog(
                             onClick = { repeatMode = CustomReminder.REPEAT_ONCE },
                             label = { Text("Once") },
                             leadingIcon = if (repeatMode == CustomReminder.REPEAT_ONCE) {
-                                { Icon(Icons.Filled.CheckCircle, null, modifier = Modifier.size(16.dp)) }
+                                { Icon(Icons.Rounded.CheckCircle, null, modifier = Modifier.size(16.dp)) }
                             } else null
                         )
                     }
@@ -863,7 +863,7 @@ private fun CustomReminderDialog(
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
                             shape = JeeShapes.medium
                         ) {
-                            Icon(Icons.Filled.Today, null, modifier = Modifier.size(17.dp), tint = PrimaryLight)
+                            Icon(Icons.Rounded.Today, null, modifier = Modifier.size(17.dp), tint = PrimaryLight)
                             Spacer(Modifier.width(6.dp))
                             Text(
                                 scheduledDate.format(DateTimeFormatter.ofPattern("d MMM yy", Locale.getDefault())),
@@ -880,7 +880,7 @@ private fun CustomReminderDialog(
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
                             shape = JeeShapes.medium
                         ) {
-                            Icon(Icons.Filled.Alarm, null, modifier = Modifier.size(17.dp), tint = PrimaryLight)
+                            Icon(Icons.Rounded.Alarm, null, modifier = Modifier.size(17.dp), tint = PrimaryLight)
                             Spacer(Modifier.width(6.dp))
                             Text(formatReminderTime(hour, minute), fontSize = 12.sp, maxLines = 1)
                         }

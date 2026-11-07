@@ -1,11 +1,10 @@
 package com.example.jeecommandcenter.ui.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -66,14 +65,13 @@ fun AiSettingsScreen(context: android.content.Context, onBack: () -> Unit) {
                             OutlinedButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth()) {
                                 Text(config.provider.label)
                                 Spacer(Modifier.weight(1f))
-                                Icon(Icons.Filled.ExpandMore, null)
+                                Icon(Icons.Rounded.ExpandMore, null)
                             }
                             DropdownMenu(
                                 expanded = expanded,
                                 onDismissRequest = { expanded = false },
                                 modifier = Modifier
                                     .background(BgCardAlt, JeeShapes.medium)
-                                    .border(1.dp, BgCardBorder.copy(alpha = .95f), JeeShapes.medium)
                                     .padding(vertical = 5.dp)
                             ) {
                                 AiProvider.entries.forEach { provider ->
@@ -163,7 +161,7 @@ fun AiSettingsScreen(context: android.content.Context, onBack: () -> Unit) {
                         supportingContent = { Text(if (settings.hasApiKey()) "JeE can use the analysis and tutor actions." else "The AI action center will show configuration guidance.") },
                         leadingContent = {
                             Icon(
-                                if (settings.hasApiKey()) Icons.Filled.CheckCircle else Icons.Filled.CloudOff,
+                                if (settings.hasApiKey()) Icons.Rounded.CheckCircle else Icons.Rounded.CloudOff,
                                 null,
                                 tint = if (settings.hasApiKey()) Success else TextMuted
                             )
@@ -189,7 +187,7 @@ fun AiSettingsScreen(context: android.content.Context, onBack: () -> Unit) {
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     if (busy) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                    else Icon(Icons.Filled.NetworkCheck, null)
+                    else Icon(Icons.Rounded.NetworkCheck, null)
                     Spacer(Modifier.width(8.dp))
                     Text(if (busy) "Testing..." else "Test connection")
                 }
@@ -203,7 +201,7 @@ fun AiSettingsScreen(context: android.content.Context, onBack: () -> Unit) {
                 AssistChip(
                     onClick = {},
                     label = { Text("API keys never go into backups") },
-                    leadingIcon = { Icon(Icons.Filled.Security, null, modifier = Modifier.size(16.dp)) }
+                    leadingIcon = { Icon(Icons.Rounded.Security, null, modifier = Modifier.size(16.dp)) }
                 )
             }
             item { Spacer(Modifier.height(24.dp)) }

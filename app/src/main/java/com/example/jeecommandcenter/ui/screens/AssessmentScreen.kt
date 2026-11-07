@@ -7,7 +7,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -152,7 +152,7 @@ fun AssessmentScreen(learning: LearningRepository, jee: JeeRepository, onBack: (
         JeeTopBar(
             title = when (state) { AssessmentState.SETUP -> "Tests & Mocks"; AssessmentState.RUNNING -> if (mode == TestMode.MOCK) "Starter mock" else "Practice test"; AssessmentState.RESULT -> "Test results" },
             onBack = onBack,
-            trailing = { if (state == AssessmentState.SETUP) TextButton(onClick = onOpenHistory) { Icon(Icons.Filled.History, null, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(4.dp)); Text("History", fontSize = 12.sp) } }
+            trailing = { if (state == AssessmentState.SETUP) TextButton(onClick = onOpenHistory) { Icon(Icons.Rounded.History, null, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(4.dp)); Text("History", fontSize = 12.sp) } }
         )
     }) { padding ->
         when (state) {
@@ -203,7 +203,7 @@ private fun SetupContent(
     loadMessage: String?
 ) {
     LazyColumn(modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        item { Column(Modifier.fillMaxWidth().clip(JeeShapes.medium).background(BgCardAlt).border(JeeSurfaceTokens.borderWidth,BgCardBorder.copy(alpha=JeeSurfaceTokens.cardBorderAlpha),JeeShapes.medium).padding(16.dp)) { Text("Tests & Mocks", style = MaterialTheme.typography.titleLarge); Spacer(Modifier.height(6.dp)); Text("Build a short practice test, take a starter mock, or create a quiz with AI. Your attempts feed your progress and Mistake Bank.", color = TextMuted, fontSize = 11.sp) } }
+        item { Column(Modifier.fillMaxWidth().clip(JeeShapes.medium).background(BgCardAlt).padding(16.dp)) { Text("Tests & Mocks", style = MaterialTheme.typography.titleLarge); Spacer(Modifier.height(6.dp)); Text("Build a short practice test, take a starter mock, or create a quiz with AI. Your attempts feed your progress and Mistake Bank.", color = TextMuted, fontSize = 11.sp) } }
         item { Text("Mode", color = TextSecondary, fontSize = 12.sp); Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { JeeFilterChip("Practice", mode == TestMode.PRACTICE) { onMode(TestMode.PRACTICE) }; JeeFilterChip("Starter mock", mode == TestMode.MOCK) { onMode(TestMode.MOCK) } } }
         if (mode == TestMode.PRACTICE) item { Text("Subject", color = TextSecondary, fontSize = 12.sp); Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { listOf("Physics", "Chemistry", "Mathematics").forEach { JeeFilterChip(it, subject == it) { onSubject(it) } } } }
         item {
@@ -218,7 +218,7 @@ private fun SetupContent(
                     Spacer(Modifier.width(8.dp))
                     Text("Loading questions…")
                 } else {
-                    Icon(Icons.Filled.PlayArrow, null)
+                    Icon(Icons.Rounded.PlayArrow, null)
                     Spacer(Modifier.width(7.dp))
                     Text(if (mode == TestMode.MOCK) "Start 10-question mock" else "Start 5-question practice")
                 }
@@ -227,8 +227,8 @@ private fun SetupContent(
                 Text(loadMessage, color = TextSecondary, fontSize = 11.sp)
             }
         }
-        item { OutlinedButton(onClick = onCreateAi, enabled = aiAvailable, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Filled.AutoAwesome, null); Spacer(Modifier.width(7.dp)); Text(if (aiAvailable) "Create quiz with AI" else "Configure AI to create quiz") } }
-        item { OutlinedButton(onClick = onOpenMistakes, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Filled.ErrorOutline, null); Spacer(Modifier.width(7.dp)); Text("Open Mistake Bank") } }
+        item { OutlinedButton(onClick = onCreateAi, enabled = aiAvailable, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Rounded.AutoAwesome, null); Spacer(Modifier.width(7.dp)); Text(if (aiAvailable) "Create quiz with AI" else "Configure AI to create quiz") } }
+        item { OutlinedButton(onClick = onOpenMistakes, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Rounded.ErrorOutline, null); Spacer(Modifier.width(7.dp)); Text("Open Mistake Bank") } }
         item { Text("AI quiz generation uses the configured provider and returns structured questions for the existing assessment flow.", color = TextMuted, fontSize = 11.sp) }
     }
 }
@@ -338,7 +338,7 @@ private fun QuestionContent(
 
 @Composable
 private fun ResultContent(modifier: Modifier, correct: Int, total: Int, onRestart: () -> Unit, onMistakes: () -> Unit) {
-    Column(modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) { Column(Modifier.fillMaxWidth().clip(JeeShapes.medium).background(BgCardAlt).border(JeeSurfaceTokens.borderWidth,BgCardBorder.copy(alpha=JeeSurfaceTokens.cardBorderAlpha),JeeShapes.medium).padding(18.dp)) { Text("Test complete", style = MaterialTheme.typography.titleLarge); Spacer(Modifier.height(8.dp)); Text("$correct / $total correct", style = MaterialTheme.typography.headlineMedium); Text(if (total == 0) "No questions recorded" else "${(correct * 100) / total}% accuracy", color = TextSecondary, fontSize = 12.sp) }; Button(onClick = onMistakes, modifier = Modifier.fillMaxWidth()) { Text("Review mistakes") }; OutlinedButton(onClick = onRestart, modifier = Modifier.fillMaxWidth()) { Text("Take another test") } }
+    Column(modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) { Column(Modifier.fillMaxWidth().clip(JeeShapes.medium).background(BgCardAlt).padding(18.dp)) { Text("Test complete", style = MaterialTheme.typography.titleLarge); Spacer(Modifier.height(8.dp)); Text("$correct / $total correct", style = MaterialTheme.typography.headlineMedium); Text(if (total == 0) "No questions recorded" else "${(correct * 100) / total}% accuracy", color = TextSecondary, fontSize = 12.sp) }; Button(onClick = onMistakes, modifier = Modifier.fillMaxWidth()) { Text("Review mistakes") }; OutlinedButton(onClick = onRestart, modifier = Modifier.fillMaxWidth()) { Text("Take another test") } }
 }
 
 private fun CloudQuestion.toAssessmentQuestion() = Question(

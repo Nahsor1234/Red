@@ -6,8 +6,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -85,9 +85,9 @@ fun SharedQuestionOptionRow(
             lineHeight = MaterialTheme.typography.bodyLarge.lineHeight
         )
         if (correctVisible) {
-            androidx.compose.material3.Icon(Icons.Filled.CheckCircle, null, tint = PrimaryLight, modifier = Modifier.size(19.dp))
+            androidx.compose.material3.Icon(Icons.Rounded.CheckCircle, null, tint = PrimaryLight, modifier = Modifier.size(19.dp))
         } else if (wrongSelection) {
-            androidx.compose.material3.Icon(Icons.Filled.ErrorOutline, null, tint = Danger, modifier = Modifier.size(19.dp))
+            androidx.compose.material3.Icon(Icons.Rounded.ErrorOutline, null, tint = Danger, modifier = Modifier.size(19.dp))
         }
     }
 }

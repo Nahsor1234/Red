@@ -1,14 +1,13 @@
 package com.example.jeecommandcenter.ui.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Cloud
-import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.ChevronRight
+import androidx.compose.material.icons.rounded.Cloud
+import androidx.compose.material.icons.rounded.CloudOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -134,7 +133,7 @@ fun SyllabusScreen(
                         Text("Syllabus", style = MaterialTheme.typography.headlineSmall)
                         Spacer(Modifier.width(8.dp))
                         Icon(
-                            if (cloudAvailable) Icons.Filled.Cloud else Icons.Filled.CloudOff,
+                            if (cloudAvailable) Icons.Rounded.Cloud else Icons.Rounded.CloudOff,
                             if (cloudAvailable) "Synced" else "Offline",
                             tint = if (cloudAvailable) PrimaryLight else TextMuted,
                             modifier = Modifier.size(16.dp)
@@ -216,13 +215,12 @@ private fun ChapterRow(chapter: JeeChapter, progress: Float, badge: String?, bad
             .fillMaxWidth()
             .clip(JeeShapes.medium)
             .background(BgCard)
-            .border(1.dp, BgCardBorder.copy(alpha = JeeSurfaceTokens.cardBorderAlpha), JeeShapes.medium)
             .premiumClick(onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         ProgressRing(progress, diameter = 40.dp, strokeWidth = 4.dp, color = if (done) Success else Primary) {
-            if (done) Icon(Icons.Filled.Check, "Complete", tint = Success, modifier = Modifier.size(18.dp))
+            if (done) Icon(Icons.Rounded.Check, "Complete", tint = Success, modifier = Modifier.size(18.dp))
             else Text(chapter.number.toString(), style = MaterialTheme.typography.labelMedium)
         }
         Spacer(Modifier.width(12.dp))
@@ -231,6 +229,6 @@ private fun ChapterRow(chapter: JeeChapter, progress: Float, badge: String?, bad
             Text("${(progress * 100).toInt()}% · ${chapter.estimatedMinutes} min", style = MaterialTheme.typography.labelSmall)
         }
         if (badge != null) Text(badge, style = MaterialTheme.typography.labelSmall, color = badgeColor, modifier = Modifier.padding(horizontal = 6.dp))
-        Icon(Icons.Filled.ChevronRight, "Open chapter", tint = TextMuted, modifier = Modifier.size(20.dp))
+        Icon(Icons.Rounded.ChevronRight, "Open chapter", tint = TextMuted, modifier = Modifier.size(20.dp))
     }
 }

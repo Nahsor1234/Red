@@ -4,9 +4,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material.icons.rounded.Email
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.PersonAdd
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -157,7 +157,7 @@ fun AuthScreen(
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 label = { Text("Email") },
-                leadingIcon = { Icon(Icons.Filled.Email, null) },
+                leadingIcon = { Icon(Icons.Rounded.Email, null) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                 enabled = !busy
             )
@@ -168,7 +168,7 @@ fun AuthScreen(
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 label = { Text("Password") },
-                leadingIcon = { Icon(Icons.Filled.Lock, null) },
+                leadingIcon = { Icon(Icons.Rounded.Lock, null) },
                 visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 enabled = !busy
@@ -181,7 +181,7 @@ fun AuthScreen(
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     label = { Text("Confirm password") },
-                    leadingIcon = { Icon(Icons.Filled.Lock, null) },
+                    leadingIcon = { Icon(Icons.Rounded.Lock, null) },
                     visualTransformation = PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     enabled = !busy
@@ -198,7 +198,7 @@ fun AuthScreen(
             ) {
                 if (busy) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
                 else {
-                    Icon(if (mode == AuthMode.SIGN_UP) Icons.Filled.PersonAdd else Icons.Filled.Lock, null)
+                    Icon(if (mode == AuthMode.SIGN_UP) Icons.Rounded.PersonAdd else Icons.Rounded.Lock, null)
                     Spacer(Modifier.width(8.dp))
                     Text(if (mode == AuthMode.SIGN_IN) "Sign in" else "Create account")
                 }
@@ -210,7 +210,7 @@ fun AuthScreen(
                     enabled = !busy,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Icon(Icons.Filled.Email, null)
+                    Icon(Icons.Rounded.Email, null)
                     Spacer(Modifier.width(8.dp))
                     Text("Resend confirmation email")
                 }

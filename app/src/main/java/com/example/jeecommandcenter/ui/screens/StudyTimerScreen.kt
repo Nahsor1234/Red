@@ -1,6 +1,7 @@
 package com.example.jeecommandcenter.ui.screens
 
 import android.view.HapticFeedbackConstants
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.animation.AnimatedVisibility
@@ -12,11 +13,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.ExpandLess
+import androidx.compose.material.icons.rounded.ExpandMore
+import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -149,9 +150,13 @@ fun StudyTimerScreen(repo: JeeRepository) {
                     modifier = Modifier.fillMaxWidth().height(56.dp),
                     shape = JeeShapes.medium
                 ) {
-                    Icon(if (running) Icons.Filled.Pause else Icons.Filled.PlayArrow, null)
-                    Spacer(Modifier.width(8.dp))
-                    Text(if (running) "Pause" else "Start session", style = MaterialTheme.typography.labelLarge)
+                    Crossfade(targetState = running, label = "timer-action") { isRunning ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(if (isRunning) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, null)
+                            Spacer(Modifier.width(8.dp))
+                            Text(if (isRunning) "Pause" else "Start session", style = MaterialTheme.typography.labelLarge)
+                        }
+                    }
                 }
             }
             item {
@@ -204,7 +209,7 @@ fun StudyTimerScreen(repo: JeeRepository) {
                                         maxLines = 1,
                                         modifier = Modifier.weight(1f)
                                     )
-                                    Icon(if (chapterPickerExpanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, null, tint = TextSecondary, modifier = Modifier.size(20.dp))
+                                    Icon(if (chapterPickerExpanded) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore, null, tint = TextSecondary, modifier = Modifier.size(20.dp))
                                 }
                             }
                             AnimatedVisibility(visible = chapterPickerExpanded && subject != "General") {
@@ -214,7 +219,6 @@ fun StudyTimerScreen(repo: JeeRepository) {
                                         .heightIn(max = 220.dp)
                                         .clip(JeeShapes.medium)
                                         .background(BgAppBase.copy(alpha = .72f))
-                                        .border(1.dp, BgCardBorder, JeeShapes.medium)
                                         .verticalScroll(rememberScrollState())
                                         .padding(vertical = 4.dp)
                                 ) {
@@ -222,7 +226,7 @@ fun StudyTimerScreen(repo: JeeRepository) {
                                         TextButton(onClick = { chapter = value.id; chapterPickerExpanded = false }, modifier = Modifier.fillMaxWidth()) {
                                             Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
                                                 Text("${value.number}. ${value.name}", style = MaterialTheme.typography.bodyMedium, color = if (chapter == value.id) PrimaryLight else TextPrimary, modifier = Modifier.weight(1f))
-                                                if (chapter == value.id) Icon(Icons.Filled.Check, "Selected", tint = PrimaryLight, modifier = Modifier.size(16.dp))
+                                                if (chapter == value.id) Icon(Icons.Rounded.Check, "Selected", tint = PrimaryLight, modifier = Modifier.size(16.dp))
                                             }
                                         }
                                     }
@@ -254,7 +258,6 @@ fun StudyTimerScreen(repo: JeeRepository) {
                             .fillMaxWidth()
                             .clip(JeeShapes.medium)
                             .background(BgCard)
-                            .border(1.dp, BgCardBorder.copy(alpha = .8f), JeeShapes.medium)
                             .padding(horizontal = 14.dp, vertical = 12.dp),
                         Arrangement.SpaceBetween,
                         Alignment.CenterVertically
@@ -305,7 +308,7 @@ private fun Preset(label: String, sub: String, selected: Boolean, modifier: Modi
         modifier
             .clip(JeeShapes.medium)
             .background(if (selected) PrimarySoft else BgCard)
-            .border(1.dp, if (selected) Primary else BgCardBorder.copy(alpha = .8f), JeeShapes.medium)
+            .then(if (selected) Modifier.border(1.dp, Primary, JeeShapes.medium) else Modifier)
             .premiumClick(onClick)
             .padding(vertical = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally

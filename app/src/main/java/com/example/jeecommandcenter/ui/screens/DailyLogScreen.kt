@@ -9,9 +9,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.ChevronLeft
-import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.ChevronLeft
+import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -215,14 +215,14 @@ fun DailyLogScreen(onBack: () -> Unit) {
             JeeCard {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = { visibleMonth = visibleMonth.minusMonths(1); selectedDate = visibleMonth.atDay(1) }) {
-                        Icon(Icons.Filled.ChevronLeft, "Previous month", tint = TextPrimary)
+                        Icon(Icons.Rounded.ChevronLeft, "Previous month", tint = TextPrimary)
                     }
                     Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(visibleMonth.month.getDisplayName(TextStyle.FULL, Locale.getDefault()), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
                         Text(visibleMonth.year.toString(), color = TextMuted, fontSize = 11.sp)
                     }
                     IconButton(onClick = { visibleMonth = visibleMonth.plusMonths(1); selectedDate = visibleMonth.atDay(1) }) {
-                        Icon(Icons.Filled.ChevronRight, "Next month", tint = TextPrimary)
+                        Icon(Icons.Rounded.ChevronRight, "Next month", tint = TextPrimary)
                     }
                 }
                 Spacer(Modifier.height(8.dp))
@@ -267,7 +267,7 @@ fun DailyLogScreen(onBack: () -> Unit) {
                                     Spacer(Modifier.height(2.dp))
                                     if (dateEntry.completed) {
                                         Icon(
-                                            imageVector = Icons.Filled.Check,
+                                            imageVector = Icons.Rounded.Check,
                                             contentDescription = "Completed",
                                             tint = PrimaryLight,
                                             modifier = Modifier.size(13.dp)

@@ -4,12 +4,11 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -46,14 +45,14 @@ fun SettingsScreen(onBack: () -> Unit, onOpenAnalytics: () -> Unit, onOpenAiSett
 
     Scaffold(containerColor = BgApp, topBar = { JeeTopBar(title = "Settings", onBack = onBack) }) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            SettingsCard("Cloud sync", "Supabase connection and cloud syllabus status", Icons.Filled.Cloud, onOpenCloudAccount)
-            SettingsCard("Analytics", "Real performance and study metrics", Icons.Filled.Insights, onOpenAnalytics)
-            SettingsCard("AI configuration", "Provider, model and API key", Icons.Filled.AutoAwesome, onOpenAiSettings)
-            SettingsCard("Notifications", "Daily study and Daily Log reminders", Icons.Filled.Notifications, onOpenNotifications)
+            SettingsCard("Cloud sync", "Supabase connection and cloud syllabus status", Icons.Rounded.Cloud, onOpenCloudAccount)
+            SettingsCard("Analytics", "Real performance and study metrics", Icons.Rounded.Insights, onOpenAnalytics)
+            SettingsCard("AI configuration", "Provider, model and API key", Icons.Rounded.AutoAwesome, onOpenAiSettings)
+            SettingsCard("Notifications", "Daily study and Daily Log reminders", Icons.Rounded.Notifications, onOpenNotifications)
             Spacer(Modifier.height(8.dp))
-            Column(Modifier.fillMaxWidth().clip(JeeShapes.medium).background(BgCard).border(JeeSurfaceTokens.borderWidth,BgCardBorder.copy(alpha=JeeSurfaceTokens.cardBorderAlpha),JeeShapes.medium).padding(14.dp)) {
+            Column(Modifier.fillMaxWidth().clip(JeeShapes.medium).background(BgCard).padding(14.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Filled.Security, "Data protection", tint = Success, modifier = Modifier.size(20.dp))
+                    Icon(Icons.Rounded.Security, "Data protection", tint = Success, modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(10.dp))
                     Text("Data protection", style = MaterialTheme.typography.titleMedium)
                 }
@@ -86,13 +85,13 @@ fun SettingsScreen(onBack: () -> Unit, onOpenAnalytics: () -> Unit, onOpenAiSett
 
 @Composable
 private fun SettingsCard(title: String, subtitle: String, icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit) {
-    Row(Modifier.fillMaxWidth().clip(JeeShapes.medium).background(BgCard).border(JeeSurfaceTokens.borderWidth,BgCardBorder.copy(alpha=JeeSurfaceTokens.cardBorderAlpha),JeeShapes.medium).premiumClick(onClick).padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().clip(JeeShapes.medium).background(BgCard).premiumClick(onClick).padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
         Icon(icon, title, tint = PrimaryLight, modifier = Modifier.size(22.dp))
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.titleMedium)
             Text(subtitle, color = TextMuted, fontSize = 11.sp)
         }
-        Icon(Icons.Filled.ChevronRight, "Open $title", tint = TextMuted)
+        Icon(Icons.Rounded.ChevronRight, "Open $title", tint = TextMuted)
     }
 }

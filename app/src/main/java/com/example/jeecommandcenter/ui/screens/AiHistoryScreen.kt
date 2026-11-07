@@ -1,12 +1,11 @@
 package com.example.jeecommandcenter.ui.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ChatBubbleOutline
+import androidx.compose.material.icons.rounded.ChatBubbleOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -29,7 +28,7 @@ fun AiHistoryScreen(context: android.content.Context, onBack: () -> Unit, onOpen
         if (conversations.isEmpty()) {
             Column(Modifier.fillMaxSize().padding(padding).padding(20.dp), verticalArrangement = Arrangement.Center) {
                 JeeCard {
-                    Icon(Icons.Filled.ChatBubbleOutline, null, tint = PrimaryLight, modifier = Modifier.size(28.dp)); Spacer(Modifier.height(10.dp)); Text("No conversations yet", style = MaterialTheme.typography.titleMedium); Spacer(Modifier.height(5.dp))
+                    Icon(Icons.Rounded.ChatBubbleOutline, null, tint = PrimaryLight, modifier = Modifier.size(28.dp)); Spacer(Modifier.height(10.dp)); Text("No conversations yet", style = MaterialTheme.typography.titleMedium); Spacer(Modifier.height(5.dp))
                     Text("Your AI study-coach conversations will appear here after the first successful response.", color = TextSecondary, fontSize = 12.sp)
                 }
             }
@@ -45,7 +44,7 @@ fun AiHistoryScreen(context: android.content.Context, onBack: () -> Unit, onOpen
 @Composable private fun ConversationCard(conversation: AiConversation, onClick: () -> Unit) {
     val user = conversation.messages.firstOrNull { it.role == "USER" }?.text.orEmpty()
     val latest = conversation.messages.lastOrNull()?.text.orEmpty().replace("\n", " ").take(140)
-    Column(Modifier.fillMaxWidth().clip(JeeShapes.medium).background(BgCard).border(1.dp, BgCardBorder.copy(alpha = .8f), JeeShapes.medium).premiumClick(onClick).padding(15.dp)) {
+    Column(Modifier.fillMaxWidth().clip(JeeShapes.medium).background(BgCard).premiumClick(onClick).padding(15.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text(conversation.title, color = TextPrimary, style = MaterialTheme.typography.titleMedium); Text(SimpleDateFormat("dd MMM, h:mm a", Locale.getDefault()).format(Date(conversation.updatedAt)), color = TextMuted, fontSize = 11.sp) }
         Spacer(Modifier.height(5.dp)); if (user.isNotBlank()) Text(user, color = TextSecondary, fontSize = 11.sp, maxLines = 2); Spacer(Modifier.height(6.dp)); if (latest.isNotBlank()) Text(latest, color = TextMuted, fontSize = 11.sp, maxLines = 2); Spacer(Modifier.height(7.dp)); Text("${conversation.messages.size} messages · Tap to continue", color = PrimaryLight, fontSize = 11.sp)
     }

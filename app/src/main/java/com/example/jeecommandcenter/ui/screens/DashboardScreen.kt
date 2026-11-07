@@ -1,14 +1,20 @@
 package com.example.jeecommandcenter.ui.screens
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -42,7 +48,6 @@ private data class DashboardSnapshot(
 fun DashboardScreen(
     repo: JeeRepository,
     onTabSelected: (AppTab) -> Unit,
-    onAiClick: () -> Unit = {},
     onOpenRevision: () -> Unit = {},
     onOpenSettings: () -> Unit = {},
     onOpenAssessment: () -> Unit = {},
@@ -132,16 +137,16 @@ fun DashboardScreen(
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = onOpenNotifications) {
-                        Icon(Icons.Filled.Notifications, "Notifications", tint = PrimaryLight)
+                        Icon(Icons.Rounded.Notifications, "Notifications", tint = PrimaryLight)
                     }
                     IconButton(onClick = onOpenSettings) {
-                        Icon(Icons.Filled.Settings, "Settings", tint = TextPrimary)
+                        Icon(Icons.Rounded.Settings, "Settings", tint = TextPrimary)
                     }
                 }
             }
 
             // Hero: the one thing to do next.
-            JeeCard(featured = true) {
+            JeeCard(modifier = Modifier.animateContentSize(), featured = true) {
                 Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
                     Text("Up next", style = MaterialTheme.typography.labelLarge, color = PrimaryLight)
                     TextButton(onClick = { showFocusPicker = true }) {
@@ -157,7 +162,7 @@ fun DashboardScreen(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Surface(shape = JeeShapes.pill, color = PrimarySoft) {
                                 Row(Modifier.padding(horizontal = 10.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Filled.Schedule, null, tint = PrimaryLight, modifier = Modifier.size(14.dp))
+                                    Icon(Icons.Rounded.Schedule, null, tint = PrimaryLight, modifier = Modifier.size(14.dp))
                                     Spacer(Modifier.width(6.dp))
                                     Text("${focus.durationMin} min", style = MaterialTheme.typography.labelMedium, color = PrimaryLight)
                                 }
@@ -181,7 +186,7 @@ fun DashboardScreen(
                 }
                 Spacer(Modifier.height(16.dp))
                 Button(onClick = onOpenStudyTimer, modifier = Modifier.fillMaxWidth().height(52.dp), shape = JeeShapes.medium) {
-                    Icon(Icons.Filled.PlayArrow, null, Modifier.size(20.dp))
+                    Icon(Icons.Rounded.PlayArrow, null, Modifier.size(20.dp))
                     Spacer(Modifier.width(8.dp))
                     Text("Start focused session", style = MaterialTheme.typography.labelLarge)
                 }
@@ -193,7 +198,7 @@ fun DashboardScreen(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     ProgressRing(progress = goalProgress, diameter = 108.dp, strokeWidth = 10.dp) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(formatMinutes(todayMinutes), style = MaterialTheme.typography.titleMedium)
+                            AnimatedValue(formatMinutes(todayMinutes)) { Text(it, style = MaterialTheme.typography.titleMedium) }
                             Text(
                                 if (goalMinutes == 0) "No goal set" else "of ${formatMinutes(goalMinutes)}",
                                 style = MaterialTheme.typography.labelSmall
@@ -230,20 +235,16 @@ fun DashboardScreen(
             Spacer(Modifier.height(20.dp))
             SectionHeader("Jump to")
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                QuickAction("Practice", "$questionsAttempted questions", Icons.Filled.Quiz, Modifier.weight(1f), true, onOpenAssessment)
-                QuickAction("Notes", "Your library", Icons.Filled.Description, Modifier.weight(1f), false, onOpenRevision)
-            }
-            Spacer(Modifier.height(10.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                QuickAction("Mistakes", "$unresolvedMistakes unresolved", Icons.Filled.ErrorOutline, Modifier.weight(1f), false, onOpenMistakes)
-                QuickAction("Study", formatMinutes(todayMinutes) + " today", Icons.Filled.Timer, Modifier.weight(1f), false, onOpenStudyTimer)
+                QuickAction("Practice", "$questionsAttempted done", Icons.Rounded.Quiz, Modifier.weight(1f), true, onOpenAssessment)
+                QuickAction("Notes", "Library", Icons.Rounded.Description, Modifier.weight(1f), false, onOpenRevision)
+                QuickAction("Mistakes", "$unresolvedMistakes open", Icons.Rounded.ErrorOutline, Modifier.weight(1f), false, onOpenMistakes)
             }
 
             Spacer(Modifier.height(20.dp))
             JeeCard(modifier = Modifier.clip(JeeShapes.medium).premiumClick(onClick = onOpenDailyLog)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Surface(shape = JeeShapes.small, color = PrimarySoft) {
-                        Icon(Icons.Filled.CalendarMonth, null, tint = PrimaryLight, modifier = Modifier.padding(10.dp).size(22.dp))
+                        Icon(Icons.Rounded.CalendarMonth, null, tint = PrimaryLight, modifier = Modifier.padding(10.dp).size(22.dp))
                     }
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
@@ -253,7 +254,7 @@ fun DashboardScreen(
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
-                    Icon(Icons.Filled.ChevronRight, "Open Daily Progress", tint = PrimaryLight)
+                    Icon(Icons.Rounded.ChevronRight, "Open Daily Progress", tint = PrimaryLight)
                 }
                 Spacer(Modifier.height(12.dp))
                 LinearStatBar(dailyLogCompleted.toFloat() / currentMonth.lengthOfMonth().coerceAtLeast(1))
@@ -267,7 +268,7 @@ fun DashboardScreen(
                         Spacer(Modifier.height(2.dp))
                         Text("Tentative NTA schedule · Jan 22–24 and Jan 28–30, 2027", style = MaterialTheme.typography.labelSmall)
                     }
-                    Icon(Icons.Filled.Event, "JEE Main 2027 countdown", tint = PrimaryLight)
+                    Icon(Icons.Rounded.Event, "JEE Main 2027 countdown", tint = PrimaryLight)
                 }
             }
 
@@ -280,7 +281,7 @@ fun DashboardScreen(
                             Text(it.chapter.name, style = MaterialTheme.typography.titleMedium)
                             Text(it.signals.take(2).joinToString(" · "), style = MaterialTheme.typography.bodySmall)
                         }
-                        Icon(Icons.Filled.ChevronRight, "Review chapter", tint = PrimaryLight)
+                        Icon(Icons.Rounded.ChevronRight, "Review chapter", tint = PrimaryLight)
                     }
                 }
             }
@@ -325,16 +326,26 @@ private fun FocusOption(label: String, selected: Boolean, onClick: () -> Unit) {
     TextButton(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
         Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
             Text(label, color = if (selected) PrimaryLight else TextPrimary, modifier = Modifier.weight(1f))
-            if (selected) Icon(Icons.Filled.Check, "Selected", tint = PrimaryLight, modifier = Modifier.size(18.dp))
+            if (selected) Icon(Icons.Rounded.Check, "Selected", tint = PrimaryLight, modifier = Modifier.size(18.dp))
         }
     }
+}
+
+/** Slides a changed value up/out so stat updates read as a change rather than a jump. */
+@Composable
+private fun AnimatedValue(value: String, content: @Composable (String) -> Unit) {
+    AnimatedContent(
+        targetState = value,
+        transitionSpec = { (slideInVertically { it / 2 } + fadeIn()) togetherWith (slideOutVertically { -it / 2 } + fadeOut()) },
+        label = "stat"
+    ) { content(it) }
 }
 
 @Composable
 private fun StatLine(label: String, value: String) {
     Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
         Text(label, style = MaterialTheme.typography.bodyMedium)
-        Text(value, style = MaterialTheme.typography.titleSmall)
+        AnimatedValue(value) { Text(it, style = MaterialTheme.typography.titleSmall) }
     }
 }
 
@@ -352,7 +363,6 @@ private fun QuickAction(
             .heightIn(min = 84.dp)
             .clip(JeeShapes.medium)
             .background(if (primary) BgCardAlt else BgCard)
-            .border(1.dp, if (primary) Primary.copy(alpha = .45f) else BgCardBorder.copy(alpha = .8f), JeeShapes.medium)
             .premiumClick(onClick)
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.SpaceBetween

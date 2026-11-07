@@ -8,7 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -149,13 +149,13 @@ fun ChapterDetailScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.Rounded.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
                     Box {
                         IconButton(onClick = { showChapterMenu = true }) {
-                            Icon(Icons.Filled.MoreHoriz, contentDescription = "Chapter options", tint = TextSecondary)
+                            Icon(Icons.Rounded.MoreHoriz, contentDescription = "Chapter options", tint = TextSecondary)
                         }
                         DropdownMenu(
                             expanded = showChapterMenu,
@@ -167,7 +167,7 @@ fun ChapterDetailScreen(
                                     showChapterMenu = false
                                     markChapterComplete()
                                 },
-                                leadingIcon = { Icon(Icons.Filled.CheckCircle, null) }
+                                leadingIcon = { Icon(Icons.Rounded.CheckCircle, null) }
                             )
                         }
                     }
@@ -186,11 +186,6 @@ fun ChapterDetailScreen(
                     Modifier.fillMaxWidth()
                         .clip(JeeShapes.large)
                         .background(BgCardAlt.copy(alpha = .78f))
-                        .border(
-                            JeeSurfaceTokens.borderWidth,
-                            BgCardBorder.copy(alpha = JeeSurfaceTokens.cardBorderAlpha),
-                            JeeShapes.large
-                        )
                         .padding(18.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
@@ -255,7 +250,7 @@ fun ChapterDetailScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
-                            if (cloudReady) Icons.Filled.Cloud else Icons.Filled.CloudOff,
+                            if (cloudReady) Icons.Rounded.Cloud else Icons.Rounded.CloudOff,
                             null,
                             tint = TextSecondary,
                             modifier = Modifier.size(20.dp)
@@ -278,7 +273,6 @@ fun ChapterDetailScreen(
                     Modifier.fillMaxWidth()
                         .clip(JeeShapes.large)
                         .background(BgCard.copy(alpha = .96f))
-                        .border(1.dp, BgCardBorder.copy(alpha = .9f), JeeShapes.large)
                         .clickable(enabled = questionCount > 0, onClick = onPracticeQuestions)
                         .padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -290,7 +284,7 @@ fun ChapterDetailScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            Icons.Filled.GpsFixed,
+                            Icons.Rounded.GpsFixed,
                             null,
                             tint = PrimaryLight,
                             modifier = Modifier.size(28.dp)
@@ -314,7 +308,7 @@ fun ChapterDetailScreen(
                         )
                     }
                     Icon(
-                        Icons.Filled.ChevronRight,
+                        Icons.Rounded.ChevronRight,
                         null,
                         tint = if (questionCount > 0) PrimaryLight else TextMuted,
                         modifier = Modifier.size(25.dp)
@@ -364,7 +358,7 @@ fun ChapterDetailScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            if (topic.completed) Icons.Filled.CheckCircle else Icons.Filled.PlayArrow,
+                            if (topic.completed) Icons.Rounded.CheckCircle else Icons.Rounded.PlayArrow,
                             null,
                             tint = if (topic.completed) PrimaryLight else TextSecondary,
                             modifier = Modifier.size(19.dp)
@@ -383,7 +377,7 @@ fun ChapterDetailScreen(
                             fontSize = 11.sp
                         )
                     }
-                    Icon(Icons.Filled.ChevronRight, null, tint = TextMuted)
+                    Icon(Icons.Rounded.ChevronRight, null, tint = TextMuted)
                 }
             }
 

@@ -1,11 +1,23 @@
 package com.example.jeecommandcenter.ui.navigation
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.systemBars
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -18,10 +30,15 @@ import com.example.jeecommandcenter.data.JeeRepository
 import com.example.jeecommandcenter.data.LearningRepository
 import com.example.jeecommandcenter.data.TestAttemptRecord
 import com.example.jeecommandcenter.ui.components.AppTab
-import com.example.jeecommandcenter.ui.components.BottomNavBar
+import com.example.jeecommandcenter.ui.components.FloatingNavBar
 import com.example.jeecommandcenter.ui.screens.*
 
-private enum class SecondaryPage { REVISION, SETTINGS, CLOUD_ACCOUNT, AUTH, AI_SETTINGS, AI_HUB, AI_TUTOR, AI_HISTORY, ANALYTICS, ASSESSMENT, ASSESSMENT_HISTORY, ASSESSMENT_RESULT, MISTAKES, CHAPTER_DETAIL, CHAPTER_QUESTIONS, DAILY_LOG, NOTIFICATIONS, NOTIFICATION_SETTINGS }
+private enum class SecondaryPage { REVISION, SETTINGS, CLOUD_ACCOUNT, AUTH, AI_SETTINGS, AI_TUTOR, AI_HISTORY, ANALYTICS, ASSESSMENT, ASSESSMENT_HISTORY, ASSESSMENT_RESULT, MISTAKES, CHAPTER_DETAIL, CHAPTER_QUESTIONS, DAILY_LOG, NOTIFICATIONS, NOTIFICATION_SETTINGS }
+
+/** A destination: the top secondary page (if any) over the selected tab, plus stack depth for transition direction. */
+private data class Route(val page: SecondaryPage?, val tab: AppTab, val depth: Int) {
+    val key: String get() = page?.let { "secondary:" + it.name } ?: ("tab:" + tab.name)
+}
 
 @Composable
 fun AppRoot(initialTarget: String? = null, launchRequestId: Int = 0) {
@@ -73,26 +90,46 @@ fun AppRoot(initialTarget: String? = null, launchRequestId: Int = 0) {
         aiHistory.setActiveConversationId(null)
     }
     BackHandler(enabled = secondaryStack.isNotEmpty()) { popPage() }
-    val screenKey = secondaryPage?.let { "secondary:" + it.name } ?: ("tab:" + selectedTab.name)
-    // The tab bar lives outside the per-screen key so it is not recreated on every tab switch.
+    val route = Route(secondaryPage, selectedTab, secondaryStack.size)
     // The AI tab is a full-screen chat with its own bottom input, so it hides the bar.
     val showTabBar = secondaryPage == null && selectedTab != AppTab.AI
 
     Scaffold(
         containerColor = Color.Transparent,
-        contentWindowInsets = if (showTabBar) WindowInsets.systemBars else WindowInsets(0, 0, 0, 0),
-        bottomBar = { if (showTabBar) BottomNavBar(selectedTab, ::selectTab) }
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        bottomBar = {
+            AnimatedVisibility(
+                visible = showTabBar,
+                enter = slideInVertically(tween(240)) { it } + fadeIn(tween(240)),
+                exit = slideOutVertically(tween(200)) { it } + fadeOut(tween(160))
+            ) {
+                FloatingNavBar(selectedTab, ::selectTab)
+            }
+        }
     ) { hostPadding ->
-        Box(Modifier.padding(hostPadding).consumeWindowInsets(hostPadding)) {
-            key(screenKey) {
-                saveableStateHolder.SaveableStateProvider(screenKey) {
-                when (secondaryPage) {
+        // Tab screens sit above the floating bar, which already pads for the navigation bar.
+        Box(Modifier.padding(hostPadding).then(if (showTabBar) Modifier.consumeWindowInsets(WindowInsets.navigationBars) else Modifier)) {
+            AnimatedContent(
+                targetState = route,
+                transitionSpec = {
+                    val transition = when {
+                        targetState.depth > initialState.depth ->
+                            (slideInHorizontally(tween(280)) { it / 5 } + fadeIn(tween(280))) togetherWith fadeOut(tween(160))
+                        targetState.depth < initialState.depth ->
+                            fadeIn(tween(220)) togetherWith (slideOutHorizontally(tween(260)) { it / 5 } + fadeOut(tween(220)))
+                        else -> fadeIn(tween(220, delayMillis = 60)) togetherWith fadeOut(tween(120))
+                    }
+                    transition.using(SizeTransform(clip = false) { _, _ -> snap() })
+                },
+                label = "screen"
+            ) { screen ->
+                saveableStateHolder.SaveableStateProvider(screen.key) {
+                when (screen.page) {
                 SecondaryPage.REVISION -> RevisionScreen(::popPage)
                 SecondaryPage.SETTINGS -> SettingsScreen(onBack = ::popPage, onOpenAnalytics = { openPage(SecondaryPage.ANALYTICS) }, onOpenAiSettings = { openPage(SecondaryPage.AI_SETTINGS) }, onOpenCloudAccount = { openPage(SecondaryPage.CLOUD_ACCOUNT) }, onOpenNotifications = { openPage(SecondaryPage.NOTIFICATION_SETTINGS) })
                 SecondaryPage.CLOUD_ACCOUNT -> CloudAccountScreen(context, ::popPage, ::openAuth)
                 SecondaryPage.AUTH -> AuthScreen(authMode, ::popPage) { popPage() }
                 SecondaryPage.AI_SETTINGS -> AiSettingsScreen(context, ::popPage)
-                SecondaryPage.AI_HUB -> AiHubScreen(context, ::popPage, { openPage(SecondaryPage.AI_TUTOR) }, { openPage(SecondaryPage.AI_SETTINGS) })
                 SecondaryPage.AI_TUTOR -> AiTutorScreen(
                     context = context,
                     jee = repo,
@@ -125,11 +162,10 @@ fun AppRoot(initialTarget: String? = null, launchRequestId: Int = 0) {
                 SecondaryPage.DAILY_LOG -> DailyLogScreen(::popPage)
                 SecondaryPage.NOTIFICATIONS -> NotificationCenterScreen(::popPage) { openPage(SecondaryPage.NOTIFICATION_SETTINGS) }
                 SecondaryPage.NOTIFICATION_SETTINGS -> NotificationSettingsScreen(::popPage)
-                    null -> when (selectedTab) {
+                    null -> when (screen.tab) {
                         AppTab.HOME -> DashboardScreen(
                             repo = repo,
                             onTabSelected = ::selectTab,
-                            onAiClick = { openPage(SecondaryPage.AI_TUTOR) },
                             onOpenRevision = { openPage(SecondaryPage.REVISION) },
                             onOpenSettings = { openPage(SecondaryPage.SETTINGS) },
                             onOpenAssessment = { openPage(SecondaryPage.ASSESSMENT) },
