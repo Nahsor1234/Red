@@ -1,7 +1,6 @@
 package com.example.jeecommandcenter.ui.screens
 
 import android.view.HapticFeedbackConstants
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.animation.AnimatedVisibility
@@ -11,7 +10,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
@@ -25,11 +23,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.jeecommandcenter.data.*
@@ -105,74 +99,136 @@ fun StudyTimerScreen(repo: JeeRepository) {
         view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
     }
 
+    fun toggleRunning() {
+        if (running) {
+            remaining = ceil((end - System.currentTimeMillis()).coerceAtLeast(0) / 1000.0).toInt().coerceIn(0, total)
+            running = false
+            end = 0
+            repo.pauseTimer(total, remaining)
+        } else {
+            if (remaining <= 0) remaining = total
+            repo.startTimer(total, remaining)
+            end = System.currentTimeMillis() + remaining * 1000
+            running = true
+        }
+        view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+    }
+
     Scaffold(containerColor = BgApp) { padding ->
         LazyColumn(
             Modifier.fillMaxSize().padding(padding).padding(horizontal = 18.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
-            contentPadding = PaddingValues(top = 10.dp, bottom = 120.dp)
+            contentPadding = PaddingValues(top = 8.dp, bottom = 24.dp)
         ) {
             item {
                 Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
                     Text("Study session", style = MaterialTheme.typography.headlineSmall)
-                    Text(if (sessionsLoaded) "$todayMinutes min today" else "Loading…", color = TextMuted, fontSize = 11.sp)
+                    Text(if (sessionsLoaded) "$todayMinutes min today" else "Loading…", style = MaterialTheme.typography.labelMedium)
                 }
             }
             item {
-                Box(Modifier.fillMaxWidth().height(250.dp), Alignment.Center) {
-                    val progress = if (total > 0) remaining.toFloat() / total else 0f
-                    Canvas(Modifier.size(224.dp)) {
-                        val st = Stroke(12.dp.toPx(), cap = StrokeCap.Round)
-                        drawArc(BgDivider, -90f, 360f, false, style = st)
-                        drawArc(Primary, -90f, 360f * progress, false, style = st)
-                    }
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(String.format(Locale.US, "%02d:%02d", remaining / 60, remaining % 60), fontSize = 46.sp, fontWeight = FontWeight.Normal)
-                        Text(if (running) "Focus mode" else "Ready", color = TextMuted, fontSize = 12.sp)
+                Box(Modifier.fillMaxWidth().padding(vertical = 8.dp), Alignment.Center) {
+                    ProgressRing(
+                        progress = if (total > 0) remaining.toFloat() / total else 0f,
+                        diameter = 240.dp,
+                        strokeWidth = 12.dp
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                String.format(Locale.US, "%02d:%02d", remaining / 60, remaining % 60),
+                                style = MaterialTheme.typography.displayLarge.copy(fontSize = 54.sp, fontFeatureSettings = "tnum")
+                            )
+                            Text(if (running) "Focus mode" else "Ready", style = MaterialTheme.typography.labelMedium)
+                        }
                     }
                 }
             }
             item {
-                Column(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(BgCardAlt).border(JeeSurfaceTokens.borderWidth, BgCardBorder.copy(alpha = JeeSurfaceTokens.cardBorderAlpha), JeeShapes.medium).padding(15.dp)
+                Button(
+                    onClick = ::toggleRunning,
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    shape = JeeShapes.medium
                 ) {
+                    Icon(if (running) Icons.Filled.Pause else Icons.Filled.PlayArrow, null)
+                    Spacer(Modifier.width(8.dp))
+                    Text(if (running) "Pause" else "Start session", style = MaterialTheme.typography.labelLarge)
+                }
+            }
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TimerPreset.values().forEach { p -> Preset(p.label, p.sublabel, selected == p, Modifier.weight(1f)) { preset(p) } }
+                    Preset("Custom", (total / 60).toString() + " min", selected == null, Modifier.weight(1f)) {
+                        custom = (total / 60).coerceAtLeast(1).toString()
+                        showCustom = true
+                    }
+                }
+            }
+            item {
+                JeeCard {
                     Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
-                        Text("SESSION CONTEXT", color = TextSecondary, fontSize = 11.sp)
-                        TextButton(enabled = !running, onClick = { contextExpanded = !contextExpanded; if (!contextExpanded) chapterPickerExpanded = false }) { Text(if (contextExpanded) "Done" else "Change", fontSize = 11.sp) }
+                        Text("Session context", style = MaterialTheme.typography.labelLarge)
+                        TextButton(enabled = !running, onClick = { contextExpanded = !contextExpanded; if (!contextExpanded) chapterPickerExpanded = false }) {
+                            Text(if (contextExpanded) "Done" else "Change", style = MaterialTheme.typography.labelLarge, color = if (running) TextMuted else PrimaryLight)
+                        }
                     }
                     Text(subject, style = MaterialTheme.typography.titleMedium)
-                    Text(chapter?.let { JeeCatalog.find(it)?.name } ?: "No chapter linked", color = TextMuted, fontSize = 11.sp)
-                    Text("Activity: " + activity.name.lowercase().replace('_', ' '), color = TextMuted, fontSize = 10.sp)
+                    Text(chapter?.let { JeeCatalog.find(it)?.name } ?: "No chapter linked", style = MaterialTheme.typography.bodySmall)
+                    Text("Activity: " + activity.name.lowercase().replace('_', ' '), style = MaterialTheme.typography.labelSmall)
                     AnimatedVisibility(visible = contextExpanded) {
                         Column(Modifier.fillMaxWidth().padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Text("Subject", color = TextSecondary, fontSize = 12.sp)
+                            Text("Subject", style = MaterialTheme.typography.labelMedium)
                             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 subjects.forEach { value ->
                                     JeeFilterChip(value, value == subject) { subject = value; chapter = null; chapterPickerExpanded = false }
                                 }
                             }
-                            Text("Chapter", color = TextSecondary, fontSize = 12.sp)
+                            Text("Chapter", style = MaterialTheme.typography.labelMedium)
                             Surface(
-                                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).border(1.dp, BgCardBorder.copy(alpha = .9f), RoundedCornerShape(14.dp)).clickable(enabled = subject != "General", onClick = { chapterPickerExpanded = !chapterPickerExpanded }),
-                                color = BgAppBase.copy(alpha = .72f), shape = RoundedCornerShape(14.dp)
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(JeeShapes.medium)
+                                    .border(1.dp, OutlineStrong.copy(alpha = .6f), JeeShapes.medium)
+                                    .clickable(enabled = subject != "General", onClick = { chapterPickerExpanded = !chapterPickerExpanded }),
+                                color = BgAppBase.copy(alpha = .72f),
+                                shape = JeeShapes.medium
                             ) {
-                                Row(Modifier.padding(horizontal = 13.dp, vertical = 11.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                                    Text(chapter?.let { JeeCatalog.find(it)?.name } ?: if (subject == "General") "General study" else "Select chapter", color = if (chapter != null) TextPrimary else TextMuted, fontSize = 12.sp, maxLines = 1)
-                                    Icon(if (chapterPickerExpanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, null, tint = TextSecondary, modifier = Modifier.size(18.dp))
+                                Row(
+                                    Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        chapter?.let { JeeCatalog.find(it)?.name } ?: if (subject == "General") "General study" else "Select chapter",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = if (chapter != null) TextPrimary else TextMuted,
+                                        maxLines = 1,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    Icon(if (chapterPickerExpanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, null, tint = TextSecondary, modifier = Modifier.size(20.dp))
                                 }
                             }
                             AnimatedVisibility(visible = chapterPickerExpanded && subject != "General") {
-                                Column(Modifier.fillMaxWidth().heightIn(max = 200.dp).clip(RoundedCornerShape(14.dp)).background(BgAppBase.copy(alpha = .72f)).border(1.dp, BgCardBorder.copy(alpha = .75f), RoundedCornerShape(14.dp)).verticalScroll(rememberScrollState()).padding(vertical = 4.dp)) {
+                                Column(
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .heightIn(max = 220.dp)
+                                        .clip(JeeShapes.medium)
+                                        .background(BgAppBase.copy(alpha = .72f))
+                                        .border(1.dp, BgCardBorder, JeeShapes.medium)
+                                        .verticalScroll(rememberScrollState())
+                                        .padding(vertical = 4.dp)
+                                ) {
                                     chapters.forEach { value ->
                                         TextButton(onClick = { chapter = value.id; chapterPickerExpanded = false }, modifier = Modifier.fillMaxWidth()) {
                                             Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
-                                                Text("${value.number}. ${value.name}", color = if (chapter == value.id) PrimaryLight else TextPrimary, fontSize = 12.sp)
-                                                if (chapter == value.id) Icon(Icons.Filled.Check, null, tint = PrimaryLight, modifier = Modifier.size(16.dp))
+                                                Text("${value.number}. ${value.name}", style = MaterialTheme.typography.bodyMedium, color = if (chapter == value.id) PrimaryLight else TextPrimary, modifier = Modifier.weight(1f))
+                                                if (chapter == value.id) Icon(Icons.Filled.Check, "Selected", tint = PrimaryLight, modifier = Modifier.size(16.dp))
                                             }
                                         }
                                     }
                                 }
                             }
-                            Text("Activity", color = TextSecondary, fontSize = 12.sp)
+                            Text("Activity", style = MaterialTheme.typography.labelMedium)
                             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 listOf(ActivityType.LEARNING, ActivityType.PRACTICE, ActivityType.REVISION, ActivityType.TEST).forEach { value ->
                                     JeeFilterChip(value.name.lowercase().replace('_', ' '), value == activity) { activity = value }
@@ -182,50 +238,79 @@ fun StudyTimerScreen(repo: JeeRepository) {
                     }
                 }
             }
-            item {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TimerPreset.values().forEach { p -> Preset(p.label, p.sublabel, selected == p, Modifier.weight(1f)) { preset(p) } }
-                    Preset("Custom", (total / 60).toString() + " min", selected == null, Modifier.weight(1f)) { custom = (total / 60).coerceAtLeast(1).toString(); showCustom = true }
-                }
-            }
-            item {
-                Button(onClick = {
-                    if (running) {
-                        remaining = ceil((end - System.currentTimeMillis()).coerceAtLeast(0) / 1000.0).toInt().coerceIn(0, total); running = false; end = 0; repo.pauseTimer(total, remaining)
-                    } else {
-                        if (remaining <= 0) remaining = total
-                        repo.startTimer(total, remaining); end = System.currentTimeMillis() + remaining * 1000; running = true
-                    }
-                    view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(17.dp), colors = ButtonDefaults.buttonColors(containerColor = Primary)) {
-                    Icon(if (running) Icons.Filled.Pause else Icons.Filled.PlayArrow, null, tint = OnPrimary); Spacer(Modifier.width(8.dp)); Text(if (running) "Pause" else "Start session", color = OnPrimary)
-                }
-            }
             item { SectionHeader("Completed sessions") }
             if (recentSessions.isEmpty()) {
-                item { JeeCard { Text("No completed sessions yet.", color = TextMuted, fontSize = 12.sp); Spacer(Modifier.height(4.dp)); Text("Completed sessions will appear here after your first study block.", color = TextSecondary, fontSize = 11.sp) } }
+                item {
+                    JeeCard {
+                        Text("No completed sessions yet.", style = MaterialTheme.typography.titleSmall)
+                        Spacer(Modifier.height(4.dp))
+                        Text("Completed sessions will appear here after your first study block.", style = MaterialTheme.typography.bodySmall)
+                    }
+                }
             } else {
                 items(recentSessions, key = { it.id }) { session ->
-                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(BgCard).border(1.dp,BgCardBorder.copy(alpha=.72f),RoundedCornerShape(14.dp)).padding(horizontal=14.dp, vertical=11.dp), Arrangement.SpaceBetween, Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) { Text(session.subject, color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.Medium); Text(session.chapter + " · " + session.activityType.name.lowercase().replace('_', ' '), color = TextMuted, fontSize = 10.sp) }
-                        Column(horizontalAlignment = Alignment.End) { Text(session.minutes.toString() + " min", color = PrimaryLight, fontSize = 12.sp); Text(session.date, color = TextMuted, fontSize = 9.sp) }
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .clip(JeeShapes.medium)
+                            .background(BgCard)
+                            .border(1.dp, BgCardBorder.copy(alpha = .8f), JeeShapes.medium)
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                        Arrangement.SpaceBetween,
+                        Alignment.CenterVertically
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text(session.subject, style = MaterialTheme.typography.titleSmall)
+                            Text(session.chapter + " · " + session.activityType.name.lowercase().replace('_', ' '), style = MaterialTheme.typography.labelSmall)
+                        }
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(session.minutes.toString() + " min", style = MaterialTheme.typography.labelLarge, color = PrimaryLight)
+                            Text(session.date, style = MaterialTheme.typography.labelSmall)
+                        }
                     }
                 }
             }
         }
     }
     if (showCustom) {
-        AlertDialog(onDismissRequest = { showCustom = false }, title = { Text("Custom timer") }, text = { OutlinedTextField(custom, { custom = it.filter(Char::isDigit).take(4) }, label = { Text("Minutes") }, singleLine = true) }, confirmButton = {
-            val m = custom.toIntOrNull()
-            TextButton(enabled = m != null && m in 1..1440, onClick = { m?.let { selected = null; total = it * 60; remaining = total; running = false; end = 0; repo.resetTimer(total); showCustom = false } }) { Text("Use") }
-        }, dismissButton = { TextButton(onClick = { showCustom = false }) { Text("Cancel") } })
+        val minutes = custom.toIntOrNull()
+        AlertDialog(
+            onDismissRequest = { showCustom = false },
+            title = { Text("Custom timer") },
+            text = { OutlinedTextField(custom, { custom = it.filter(Char::isDigit).take(4) }, label = { Text("Minutes") }, singleLine = true) },
+            confirmButton = {
+                TextButton(
+                    enabled = minutes != null && minutes in 1..1440,
+                    onClick = {
+                        minutes?.let {
+                            selected = null
+                            total = it * 60
+                            remaining = total
+                            running = false
+                            end = 0
+                            repo.resetTimer(total)
+                            showCustom = false
+                        }
+                    }
+                ) { Text("Use") }
+            },
+            dismissButton = { TextButton(onClick = { showCustom = false }) { Text("Cancel") } }
+        )
     }
 }
 
 @Composable
 private fun Preset(label: String, sub: String, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
-    Column(modifier.clip(RoundedCornerShape(15.dp)).background(BgCard).border(1.dp, if (selected) Primary else Color.Transparent, RoundedCornerShape(15.dp)).premiumClick(onClick).padding(vertical = 11.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(label, color = if (selected) Primary else TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-        Text(sub, color = TextMuted, fontSize = 10.sp)
+    Column(
+        modifier
+            .clip(JeeShapes.medium)
+            .background(if (selected) PrimarySoft else BgCard)
+            .border(1.dp, if (selected) Primary else BgCardBorder.copy(alpha = .8f), JeeShapes.medium)
+            .premiumClick(onClick)
+            .padding(vertical = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(label, style = MaterialTheme.typography.labelLarge, color = if (selected) PrimaryLight else TextPrimary)
+        Text(sub, style = MaterialTheme.typography.labelSmall)
     }
 }
