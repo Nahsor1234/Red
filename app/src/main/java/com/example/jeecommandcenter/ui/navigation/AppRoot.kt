@@ -156,8 +156,8 @@ fun AppRoot(initialTarget: String? = null, launchRequestId: Int = 0) {
                             onConversationOpened = { id -> activeAiConversationId = id; aiHistory.setActiveConversationId(id) },
                             onConversationCleared = ::clearAiConversation
                         )
-                        AppTab.TASKS -> TasksScreen(repo) { openPage(SecondaryPage.AI_TUTOR) }
-                        AppTab.STATS -> StudyTimerScreen(repo) { openPage(SecondaryPage.AI_TUTOR) }
+                        AppTab.TASKS -> TasksScreen(repo)
+                        AppTab.STATS -> StudyTimerScreen(repo)
                     }
                 }
                 }

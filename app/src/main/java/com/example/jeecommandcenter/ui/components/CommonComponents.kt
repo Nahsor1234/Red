@@ -55,8 +55,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -68,6 +68,7 @@ import com.example.jeecommandcenter.ui.theme.JeeShapes
 import com.example.jeecommandcenter.ui.theme.JeeSurfaceTokens
 import com.example.jeecommandcenter.ui.theme.OnPrimary
 import com.example.jeecommandcenter.ui.theme.OnSuccess
+import com.example.jeecommandcenter.ui.theme.OutlineStrong
 import com.example.jeecommandcenter.ui.theme.Primary
 import com.example.jeecommandcenter.ui.theme.PrimaryLight
 import com.example.jeecommandcenter.ui.theme.PrimarySoft
@@ -191,10 +192,38 @@ data class TaskItem(
     val inProgress: Boolean = false
 )
 
+/** Checkbox with a 44dp touch target around a 22dp visual box. */
+@Composable
+fun TaskCheckbox(done: Boolean, modifier: Modifier = Modifier, onToggle: () -> Unit) {
+    val fill by animateColorAsState(if (done) Success else Color.Transparent, label = "task-check")
+    Box(
+        modifier
+            .size(44.dp)
+            .clip(JeeShapes.small)
+            .semantics { stateDescription = if (done) "Completed" else "Not completed" }
+            .premiumClick(
+                haptic = if (!done) HapticFeedbackConstants.KEYBOARD_TAP else HapticFeedbackConstants.VIRTUAL_KEY,
+                role = Role.Checkbox,
+                onClick = onToggle
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            Modifier
+                .size(22.dp)
+                .clip(RoundedCornerShape(7.dp))
+                .background(fill)
+                .border(1.5.dp, if (done) Success else OutlineStrong, RoundedCornerShape(7.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            if (done) Icon(Icons.Filled.Check, contentDescription = null, tint = OnSuccess, modifier = Modifier.size(15.dp))
+        }
+    }
+}
+
 @Composable
 fun TaskRow(task: TaskItem, onToggle: (String) -> Unit, onClick: () -> Unit = {}) {
     val rowAlpha by animateFloatAsState(if (task.done) .62f else 1f, label = "task-alpha")
-    val check by animateColorAsState(if (task.done) Success else Color.Transparent, label = "task-check")
     Row(
         Modifier
             .fillMaxWidth()
@@ -203,26 +232,7 @@ fun TaskRow(task: TaskItem, onToggle: (String) -> Unit, onClick: () -> Unit = {}
             .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // 44dp touch target around a 22dp visual checkbox.
-        Box(
-            Modifier
-                .size(44.dp)
-                .clip(JeeShapes.small)
-                .semantics { role = Role.Checkbox }
-                .premiumClick(haptic = if (!task.done) HapticFeedbackConstants.KEYBOARD_TAP else HapticFeedbackConstants.VIRTUAL_KEY) { onToggle(task.id) },
-            contentAlignment = Alignment.Center
-        ) {
-            Box(
-                Modifier
-                    .size(22.dp)
-                    .clip(RoundedCornerShape(7.dp))
-                    .background(check)
-                    .border(1.5.dp, if (task.done) Success else BgCardBorder, RoundedCornerShape(7.dp)),
-                contentAlignment = Alignment.Center
-            ) {
-                if (task.done) Icon(Icons.Filled.Check, contentDescription = "Completed", tint = OnSuccess, modifier = Modifier.size(15.dp))
-            }
-        }
+        TaskCheckbox(task.done) { onToggle(task.id) }
         Column(Modifier.weight(1f).padding(start = 4.dp)) {
             Text(
                 task.title,
@@ -230,9 +240,9 @@ fun TaskRow(task: TaskItem, onToggle: (String) -> Unit, onClick: () -> Unit = {}
                 style = MaterialTheme.typography.titleSmall,
                 textDecoration = if (task.done) TextDecoration.LineThrough else TextDecoration.None
             )
-            if (task.subtitle.isNotEmpty()) Text(task.subtitle, color = TextSecondary, style = MaterialTheme.typography.bodySmall)
+            if (task.subtitle.isNotEmpty()) Text(task.subtitle, style = MaterialTheme.typography.bodySmall)
         }
-        Text(task.duration, color = TextMuted, style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(start = 8.dp))
+        Text(task.duration, style = MaterialTheme.typography.labelMedium, color = TextMuted, modifier = Modifier.padding(start = 8.dp))
     }
 }
 

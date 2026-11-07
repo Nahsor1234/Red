@@ -47,7 +47,7 @@ private enum class TimerPreset(val label: String, val sublabel: String, val minu
 }
 
 @Composable
-fun StudyTimerScreen(repo: JeeRepository, onAiClick: () -> Unit = {}) {
+fun StudyTimerScreen(repo: JeeRepository) {
     val initial = remember { repo.restoreTimerState() }
     var selected by remember { mutableStateOf(TimerPreset.values().firstOrNull { it.minutes * 60 == initial.totalSeconds }) }
     var custom by remember { mutableStateOf((initial.totalSeconds / 60).coerceAtLeast(1).toString()) }

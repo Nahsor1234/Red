@@ -14,6 +14,8 @@ val BgCardAlt = Color(0xFF1F2438)
 val BgCardHigh = Color(0xFF2A3150)
 val BgCardBorder = Color(0xFF2C3354)
 val BgDivider = BgCardHigh
+/** Visible outline for interactive controls (3:1 against card surfaces). */
+val OutlineStrong = Color(0xFF6B7499)
 
 // Text.
 val TextPrimary = Color(0xFFECEFFA)
