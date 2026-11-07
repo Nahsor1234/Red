@@ -228,17 +228,40 @@ fun AiTutorScreen(
                 items(messages, key = { it.id }) { message ->
                     val isUser = message.role == "USER"
                     val isStreamingMessage = message.id == streamingMessageId
-                    Surface(Modifier.fillMaxWidth(), color = if (isUser) BgCardAlt else BgCard, shape = JeeShapes.medium, border = androidx.compose.foundation.BorderStroke(1.dp, BgCardBorder.copy(alpha = .75f))) {
-                        Column(Modifier.padding(15.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(if (isUser) "YOU" else "COACH", color = PrimaryLight, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = .9.sp)
-                                if (isStreamingMessage && busy && message.text.isBlank()) { Spacer(Modifier.width(9.dp)); CircularProgressIndicator(Modifier.size(13.dp), strokeWidth = 2.dp, color = Primary) }
+                    val waiting = isStreamingMessage && busy && message.text.isBlank()
+                    if (isUser) {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                            Surface(
+                                modifier = Modifier.widthIn(max = 320.dp),
+                                color = PrimarySoft,
+                                shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp, 20.dp, 6.dp, 20.dp)
+                            ) {
+                                MathMarkdownText(
+                                    message.text,
+                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                                    color = TextPrimary,
+                                    fontSize = 14.sp,
+                                    lineHeight = 21.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
                             }
-                            Spacer(Modifier.height(7.dp))
-                            when {
-                                isUser -> MathMarkdownText(message.text, modifier = Modifier.fillMaxWidth(), color = TextPrimary, fontSize = 14.sp, lineHeight = 21.sp, fontWeight = FontWeight.Medium)
-                                isStreamingMessage && busy && message.text.isBlank() -> Text("Coach is thinking…", color = TextSecondary, fontSize = 12.sp)
-                                else -> MathMarkdownText(message.text, modifier = Modifier.fillMaxWidth(), color = TextPrimary, fontSize = 14.sp, lineHeight = 21.sp)
+                        }
+                    } else {
+                        Column(Modifier.fillMaxWidth()) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Filled.AutoAwesome, null, tint = PrimaryLight, modifier = Modifier.size(16.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text("Coach", style = MaterialTheme.typography.labelLarge, color = PrimaryLight)
+                                if (waiting) {
+                                    Spacer(Modifier.width(9.dp))
+                                    CircularProgressIndicator(Modifier.size(13.dp), strokeWidth = 2.dp, color = Primary)
+                                }
+                            }
+                            Spacer(Modifier.height(6.dp))
+                            if (waiting) {
+                                Text("Coach is thinking…", style = MaterialTheme.typography.bodyMedium)
+                            } else {
+                                MathMarkdownText(message.text, modifier = Modifier.fillMaxWidth(), color = TextPrimary, fontSize = 14.sp, lineHeight = 21.sp)
                             }
                         }
                     }
