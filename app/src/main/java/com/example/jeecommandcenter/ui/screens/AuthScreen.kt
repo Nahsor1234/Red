@@ -1,5 +1,7 @@
 package com.example.jeecommandcenter.ui.screens
 
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -188,8 +190,8 @@ fun AuthScreen(
                 )
             }
 
-            error?.let { Text(it, color = Danger, fontSize = 12.sp) }
-            message?.let { Text(it, color = Success, fontSize = 12.sp) }
+            error?.let { StatusMessage(it, isError = true) }
+            message?.let { StatusMessage(it, isError = false) }
 
             Button(
                 onClick = ::submit,
@@ -240,3 +242,18 @@ fun AuthScreen(
 
 private fun CloudAuthMode.toInternal(): AuthMode =
     if (this == CloudAuthMode.SIGN_UP) AuthMode.SIGN_UP else AuthMode.SIGN_IN
+
+/** Status is conveyed by icon and wording as well as tone, so it never depends on colour alone. */
+@Composable
+private fun StatusMessage(text: String, isError: Boolean) {
+    Row(verticalAlignment = Alignment.Top) {
+        Icon(
+            if (isError) Icons.Rounded.ErrorOutline else Icons.Rounded.CheckCircle,
+            contentDescription = if (isError) "Error" else "Success",
+            tint = PrimaryLight,
+            modifier = Modifier.size(16.dp)
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(text, style = MaterialTheme.typography.bodySmall, color = TextPrimary)
+    }
+}

@@ -295,11 +295,20 @@ private fun QuestionContent(
                         .padding(15.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text(
-                        if (isCorrect) "Correct answer" else "Answer Review",
-                        color = if (isCorrect) PrimaryLight else Warning,
-                        style = MaterialTheme.typography.titleMedium
-                    )
+                    Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                        Icon(
+                            if (isCorrect) Icons.Rounded.CheckCircle else Icons.Rounded.ErrorOutline,
+                            contentDescription = null,
+                            tint = if (isCorrect) PrimaryLight else Warning,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            if (isCorrect) "Correct answer" else "Answer Review",
+                            color = if (isCorrect) PrimaryLight else Warning,
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                    }
                     MathMarkdownText(
                         "Your answer: " + (question.options.getOrNull(selected) ?: "Not answered"),
                         modifier = Modifier.fillMaxWidth(),
