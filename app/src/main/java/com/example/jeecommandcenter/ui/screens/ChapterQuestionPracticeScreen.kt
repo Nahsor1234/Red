@@ -242,10 +242,10 @@ fun ChapterQuestionPracticeScreen(
 
                         Surface(
                             modifier = Modifier.size(48.dp)
-                                .clip(RoundedCornerShape(14.dp))
+                                .clip(JeeShapes.medium)
                                 .clickable { toggleBookmark(question.id) },
                             color = if (bookmarked) PrimarySoft else BgCard,
-                            shape = RoundedCornerShape(14.dp),
+                            shape = JeeShapes.medium,
                             border = BorderStroke(1.dp, if (bookmarked) Primary else BgCardBorder)
                         ) {
                             Box(contentAlignment = Alignment.Center) {
@@ -340,7 +340,7 @@ fun ChapterQuestionPracticeScreen(
                     Spacer(Modifier.height(2.dp))
                     LinearProgressIndicator(
                         progress = { (index + 1).toFloat() / questions.size.coerceAtLeast(1) },
-                        modifier = Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(99.dp)),
+                        modifier = Modifier.fillMaxWidth().height(4.dp).clip(JeeShapes.pill),
                         color = Primary,
                         trackColor = BgDivider
                     )
@@ -363,7 +363,7 @@ fun ChapterQuestionPracticeScreen(
                         val correct = selectedIndex == question.correctIndex
                         Surface(
                             Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(16.dp),
+                            shape = JeeShapes.medium,
                             color = BgCardAlt,
                             border = BorderStroke(1.dp, if (correct) Primary else Danger)
                         ) {
@@ -400,7 +400,7 @@ fun ChapterQuestionPracticeScreen(
                                                 Text(
                                                     selectedMistakeType?.let(::mistakeTypeLabel) ?: "Tag mistake",
                                                     color = TextPrimary,
-                                                    fontSize = 10.sp,
+                                                    fontSize = 11.sp,
                                                     maxLines = 1
                                                 )
                                             }
@@ -498,7 +498,7 @@ fun ChapterQuestionPracticeScreen(
                                     index = questionIndex
                                     showBookmarkedQuestions = false
                                 },
-                                shape = RoundedCornerShape(14.dp),
+                                shape = JeeShapes.medium,
                                 color = BgCard,
                                 border = BorderStroke(1.dp, BgCardBorder)
                             ) {
@@ -564,7 +564,7 @@ fun ChapterQuestionPracticeScreen(
                                     index = questionIndex
                                     showQuestionPicker = false
                                 },
-                            shape = RoundedCornerShape(12.dp),
+                            shape = JeeShapes.small,
                             color = cellColor,
                             border = BorderStroke(
                                 1.dp,
@@ -597,15 +597,15 @@ fun ChapterQuestionPracticeScreen(
                 Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                         Box(Modifier.size(9.dp).clip(RoundedCornerShape(3.dp)).background(Primary))
-                        Text("Current", color = TextSecondary, fontSize = 10.sp)
+                        Text("Current", color = TextSecondary, fontSize = 11.sp)
                     }
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                         Box(Modifier.size(9.dp).clip(RoundedCornerShape(3.dp)).background(PrimarySoft).border(1.dp, Primary))
-                        Text("Checked", color = TextSecondary, fontSize = 10.sp)
+                        Text("Checked", color = TextSecondary, fontSize = 11.sp)
                     }
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                         Icon(Icons.Filled.Bookmark, null, tint = PrimaryLight, modifier = Modifier.size(12.dp))
-                        Text("Bookmarked", color = TextSecondary, fontSize = 10.sp)
+                        Text("Bookmarked", color = TextSecondary, fontSize = 11.sp)
                     }
                 }
             }

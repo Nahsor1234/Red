@@ -186,12 +186,12 @@ fun ChapterDetailScreen(
             item {
                 Column(
                     Modifier.fillMaxWidth()
-                        .clip(RoundedCornerShape(22.dp))
+                        .clip(JeeShapes.large)
                         .background(BgCardAlt.copy(alpha = .78f))
                         .border(
                             JeeSurfaceTokens.borderWidth,
                             BgCardBorder.copy(alpha = JeeSurfaceTokens.cardBorderAlpha),
-                            RoundedCornerShape(22.dp)
+                            JeeShapes.large
                         )
                         .padding(18.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp)
@@ -247,7 +247,7 @@ fun ChapterDetailScreen(
                     }
                     LinearProgressIndicator(
                         progress = { progress },
-                        modifier = Modifier.fillMaxWidth().height(5.dp).clip(RoundedCornerShape(99.dp)),
+                        modifier = Modifier.fillMaxWidth().height(5.dp).clip(JeeShapes.pill),
                         color = Primary,
                         trackColor = BgDivider
                     )
@@ -278,16 +278,16 @@ fun ChapterDetailScreen(
             item {
                 Row(
                     Modifier.fillMaxWidth()
-                        .clip(RoundedCornerShape(20.dp))
+                        .clip(JeeShapes.large)
                         .background(BgCard.copy(alpha = .96f))
-                        .border(1.dp, BgCardBorder.copy(alpha = .9f), RoundedCornerShape(20.dp))
+                        .border(1.dp, BgCardBorder.copy(alpha = .9f), JeeShapes.large)
                         .clickable(enabled = questionCount > 0, onClick = onPracticeQuestions)
                         .padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(13.dp)
                 ) {
                     Box(
-                        Modifier.size(58.dp).clip(RoundedCornerShape(16.dp))
+                        Modifier.size(58.dp).clip(JeeShapes.medium)
                             .background(PrimarySoft),
                         contentAlignment = Alignment.Center
                     ) {
@@ -347,13 +347,13 @@ fun ChapterDetailScreen(
             items(topics, key = { it.id }) { topic ->
                 Row(
                     Modifier.fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
+                        .clip(JeeShapes.medium)
                         .background(BgCard.copy(alpha = .94f))
                         .border(
                             1.dp,
                             if (topic.completed) Primary.copy(alpha = .7f)
                             else BgCardBorder.copy(alpha = JeeSurfaceTokens.cardBorderAlpha),
-                            RoundedCornerShape(16.dp)
+                            JeeShapes.medium
                         )
                         .clickable { selectedTopic = topic }
                         .padding(14.dp),
@@ -361,7 +361,7 @@ fun ChapterDetailScreen(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Box(
-                        Modifier.size(34.dp).clip(RoundedCornerShape(11.dp))
+                        Modifier.size(34.dp).clip(JeeShapes.small)
                             .background(if (topic.completed) PrimarySoft else BgCardAlt),
                         contentAlignment = Alignment.Center
                     ) {

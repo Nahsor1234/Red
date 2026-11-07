@@ -133,7 +133,7 @@ fun DailyLogScreen(onBack: () -> Unit) {
                     Text(
                         "YOUR MONTH AT A GLANCE",
                         color = TextMuted,
-                        fontSize = 10.sp,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 1.1.sp
                     )
@@ -182,7 +182,7 @@ fun DailyLogScreen(onBack: () -> Unit) {
                                 Text(
                                     "CONSISTENCY",
                                     color = TextMuted,
-                                    fontSize = 7.sp,
+                                    fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
                                     letterSpacing = .25.sp,
                                     maxLines = 1
@@ -261,9 +261,9 @@ fun DailyLogScreen(onBack: () -> Unit) {
                                     Modifier.weight(1f)
                                         .aspectRatio(0.92f)
                                         .padding(1.dp)
-                                        .clip(RoundedCornerShape(11.dp))
+                                        .clip(JeeShapes.small)
                                         .background(cellColor)
-                                        .border(1.dp, cellBorder, RoundedCornerShape(11.dp))
+                                        .border(1.dp, cellBorder, JeeShapes.small)
                                         .clickable { selectedDate = date }
                                         .padding(vertical = 4.dp),
                                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -287,7 +287,7 @@ fun DailyLogScreen(onBack: () -> Unit) {
                     }
                 }
                 Spacer(Modifier.height(7.dp))
-                Text("Check = completed · outlined date = today", color = TextMuted, fontSize = 10.sp)
+                Text("Check = completed · outlined date = today", color = TextMuted, fontSize = 11.sp)
             }
 
             JeeCard {
@@ -297,7 +297,7 @@ fun DailyLogScreen(onBack: () -> Unit) {
                     }
                     if (!selectedIsToday) {
                         Surface(shape = RoundedCornerShape(8.dp), color = BgCardAlt) {
-                            Text(if (selectedDate.isAfter(today)) "Upcoming" else if (entry.completed) "Complete" else if (entry.notes.isNotBlank()) "Notes saved" else "No record", color = TextSecondary, fontSize = 10.sp, modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp))
+                            Text(if (selectedDate.isAfter(today)) "Upcoming" else if (entry.completed) "Complete" else if (entry.notes.isNotBlank()) "Notes saved" else "No record", color = TextSecondary, fontSize = 11.sp, modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp))
                         }
                     }
                 }
@@ -311,7 +311,7 @@ fun DailyLogScreen(onBack: () -> Unit) {
                         )
                         Column(Modifier.weight(1f)) {
                             Text("I've completed my study today", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-                            Text("Tick only when you're done for today.", color = TextMuted, fontSize = 10.sp)
+                            Text("Tick only when you're done for today.", color = TextMuted, fontSize = 11.sp)
                         }
                     }
                 } else if (selectedDate.isAfter(today)) {
@@ -343,7 +343,7 @@ fun DailyLogScreen(onBack: () -> Unit) {
                 )
                 if (selectedIsToday) {
                     Spacer(Modifier.height(5.dp))
-                    Text("${entry.notes.length}/${DailyLogRepository.MAX_NOTE_LENGTH} characters · ${cloudBackupStatus ?: "Saved automatically on this device"}", color = if (cloudBackupStatus?.startsWith("Backed up") == true) Success else TextMuted, fontSize = 9.sp)
+                    Text("${entry.notes.length}/${DailyLogRepository.MAX_NOTE_LENGTH} characters · ${cloudBackupStatus ?: "Saved automatically on this device"}", color = if (cloudBackupStatus?.startsWith("Backed up") == true) Success else TextMuted, fontSize = 11.sp)
                 }
             }
             Spacer(Modifier.height(4.dp))

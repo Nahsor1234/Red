@@ -73,8 +73,8 @@ fun AiSettingsScreen(context: android.content.Context, onBack: () -> Unit) {
                                 expanded = expanded,
                                 onDismissRequest = { expanded = false },
                                 modifier = Modifier
-                                    .background(BgCardAlt, RoundedCornerShape(16.dp))
-                                    .border(1.dp, BgCardBorder.copy(alpha = .95f), RoundedCornerShape(16.dp))
+                                    .background(BgCardAlt, JeeShapes.medium)
+                                    .border(1.dp, BgCardBorder.copy(alpha = .95f), JeeShapes.medium)
                                     .padding(vertical = 5.dp)
                             ) {
                                 AiProvider.entries.forEach { provider ->

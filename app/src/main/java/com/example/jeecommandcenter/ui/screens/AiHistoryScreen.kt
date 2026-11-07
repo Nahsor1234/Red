@@ -46,8 +46,8 @@ fun AiHistoryScreen(context: android.content.Context, onBack: () -> Unit, onOpen
 @Composable private fun ConversationCard(conversation: AiConversation, onClick: () -> Unit) {
     val user = conversation.messages.firstOrNull { it.role == "USER" }?.text.orEmpty()
     val latest = conversation.messages.lastOrNull()?.text.orEmpty().replace("\n", " ").take(140)
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(BgCard).border(1.dp, BgCardBorder.copy(alpha = .8f), RoundedCornerShape(16.dp)).premiumClick(onClick).padding(15.dp)) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text(conversation.title, color = TextPrimary, style = MaterialTheme.typography.titleMedium); Text(SimpleDateFormat("dd MMM, h:mm a", Locale.getDefault()).format(Date(conversation.updatedAt)), color = TextMuted, fontSize = 9.sp) }
-        Spacer(Modifier.height(5.dp)); if (user.isNotBlank()) Text(user, color = TextSecondary, fontSize = 11.sp, maxLines = 2); Spacer(Modifier.height(6.dp)); if (latest.isNotBlank()) Text(latest, color = TextMuted, fontSize = 10.sp, maxLines = 2); Spacer(Modifier.height(7.dp)); Text("${conversation.messages.size} messages · Tap to continue", color = PrimaryLight, fontSize = 10.sp)
+    Column(Modifier.fillMaxWidth().clip(JeeShapes.medium).background(BgCard).border(1.dp, BgCardBorder.copy(alpha = .8f), JeeShapes.medium).premiumClick(onClick).padding(15.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text(conversation.title, color = TextPrimary, style = MaterialTheme.typography.titleMedium); Text(SimpleDateFormat("dd MMM, h:mm a", Locale.getDefault()).format(Date(conversation.updatedAt)), color = TextMuted, fontSize = 11.sp) }
+        Spacer(Modifier.height(5.dp)); if (user.isNotBlank()) Text(user, color = TextSecondary, fontSize = 11.sp, maxLines = 2); Spacer(Modifier.height(6.dp)); if (latest.isNotBlank()) Text(latest, color = TextMuted, fontSize = 11.sp, maxLines = 2); Spacer(Modifier.height(7.dp)); Text("${conversation.messages.size} messages · Tap to continue", color = PrimaryLight, fontSize = 11.sp)
     }
 }

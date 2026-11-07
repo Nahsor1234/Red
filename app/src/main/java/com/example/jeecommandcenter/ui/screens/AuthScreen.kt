@@ -233,7 +233,7 @@ fun AuthScreen(
             Text(
                 "You can keep using Sigma JE offline without an account. Cloud sync is available after authentication.",
                 color = TextMuted,
-                fontSize = 10.sp
+                fontSize = 11.sp
             )
         }
     }

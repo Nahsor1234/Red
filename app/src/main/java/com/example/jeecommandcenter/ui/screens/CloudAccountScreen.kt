@@ -111,7 +111,7 @@ fun CloudAccountScreen(
                         Text(
                             "Last sync: ${DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(lastSync))}",
                             color = TextMuted,
-                            fontSize = 10.sp
+                            fontSize = 11.sp
                         )
                     }
                 }

@@ -52,7 +52,7 @@ fun SettingsScreen(onBack: () -> Unit, onOpenAnalytics: () -> Unit, onOpenAiSett
             SettingsCard("AI configuration", "Provider, model and API key", Icons.Filled.AutoAwesome, onOpenAiSettings)
             SettingsCard("Notifications", "Daily study and Daily Log reminders", Icons.Filled.Notifications, onOpenNotifications)
             Spacer(Modifier.height(8.dp))
-            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(BgCard).border(JeeSurfaceTokens.borderWidth,BgCardBorder.copy(alpha=JeeSurfaceTokens.cardBorderAlpha),JeeShapes.medium).padding(14.dp)) {
+            Column(Modifier.fillMaxWidth().clip(JeeShapes.medium).background(BgCard).border(JeeSurfaceTokens.borderWidth,BgCardBorder.copy(alpha=JeeSurfaceTokens.cardBorderAlpha),JeeShapes.medium).padding(14.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Filled.Security, "Data protection", tint = Success, modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(10.dp))
@@ -76,7 +76,7 @@ fun SettingsScreen(onBack: () -> Unit, onOpenAnalytics: () -> Unit, onOpenAiSett
                 }
                 backupStatus?.let {
                     Spacer(Modifier.height(4.dp))
-                    Text(it, color = TextMuted, fontSize = 10.sp)
+                    Text(it, color = TextMuted, fontSize = 11.sp)
                 }
             }
             Spacer(Modifier.height(8.dp))
@@ -87,7 +87,7 @@ fun SettingsScreen(onBack: () -> Unit, onOpenAnalytics: () -> Unit, onOpenAiSett
 
 @Composable
 private fun SettingsCard(title: String, subtitle: String, icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit) {
-    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(BgCard).border(JeeSurfaceTokens.borderWidth,BgCardBorder.copy(alpha=JeeSurfaceTokens.cardBorderAlpha),JeeShapes.medium).premiumClick(onClick).padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().clip(JeeShapes.medium).background(BgCard).border(JeeSurfaceTokens.borderWidth,BgCardBorder.copy(alpha=JeeSurfaceTokens.cardBorderAlpha),JeeShapes.medium).premiumClick(onClick).padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
         Icon(icon, title, tint = PrimaryLight, modifier = Modifier.size(22.dp))
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {

@@ -81,7 +81,7 @@ fun NotificationCenterScreen(onBack: () -> Unit, onOpenSettings: () -> Unit) {
 private fun CustomReminderSummaryCard(reminder: CustomReminder) {
     JeeCard {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Surface(shape = RoundedCornerShape(12.dp), color = PrimarySoft) {
+            Surface(shape = JeeShapes.small, color = PrimarySoft) {
                 Icon(Icons.Filled.Notifications, null, tint = PrimaryLight, modifier = Modifier.padding(10.dp).size(20.dp))
             }
             Spacer(Modifier.width(11.dp))
@@ -117,7 +117,7 @@ private fun ReminderSummaryCard(
 ) {
     JeeCard {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Surface(shape = RoundedCornerShape(12.dp), color = PrimarySoft) {
+            Surface(shape = JeeShapes.small, color = PrimarySoft) {
                 Icon(icon, null, tint = PrimaryLight, modifier = Modifier.padding(10.dp).size(20.dp))
             }
             Spacer(Modifier.width(11.dp))
@@ -138,7 +138,7 @@ private fun ReminderSummaryCard(
         }
         if (lastTriggered > 0L) {
             Spacer(Modifier.height(6.dp))
-            Text("Last delivered ${formatInstant(lastTriggered)}", color = TextMuted, fontSize = 10.sp)
+            Text("Last delivered ${formatInstant(lastTriggered)}", color = TextMuted, fontSize = 11.sp)
         }
     }
 }
@@ -195,7 +195,7 @@ private fun DailyReminderTimeline(
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            Text("DAILY TIMELINE", color = TextMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+            Text("DAILY TIMELINE", color = TextMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
             Text("Your recurring reminders, in time order", color = TextSecondary, fontSize = 11.sp)
         }
         JeeCard {
@@ -349,7 +349,7 @@ private fun NotificationManagementScreen(onBack: () -> Unit) {
                 Text(
                     "YOUR STUDY ROUTINE",
                     color = TextMuted,
-                    fontSize = 10.sp,
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 1.1.sp
                 )
@@ -403,7 +403,7 @@ private fun NotificationManagementScreen(onBack: () -> Unit) {
                 Text(
                     if (!masterEnabled) "REMINDERS PAUSED" else "UP NEXT",
                     color = PrimaryLight,
-                    fontSize = 10.sp,
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 1.sp
                 )
@@ -454,7 +454,7 @@ private fun NotificationManagementScreen(onBack: () -> Unit) {
                 FilledIconButton(
                     onClick = { editingCustomReminder = null; showCustomDialog = true },
                     modifier = Modifier.size(42.dp),
-                    shape = RoundedCornerShape(14.dp),
+                    shape = JeeShapes.medium,
                     colors = IconButtonDefaults.filledIconButtonColors(
                         containerColor = PrimaryLight,
                         contentColor = BgAppBase
@@ -500,7 +500,7 @@ private fun NotificationManagementScreen(onBack: () -> Unit) {
                             }
                         },
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(13.dp)
+                        shape = JeeShapes.medium
                     ) {
                         Text(if (Build.VERSION.SDK_INT >= 33 && !notificationsAllowed) "Allow notifications" else "Open system notification settings")
                     }
@@ -536,7 +536,7 @@ private fun NotificationManagementScreen(onBack: () -> Unit) {
                             }
                         },
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(13.dp)
+                        shape = JeeShapes.medium
                     ) { Text("Enable precise timing") }
                 }
             }
@@ -686,17 +686,17 @@ private fun DailyReminderTile(
 ) {
     JeeCard(modifier = modifier) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Surface(shape = RoundedCornerShape(10.dp), color = PrimarySoft) {
+            Surface(shape = JeeShapes.small, color = PrimarySoft) {
                 Icon(icon, contentDescription = null, tint = PrimaryLight, modifier = Modifier.padding(8.dp).size(18.dp))
             }
             Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, lineHeight = 16.sp)
         }
         Spacer(Modifier.height(7.dp))
-        Text(subtitle, color = TextSecondary, fontSize = 10.sp, lineHeight = 14.sp, minLines = 1, maxLines = 2)
+        Text(subtitle, color = TextSecondary, fontSize = 11.sp, lineHeight = 14.sp, minLines = 1, maxLines = 2)
         Spacer(Modifier.height(8.dp))
         Text(formatReminderTime(rule.hour, rule.minute), color = PrimaryLight, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(4.dp))
-        Text("Every day", color = TextMuted, fontSize = 10.sp)
+        Text("Every day", color = TextMuted, fontSize = 11.sp)
         TextButton(onClick = onTimeClick, contentPadding = PaddingValues(horizontal = 0.dp, vertical = 0.dp)) {
             Icon(Icons.Filled.Alarm, contentDescription = null, modifier = Modifier.size(15.dp))
             Spacer(Modifier.width(4.dp))
@@ -707,7 +707,7 @@ private fun DailyReminderTile(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(if (rule.enabled) "ON" else "OFF", color = if (rule.enabled) PrimaryLight else TextMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+            Text(if (rule.enabled) "ON" else "OFF", color = if (rule.enabled) PrimaryLight else TextMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
             Switch(checked = rule.enabled, onCheckedChange = onToggle, modifier = Modifier.width(48.dp))
         }
     }
@@ -861,7 +861,7 @@ private fun ReminderTimeline(
                             formatReminderTime(item.at.hour, item.at.minute),
                             modifier = Modifier.width(62.dp).padding(top = 12.dp),
                             color = if (item.enabled && masterEnabled) PrimaryLight else TextMuted,
-                            fontSize = 10.sp,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.SemiBold,
                             maxLines = 1
                         )
@@ -894,7 +894,7 @@ private fun ReminderTimeline(
                                 }
                                 item.systemType?.let { onSystemToggle(it, !item.enabled) }
                             },
-                            shape = RoundedCornerShape(14.dp),
+                            shape = JeeShapes.medium,
                             color = BgCard,
                             border = BorderStroke(1.dp, BgCardBorder)
                         ) {
@@ -928,7 +928,7 @@ private fun ReminderTimeline(
                                             else -> "DAILY · TAP TO TURN OFF"
                                         },
                                         color = if (masterEnabled && item.enabled) PrimaryLight else TextMuted,
-                                        fontSize = 10.sp,
+                                        fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
                                         letterSpacing = .35.sp
                                     )
@@ -1001,7 +1001,7 @@ private fun CustomReminderDialog(
     ) {
         Surface(
             modifier = Modifier.fillMaxWidth(0.93f).widthIn(max = 420.dp).heightIn(max = 620.dp),
-            shape = RoundedCornerShape(26.dp),
+            shape = JeeShapes.large,
             color = BgCard,
             border = BorderStroke(1.dp, BgCardBorder)
         ) {
@@ -1034,7 +1034,7 @@ private fun CustomReminderDialog(
                     placeholder = { Text("e.g. Revise vectors", fontSize = 15.sp) },
                     textStyle = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp),
                     singleLine = true,
-                    shape = RoundedCornerShape(14.dp)
+                    shape = JeeShapes.medium
                 )
 
                 OutlinedTextField(
@@ -1046,7 +1046,7 @@ private fun CustomReminderDialog(
                     textStyle = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp),
                     minLines = 1,
                     maxLines = 3,
-                    shape = RoundedCornerShape(14.dp)
+                    shape = JeeShapes.medium
                 )
 
                 Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
@@ -1102,7 +1102,7 @@ private fun CustomReminderDialog(
                             },
                             modifier = Modifier.fillMaxWidth().height(48.dp),
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
-                            shape = RoundedCornerShape(13.dp)
+                            shape = JeeShapes.medium
                         ) {
                             Icon(Icons.Filled.Today, null, modifier = Modifier.size(17.dp), tint = PrimaryLight)
                             Spacer(Modifier.width(6.dp))
@@ -1119,7 +1119,7 @@ private fun CustomReminderDialog(
                             onClick = { showTimePicker(context, hour, minute) { h, m -> hour = h; minute = m } },
                             modifier = Modifier.fillMaxWidth().height(48.dp),
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
-                            shape = RoundedCornerShape(13.dp)
+                            shape = JeeShapes.medium
                         ) {
                             Icon(Icons.Filled.Alarm, null, modifier = Modifier.size(17.dp), tint = PrimaryLight)
                             Spacer(Modifier.width(6.dp))
@@ -1157,7 +1157,7 @@ private fun CustomReminderDialog(
                                 )
                             )
                         },
-                        shape = RoundedCornerShape(13.dp),
+                        shape = JeeShapes.medium,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = PrimaryLight,
                             contentColor = BgAppBase
@@ -1178,19 +1178,19 @@ private fun QuietHoursCard(context: Context, hours: QuietHours, onChange: (Quiet
         Spacer(Modifier.height(9.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
             Column(Modifier.weight(1f)) {
-                Text("Start", color = TextMuted, fontSize = 10.sp)
+                Text("Start", color = TextMuted, fontSize = 11.sp)
                 OutlinedButton(
                     onClick = { showTimePicker(context, hours.startHour, hours.startMinute) { h, m -> onChange(hours.copy(startHour = h, startMinute = m)) } },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = JeeShapes.small
                 ) { Text(formatReminderTime(hours.startHour, hours.startMinute), fontSize = 11.sp, maxLines = 1) }
             }
             Column(Modifier.weight(1f)) {
-                Text("End", color = TextMuted, fontSize = 10.sp)
+                Text("End", color = TextMuted, fontSize = 11.sp)
                 OutlinedButton(
                     onClick = { showTimePicker(context, hours.endHour, hours.endMinute) { h, m -> onChange(hours.copy(endHour = h, endMinute = m)) } },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = JeeShapes.small
                 ) { Text(formatReminderTime(hours.endHour, hours.endMinute), fontSize = 11.sp, maxLines = 1) }
             }
         }
@@ -1216,10 +1216,10 @@ private fun ReminderSettingCard(
         Spacer(Modifier.height(8.dp))
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
             Column {
-                Text("Reminder time", color = TextMuted, fontSize = 10.sp)
+                Text("Reminder time", color = TextMuted, fontSize = 11.sp)
                 Text(formatReminderTime(rule.hour, rule.minute), color = PrimaryLight, fontWeight = FontWeight.SemiBold)
             }
-            OutlinedButton(onClick = onTimeClick, shape = RoundedCornerShape(12.dp)) {
+            OutlinedButton(onClick = onTimeClick, shape = JeeShapes.small) {
                 Icon(Icons.Filled.Alarm, null, modifier = Modifier.size(17.dp))
                 Spacer(Modifier.width(6.dp))
                 Text("Change time")

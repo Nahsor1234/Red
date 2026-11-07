@@ -35,12 +35,12 @@ fun AssessmentHistoryScreen(learning: LearningRepository, onBack: () -> Unit, on
         } else {
             LazyColumn(Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(bottom = 24.dp)) {
                 items(attempts, key = { it.id }) { attempt ->
-                    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(BgCard).border(1.dp, BgCardBorder.copy(alpha = .8f), RoundedCornerShape(16.dp)).premiumClick { onOpenAttempt(attempt) }.padding(14.dp)) {
+                    Column(Modifier.fillMaxWidth().clip(JeeShapes.medium).background(BgCard).border(1.dp, BgCardBorder.copy(alpha = .8f), JeeShapes.medium).premiumClick { onOpenAttempt(attempt) }.padding(14.dp)) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Column(Modifier.weight(1f)) { Text(if (attempt.name.isBlank()) attempt.mode.name.lowercase().replace('_', ' ') else attempt.name, style = MaterialTheme.typography.titleMedium); Text(SimpleDateFormat("dd MMM, h:mm a", Locale.getDefault()).format(Date(attempt.completedAt)), color = TextMuted, fontSize = 9.sp) }
+                            Column(Modifier.weight(1f)) { Text(if (attempt.name.isBlank()) attempt.mode.name.lowercase().replace('_', ' ') else attempt.name, style = MaterialTheme.typography.titleMedium); Text(SimpleDateFormat("dd MMM, h:mm a", Locale.getDefault()).format(Date(attempt.completedAt)), color = TextMuted, fontSize = 11.sp) }
                             Text("${attempt.score}/${attempt.totalMarks}", color = PrimaryLight, fontWeight = FontWeight.SemiBold)
                         }
-                        Spacer(Modifier.height(7.dp)); Text("${attempt.correctCount} correct · ${attempt.incorrectCount} incorrect · ${attempt.skippedCount} skipped", color = TextSecondary, fontSize = 11.sp); Text("${formatTestDuration(attempt.durationSec)} · ${attempt.questionCount} questions", color = TextMuted, fontSize = 10.sp); Spacer(Modifier.height(5.dp)); Text("View full result →", color = PrimaryLight, fontSize = 10.sp)
+                        Spacer(Modifier.height(7.dp)); Text("${attempt.correctCount} correct · ${attempt.incorrectCount} incorrect · ${attempt.skippedCount} skipped", color = TextSecondary, fontSize = 11.sp); Text("${formatTestDuration(attempt.durationSec)} · ${attempt.questionCount} questions", color = TextMuted, fontSize = 11.sp); Spacer(Modifier.height(5.dp)); Text("View full result →", color = PrimaryLight, fontSize = 11.sp)
                     }
                 }
             }

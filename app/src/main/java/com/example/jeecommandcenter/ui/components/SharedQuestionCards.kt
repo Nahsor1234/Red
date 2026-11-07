@@ -25,7 +25,7 @@ import com.example.jeecommandcenter.ui.theme.*
 fun SharedQuestionPromptCard(prompt: String) {
     androidx.compose.material3.Surface(
         Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
+        shape = JeeShapes.medium,
         color = BgCardAlt,
         border = BorderStroke(1.dp, BgCardBorder.copy(alpha = .85f))
     ) {
@@ -58,11 +58,11 @@ fun SharedQuestionOptionRow(
     }
     Row(
         Modifier.fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(JeeShapes.medium)
             .background(if (selected || correctVisible) PrimarySoft else BgCard)
             .border(
                 BorderStroke(if (selected || correctVisible) 1.5.dp else 1.dp, borderColor),
-                RoundedCornerShape(16.dp)
+                JeeShapes.medium
             )
             .clickable(enabled = !submitted, onClick = onClick)
             .padding(horizontal = 14.dp, vertical = 13.dp),

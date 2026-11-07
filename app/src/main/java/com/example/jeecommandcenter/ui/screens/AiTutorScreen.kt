@@ -209,7 +209,7 @@ fun AiTutorScreen(
                         CoachQuickAction("Analyze my mistakes from now", Icons.Filled.ErrorOutline, Modifier.weight(1f)) { send("Analyze my mistakes from now", "Mistake analysis") { orchestrator.explainMistakes() } }
                     }
                 }
-                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(BgCardAlt).border(1.dp, BgCardBorder.copy(alpha = .85f), RoundedCornerShape(28.dp)).padding(horizontal = 5.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.fillMaxWidth().clip(JeeShapes.large).background(BgCardAlt).border(1.dp, BgCardBorder.copy(alpha = .85f), JeeShapes.large).padding(horizontal = 5.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Filled.Add, null, tint = TextSecondary, modifier = Modifier.padding(8.dp).size(21.dp))
                     TextField(value = input, onValueChange = { input = it }, modifier = Modifier.weight(1f), placeholder = { Text("Ask your study coach", color = TextMuted) }, singleLine = false, maxLines = 3, colors = TextFieldDefaults.colors(focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent, disabledContainerColor = Color.Transparent, focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent))
                     IconButton(onClick = { send(input) }, enabled = input.isNotBlank() && !busy) { Icon(Icons.Filled.Send, "Ask coach", tint = if (input.isNotBlank() && !busy) PrimaryLight else TextMuted) }
@@ -223,13 +223,13 @@ fun AiTutorScreen(
                 item {
                     Spacer(Modifier.height(90.dp)); Icon(Icons.Filled.AutoAwesome, null, tint = PrimaryLight, modifier = Modifier.size(48.dp)); Spacer(Modifier.height(14.dp))
                     Text("How can I help with your JEE prep?", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold); Spacer(Modifier.height(6.dp))
-                    Text("Your study data is available to the coach. Ask anything, or use a quick action below.", color = TextSecondary, fontSize = 12.sp); Spacer(Modifier.height(12.dp)); Text("Current signal · $coachingHeadline", color = TextMuted, fontSize = 10.sp)
+                    Text("Your study data is available to the coach. Ask anything, or use a quick action below.", color = TextSecondary, fontSize = 12.sp); Spacer(Modifier.height(12.dp)); Text("Current signal · $coachingHeadline", color = TextMuted, fontSize = 11.sp)
                 }
             } else {
                 items(messages, key = { it.id }) { message ->
                     val isUser = message.role == "USER"
                     val isStreamingMessage = message.id == streamingMessageId
-                    Surface(Modifier.fillMaxWidth(), color = if (isUser) BgCardAlt else BgCard, shape = RoundedCornerShape(18.dp), border = androidx.compose.foundation.BorderStroke(1.dp, BgCardBorder.copy(alpha = .75f))) {
+                    Surface(Modifier.fillMaxWidth(), color = if (isUser) BgCardAlt else BgCard, shape = JeeShapes.medium, border = androidx.compose.foundation.BorderStroke(1.dp, BgCardBorder.copy(alpha = .75f))) {
                         Column(Modifier.padding(15.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(if (isUser) "YOU" else "COACH", color = PrimaryLight, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = .9.sp)
@@ -249,7 +249,7 @@ fun AiTutorScreen(
     }
 }
 
-@Composable private fun CoachQuickAction(title: String, icon: androidx.compose.ui.graphics.vector.ImageVector, modifier: Modifier = Modifier, onClick: () -> Unit) { Row(modifier.fillMaxWidth().height(48.dp).clip(RoundedCornerShape(18.dp)).background(BgCard).border(1.dp, BgCardBorder.copy(alpha = .8f), RoundedCornerShape(18.dp)).premiumClick(onClick).padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) { Icon(icon, null, tint = PrimaryLight, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(7.dp)); Text(title, color = TextPrimary, fontSize = 10.sp, fontWeight = FontWeight.Medium, maxLines = 2) } }
+@Composable private fun CoachQuickAction(title: String, icon: androidx.compose.ui.graphics.vector.ImageVector, modifier: Modifier = Modifier, onClick: () -> Unit) { Row(modifier.fillMaxWidth().height(48.dp).clip(JeeShapes.medium).background(BgCard).border(1.dp, BgCardBorder.copy(alpha = .8f), JeeShapes.medium).premiumClick(onClick).padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) { Icon(icon, null, tint = PrimaryLight, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(7.dp)); Text(title, color = TextPrimary, fontSize = 11.sp, fontWeight = FontWeight.Medium, maxLines = 2) } }
 
 private fun buildBoundedAiTurns(history: List<AiChatMessage>): List<AiPromptMessage> {
     // Keep the active practice context once in history, but not in the visible transcript.
