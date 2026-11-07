@@ -275,14 +275,14 @@ fun SyllabusScreen(
                                 Box(
                                     Modifier.size(13.dp)
                                         .clip(CircleShape)
-                                        .background(if (progress >= 1f) AccentGreen else BgDivider),
+                                        .background(if (progress >= 1f) Success else BgDivider),
                                     Alignment.Center
                                 ) {
                                     if (progress >= 1f) {
                                         Icon(
                                             Icons.Filled.Check,
                                             null,
-                                            tint = AccentGreenDark,
+                                            tint = OnSuccess,
                                             modifier = Modifier.size(9.dp)
                                         )
                                     }
@@ -291,7 +291,7 @@ fun SyllabusScreen(
                                 Column {
                                     Text(
                                         "${chapter.number}. ${chapter.name}",
-                                        color = TextOnCard,
+                                        color = TextPrimary,
                                         fontSize = 14.sp
                                     )
                                     Text(
@@ -310,7 +310,7 @@ fun SyllabusScreen(
 
                             Column(horizontalAlignment = Alignment.End) {
                                 if (due.contains(chapter.id)) {
-                                    Text("Review due", color = AccentAmber, fontSize = 10.sp)
+                                    Text("Review due", color = Warning, fontSize = 10.sp)
                                 } else if (weak.contains(chapter.id)) {
                                     Text("Weak", color = PrimaryLight, fontSize = 10.sp)
                                 }

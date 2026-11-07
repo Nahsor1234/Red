@@ -190,7 +190,7 @@ fun AuthScreen(
             }
 
             error?.let { Text(it, color = Danger, fontSize = 12.sp) }
-            message?.let { Text(it, color = AccentGreen, fontSize = 12.sp) }
+            message?.let { Text(it, color = Success, fontSize = 12.sp) }
 
             Button(
                 onClick = ::submit,

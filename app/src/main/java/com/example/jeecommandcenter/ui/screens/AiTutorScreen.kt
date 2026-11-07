@@ -243,7 +243,7 @@ fun AiTutorScreen(
                             when {
                                 isUser -> MathMarkdownText(message.text, modifier = Modifier.fillMaxWidth(), color = TextPrimary, fontSize = 14.sp, lineHeight = 21.sp, fontWeight = FontWeight.Medium)
                                 isStreamingMessage && busy && message.text.isBlank() -> Text("Coach is thinking…", color = TextSecondary, fontSize = 12.sp)
-                                else -> MathMarkdownText(message.text, modifier = Modifier.fillMaxWidth(), color = TextOnCard, fontSize = 14.sp, lineHeight = 21.sp)
+                                else -> MathMarkdownText(message.text, modifier = Modifier.fillMaxWidth(), color = TextPrimary, fontSize = 14.sp, lineHeight = 21.sp)
                             }
                         }
                     }
@@ -253,7 +253,7 @@ fun AiTutorScreen(
     }
 }
 
-@Composable private fun CoachQuickAction(title: String, icon: androidx.compose.ui.graphics.vector.ImageVector, modifier: Modifier = Modifier, onClick: () -> Unit) { Row(modifier.fillMaxWidth().height(48.dp).clip(RoundedCornerShape(18.dp)).background(BgCard).border(1.dp, BgCardBorder.copy(alpha = .8f), RoundedCornerShape(18.dp)).premiumClick(onClick).padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) { Icon(icon, null, tint = PrimaryLight, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(7.dp)); Text(title, color = TextOnCard, fontSize = 10.sp, fontWeight = FontWeight.Medium, maxLines = 2) } }
+@Composable private fun CoachQuickAction(title: String, icon: androidx.compose.ui.graphics.vector.ImageVector, modifier: Modifier = Modifier, onClick: () -> Unit) { Row(modifier.fillMaxWidth().height(48.dp).clip(RoundedCornerShape(18.dp)).background(BgCard).border(1.dp, BgCardBorder.copy(alpha = .8f), RoundedCornerShape(18.dp)).premiumClick(onClick).padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) { Icon(icon, null, tint = PrimaryLight, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(7.dp)); Text(title, color = TextPrimary, fontSize = 10.sp, fontWeight = FontWeight.Medium, maxLines = 2) } }
 
 private fun buildBoundedAiTurns(history: List<AiChatMessage>): List<AiPromptMessage> {
     // Keep the active practice context once in history, but not in the visible transcript.

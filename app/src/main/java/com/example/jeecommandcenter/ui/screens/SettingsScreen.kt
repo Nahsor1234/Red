@@ -54,7 +54,7 @@ fun SettingsScreen(onBack: () -> Unit, onOpenAnalytics: () -> Unit, onOpenAiSett
             Spacer(Modifier.height(8.dp))
             Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(BgCard).border(JeeSurfaceTokens.borderWidth,BgCardBorder.copy(alpha=JeeSurfaceTokens.cardBorderAlpha),JeeShapes.medium).padding(14.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Filled.Security, "Data protection", tint = AccentGreen, modifier = Modifier.size(20.dp))
+                    Icon(Icons.Filled.Security, "Data protection", tint = Success, modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(10.dp))
                     Text("Data protection", style = MaterialTheme.typography.titleMedium)
                 }
@@ -88,7 +88,7 @@ fun SettingsScreen(onBack: () -> Unit, onOpenAnalytics: () -> Unit, onOpenAiSett
 @Composable
 private fun SettingsCard(title: String, subtitle: String, icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit) {
     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(BgCard).border(JeeSurfaceTokens.borderWidth,BgCardBorder.copy(alpha=JeeSurfaceTokens.cardBorderAlpha),JeeShapes.medium).premiumClick(onClick).padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-        Icon(icon, title, tint = AccentBlueLight, modifier = Modifier.size(22.dp))
+        Icon(icon, title, tint = PrimaryLight, modifier = Modifier.size(22.dp))
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.titleMedium)

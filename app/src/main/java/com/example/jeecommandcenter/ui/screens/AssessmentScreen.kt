@@ -185,7 +185,7 @@ fun AssessmentScreen(learning: LearningRepository, jee: JeeRepository, onBack: (
                 Text("Questions", color = TextSecondary, fontSize = 12.sp)
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { listOf(5, 10, 15, 20).forEach { JeeFilterChip(it.toString(), aiCount == it) { aiCount = it } } }
                 Text("Context: $subject${if (mode == TestMode.PRACTICE) "" else " · mixed subjects"}", color = TextMuted, fontSize = 11.sp)
-                if (aiBusy) LinearProgressIndicator(Modifier.fillMaxWidth(), color = AccentBlue)
+                if (aiBusy) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Primary)
             }
         }, confirmButton = { Button(enabled = !aiBusy, onClick = { aiBusy = true; scope.launch { val generated = AiEngine(settings).generateQuiz(subject, null, aiDifficulty, aiCount); aiBusy = false; if (generated.isNotEmpty()) { showAiDialog = false; startWith(generated) } } }) { Text(if (aiBusy) "Creating..." else "Create quiz") } }, dismissButton = { TextButton(enabled = !aiBusy, onClick = { showAiDialog = false }) { Text("Cancel") } })
     }
@@ -214,7 +214,7 @@ private fun SetupContent(
                 onClick = onStart,
                 enabled = !loadingQuestions,
                 modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = AccentBlue)
+                colors = ButtonDefaults.buttonColors(containerColor = Primary)
             ) {
                 if (loadingQuestions) {
                     CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
@@ -266,7 +266,7 @@ private fun QuestionContent(
                 }
                 Text(
                     "${remaining}s",
-                    color = if (remaining <= 10) AccentAmber else TextSecondary,
+                    color = if (remaining <= 10) Warning else TextSecondary,
                     fontSize = 13.sp
                 )
             }
@@ -300,7 +300,7 @@ private fun QuestionContent(
                 ) {
                     Text(
                         if (isCorrect) "Correct answer" else "Answer Review",
-                        color = if (isCorrect) PrimaryLight else AccentAmber,
+                        color = if (isCorrect) PrimaryLight else Warning,
                         style = MaterialTheme.typography.titleMedium
                     )
                     MathMarkdownText(

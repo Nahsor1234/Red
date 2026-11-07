@@ -249,7 +249,7 @@ fun DailyLogScreen(onBack: () -> Unit) {
                                 val isToday = date == today
                                 val cellColor = when {
                                     isSelected -> PrimarySoft
-                                    dateEntry.completed -> AccentGreen.copy(alpha = 0.14f)
+                                    dateEntry.completed -> Success.copy(alpha = 0.14f)
                                     else -> BgCard.copy(alpha = 0.68f)
                                 }
                                 val cellBorder = when {
@@ -343,7 +343,7 @@ fun DailyLogScreen(onBack: () -> Unit) {
                 )
                 if (selectedIsToday) {
                     Spacer(Modifier.height(5.dp))
-                    Text("${entry.notes.length}/${DailyLogRepository.MAX_NOTE_LENGTH} characters · ${cloudBackupStatus ?: "Saved automatically on this device"}", color = if (cloudBackupStatus?.startsWith("Backed up") == true) AccentGreen else TextMuted, fontSize = 9.sp)
+                    Text("${entry.notes.length}/${DailyLogRepository.MAX_NOTE_LENGTH} characters · ${cloudBackupStatus ?: "Saved automatically on this device"}", color = if (cloudBackupStatus?.startsWith("Backed up") == true) Success else TextMuted, fontSize = 9.sp)
                 }
             }
             Spacer(Modifier.height(4.dp))

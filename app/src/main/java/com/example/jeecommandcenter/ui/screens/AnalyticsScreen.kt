@@ -47,10 +47,10 @@ fun AnalyticsScreen(repo: JeeRepository, learning: LearningRepository, onBack: (
                         Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
                             Text(point.date.format(DateTimeFormatter.ofPattern("dd MMM")), color = TextMuted, fontSize = 9.sp, modifier = Modifier.width(42.dp))
                             Column(Modifier.weight(1f)) {
-                                LinearProgressIndicator(progress = { point.studyMinutes.toFloat() / maxStudy }, modifier = Modifier.fillMaxWidth().height(5.dp), color = AccentBlue, trackColor = BgDivider)
+                                LinearProgressIndicator(progress = { point.studyMinutes.toFloat() / maxStudy }, modifier = Modifier.fillMaxWidth().height(5.dp), color = Primary, trackColor = BgDivider)
                                 Text(point.studyMinutes.toString() + "m study · " + point.questions + " questions" + (point.accuracy?.let { " · " + (it * 100).toInt() + "%" } ?: ""), color = TextMuted, fontSize = 8.sp)
                             }
-                            if (point.tests > 0) Text("T " + (point.testScore?.toInt() ?: 0) + "%", color = AccentGreen, fontSize = 9.sp, modifier = Modifier.padding(start = 8.dp))
+                            if (point.tests > 0) Text("T " + (point.testScore?.toInt() ?: 0) + "%", color = Success, fontSize = 9.sp, modifier = Modifier.padding(start = 8.dp))
                         }
                     }
                 }
@@ -97,8 +97,8 @@ private fun WeeklyReviewCard(review: WeeklyReview) {
 private fun ChapterEvidenceRow(evidence: ChapterEvidence) {
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(BgCard).border(JeeSurfaceTokens.borderWidth,BgCardBorder.copy(alpha=JeeSurfaceTokens.cardBorderAlpha),JeeShapes.medium).padding(12.dp)) {
         Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
-            Column(Modifier.weight(1f)) { Text(evidence.chapterName, color = TextOnCard, fontSize = 12.sp); Text(evidence.subject, color = TextMuted, fontSize = 9.sp) }
-            Text(evidence.accuracy?.let { (it * 100).toInt().toString() + "%" } ?: "—", color = if ((evidence.accuracy ?: 1f) < 0.65f) TextAmber else TextSecondary, fontSize = 11.sp)
+            Column(Modifier.weight(1f)) { Text(evidence.chapterName, color = TextPrimary, fontSize = 12.sp); Text(evidence.subject, color = TextMuted, fontSize = 9.sp) }
+            Text(evidence.accuracy?.let { (it * 100).toInt().toString() + "%" } ?: "—", color = if ((evidence.accuracy ?: 1f) < 0.65f) Warning else TextSecondary, fontSize = 11.sp)
         }
         Spacer(Modifier.height(6.dp)); Text(evidence.studyMinutes.toString() + "m study · " + evidence.questions + " questions · " + evidence.revisions + " revisions · " + evidence.unresolvedMistakes + " unresolved mistakes", color = TextMuted, fontSize = 9.sp)
     }
@@ -113,6 +113,6 @@ private fun Metric(label: String, value: String, modifier: Modifier) {
 private fun SubjectBar(subject: SubjectAnalytics) {
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(BgCard).border(JeeSurfaceTokens.borderWidth,BgCardBorder.copy(alpha=JeeSurfaceTokens.cardBorderAlpha),JeeShapes.medium).padding(12.dp)) {
         Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) { Text(subject.subject, color = TextSecondary, fontSize = 12.sp); Text(subject.attempted.toString() + " attempted · " + (subject.accuracy * 100).toInt() + "%", color = TextMuted, fontSize = 10.sp) }
-        Spacer(Modifier.height(7.dp)); LinearProgressIndicator(progress = { subject.accuracy.coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth().height(6.dp), color = AccentBlue, trackColor = BgDivider)
+        Spacer(Modifier.height(7.dp)); LinearProgressIndicator(progress = { subject.accuracy.coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth().height(6.dp), color = Primary, trackColor = BgDivider)
     }
 }

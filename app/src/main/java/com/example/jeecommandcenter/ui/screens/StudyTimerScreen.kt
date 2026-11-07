@@ -123,7 +123,7 @@ fun StudyTimerScreen(repo: JeeRepository, selectedTab: AppTab, onTabSelected: (A
                     Canvas(Modifier.size(224.dp)) {
                         val st = Stroke(12.dp.toPx(), cap = StrokeCap.Round)
                         drawArc(BgDivider, -90f, 360f, false, style = st)
-                        drawArc(AccentBlue, -90f, 360f * progress, false, style = st)
+                        drawArc(Primary, -90f, 360f * progress, false, style = st)
                     }
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(String.format(Locale.US, "%02d:%02d", remaining / 60, remaining % 60), fontSize = 46.sp, fontWeight = FontWeight.Normal)
@@ -165,7 +165,7 @@ fun StudyTimerScreen(repo: JeeRepository, selectedTab: AppTab, onTabSelected: (A
                                     chapters.forEach { value ->
                                         TextButton(onClick = { chapter = value.id; chapterPickerExpanded = false }, modifier = Modifier.fillMaxWidth()) {
                                             Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
-                                                Text("${value.number}. ${value.name}", color = if (chapter == value.id) PrimaryLight else TextOnCard, fontSize = 12.sp)
+                                                Text("${value.number}. ${value.name}", color = if (chapter == value.id) PrimaryLight else TextPrimary, fontSize = 12.sp)
                                                 if (chapter == value.id) Icon(Icons.Filled.Check, null, tint = PrimaryLight, modifier = Modifier.size(16.dp))
                                             }
                                         }
@@ -197,8 +197,8 @@ fun StudyTimerScreen(repo: JeeRepository, selectedTab: AppTab, onTabSelected: (A
                         repo.startTimer(total, remaining); end = System.currentTimeMillis() + remaining * 1000; running = true
                     }
                     view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(17.dp), colors = ButtonDefaults.buttonColors(containerColor = AccentBlue)) {
-                    Icon(if (running) Icons.Filled.Pause else Icons.Filled.PlayArrow, null, tint = Color(0xFF17120A)); Spacer(Modifier.width(8.dp)); Text(if (running) "Pause" else "Start session", color = Color(0xFF17120A))
+                }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(17.dp), colors = ButtonDefaults.buttonColors(containerColor = Primary)) {
+                    Icon(if (running) Icons.Filled.Pause else Icons.Filled.PlayArrow, null, tint = OnPrimary); Spacer(Modifier.width(8.dp)); Text(if (running) "Pause" else "Start session", color = OnPrimary)
                 }
             }
             item { SectionHeader("Completed sessions") }
@@ -224,8 +224,8 @@ fun StudyTimerScreen(repo: JeeRepository, selectedTab: AppTab, onTabSelected: (A
 
 @Composable
 private fun Preset(label: String, sub: String, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
-    Column(modifier.clip(RoundedCornerShape(15.dp)).background(BgCard).border(1.dp, if (selected) AccentBlue else Color.Transparent, RoundedCornerShape(15.dp)).premiumClick(onClick).padding(vertical = 11.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(label, color = if (selected) AccentBlue else TextOnCard, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+    Column(modifier.clip(RoundedCornerShape(15.dp)).background(BgCard).border(1.dp, if (selected) Primary else Color.Transparent, RoundedCornerShape(15.dp)).premiumClick(onClick).padding(vertical = 11.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(label, color = if (selected) Primary else TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
         Text(sub, color = TextMuted, fontSize = 10.sp)
     }
 }

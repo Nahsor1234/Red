@@ -3,15 +3,26 @@ package com.example.jeecommandcenter.ui.theme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.unit.dp
 
+/** Corner radii: smaller radii for dense controls, larger for containers. */
 object JeeShapes {
     val small = RoundedCornerShape(10.dp)
-    val medium = RoundedCornerShape(14.dp)
-    val large = RoundedCornerShape(18.dp)
-    val pill = RoundedCornerShape(50.dp)
+    val medium = RoundedCornerShape(16.dp)
+    val large = RoundedCornerShape(24.dp)
+    val pill = RoundedCornerShape(50)
 }
 
 object JeeSurfaceTokens {
     val borderWidth = 1.dp
-    val cardBorderAlpha = 0.72f
-    val featuredBorderAlpha = 0.90f
+    const val cardBorderAlpha = 0.8f
+    const val featuredBorderAlpha = 1f
+}
+
+/** 4dp-based spacing scale. */
+object JeeSpacing {
+    val xs = 4.dp
+    val sm = 8.dp
+    val md = 12.dp
+    val lg = 16.dp
+    val xl = 24.dp
+    val xxl = 32.dp
 }

@@ -51,7 +51,7 @@ fun MistakeBankScreen(learning: LearningRepository, onBack: () -> Unit, onOpenTu
         syncingCloudMistakes = false
     }
     Scaffold(containerColor = BgApp, topBar = {
-        JeeTopBar(title = "Mistake Bank", subtitle = if (syncingCloudMistakes) "Syncing saved attempts…" else "${mistakes.size} unresolved questions", onBack = onBack, trailing = { Text(mistakes.size.toString(), color = AccentAmber) })
+        JeeTopBar(title = "Mistake Bank", subtitle = if (syncingCloudMistakes) "Syncing saved attempts…" else "${mistakes.size} unresolved questions", onBack = onBack, trailing = { Text(mistakes.size.toString(), color = Warning) })
     }) { padding ->
         LazyColumn(Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             if (mistakes.isEmpty()) {
@@ -75,8 +75,8 @@ private fun MistakeCard(mistake: MistakeRecord, learning: LearningRepository, on
     var typeMenu by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(BgCard).border(JeeSurfaceTokens.borderWidth,BgCardBorder.copy(alpha=JeeSurfaceTokens.cardBorderAlpha),JeeShapes.medium).padding(14.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Column(Modifier.weight(1f)) { Text(mistake.subject + " · " + chapterName + " · " + sourceLabel, color = AccentBlueLight, fontSize = 10.sp); Spacer(Modifier.height(4.dp)); MathMarkdownText(mistake.questionPrompt, modifier = Modifier.fillMaxWidth(), color = TextPrimary, fontSize = MaterialTheme.typography.titleMedium.fontSize, lineHeight = MaterialTheme.typography.titleMedium.lineHeight) }
-            Text("×" + mistake.count, color = if (mistake.count >= 2) AccentAmber else TextMuted)
+            Column(Modifier.weight(1f)) { Text(mistake.subject + " · " + chapterName + " · " + sourceLabel, color = PrimaryLight, fontSize = 10.sp); Spacer(Modifier.height(4.dp)); MathMarkdownText(mistake.questionPrompt, modifier = Modifier.fillMaxWidth(), color = TextPrimary, fontSize = MaterialTheme.typography.titleMedium.fontSize, lineHeight = MaterialTheme.typography.titleMedium.lineHeight) }
+            Text("×" + mistake.count, color = if (mistake.count >= 2) Warning else TextMuted)
         }
         Spacer(Modifier.height(8.dp))
         Box {
@@ -88,7 +88,7 @@ private fun MistakeCard(mistake: MistakeRecord, learning: LearningRepository, on
         if (expanded) {
             Spacer(Modifier.height(8.dp))
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) { Text("Your answer:", color = TextSecondary, fontSize = 12.sp); MathMarkdownText(mistake.lastSelectedAnswer, modifier = Modifier.fillMaxWidth(), color = TextSecondary, fontSize = 12.sp, lineHeight = 17.sp) }
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) { Text("Correct answer:", color = AccentGreen, fontSize = 12.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium); MathMarkdownText(mistake.correctAnswer, modifier = Modifier.fillMaxWidth(), color = AccentGreen, fontSize = 12.sp, lineHeight = 17.sp) }
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) { Text("Correct answer:", color = Success, fontSize = 12.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium); MathMarkdownText(mistake.correctAnswer, modifier = Modifier.fillMaxWidth(), color = Success, fontSize = 12.sp, lineHeight = 17.sp) }
             if (mistake.correction.isNotBlank()) {
                 Text("Solution", color = TextPrimary, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, fontSize = 12.sp)
                 MathMarkdownText(mistake.correction, modifier = Modifier.fillMaxWidth(), color = TextSecondary, fontSize = 12.sp, lineHeight = 18.sp)

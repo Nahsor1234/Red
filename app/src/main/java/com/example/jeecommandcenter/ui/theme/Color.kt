@@ -2,48 +2,31 @@ package com.example.jeecommandcenter.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Warm Graphite palette
-val BgAppBase = Color(0xFF151916)
-// Screen scaffolds are transparent so the global academic wallpaper can sit behind them.
+// "Ink & Lamp" palette: deep blue-black ink surfaces lit by a warm amber accent.
+// All text/surface pairs below meet WCAG AA (4.5:1) for normal text.
+
+// Surfaces, darkest to lightest.
+val BgAppBase = Color(0xFF0E1120)
+/** Screen scaffolds are transparent; the root surface in MainActivity paints [BgAppBase]. */
 val BgApp = Color.Transparent
-val BgCard = Color(0xFF20251F)
-val BgCardAlt = Color(0xFF2B312A)
-val BgCardBorder = Color(0xFF444D43)
-val BgDivider = Color(0xFF444D43)
-val BgPriority = Color(0xFF2B312A)
-val BorderPriority = Color(0xFF444D43)
-val BgPriorityBadge = Color(0xFF2B312A)
+val BgCard = Color(0xFF161A2C)
+val BgCardAlt = Color(0xFF1F2438)
+val BgCardHigh = Color(0xFF2A3150)
+val BgCardBorder = Color(0xFF2C3354)
+val BgDivider = BgCardHigh
 
-val TextPriorityBadge = Color(0xFFCAF592)
-val TextAmber = Color(0xFFCAF592)
-val TextPrimary = Color(0xFFF2F6EF)
-val TextSecondary = Color(0xFFAEB7A7)
-val TextMuted = Color(0xFF7F8979)
-val TextOnCard = Color(0xFFF2F6EF)
+// Text.
+val TextPrimary = Color(0xFFECEFFA)
+val TextSecondary = Color(0xFFB0B7D3)
+val TextMuted = Color(0xFF8790B3)
 
-// Semantic accent tokens. Prefer these names in new code.
-val Primary = Color(0xFFA4D56A)
-val PrimaryLight = Color(0xFFCAF592)
-val PrimarySoft = Color(0xFF2B312A)
-val Success = Color(0xFF4EE986)
-val SuccessDark = Color(0xFF151916)
-val Warning = Color(0xFFFACC15)
-val Danger = Color(0xFFEF4444)
-val ChipSelectedBg = Primary
-val ChipUnselectedBg = BgCard
-
-// Legacy aliases retained so existing screens can migrate incrementally.
-@Deprecated("Use Primary")
-val AccentBlue = Primary
-@Deprecated("Use PrimaryLight")
-val AccentBlueLight = PrimaryLight
-@Deprecated("Use PrimarySoft")
-val AccentBlueSoft = PrimarySoft
-@Deprecated("Use Success")
-val AccentGreen = Success
-@Deprecated("Use SuccessDark")
-val AccentGreenDark = SuccessDark
-@Deprecated("Use Warning")
-val AccentAmber = Warning
-@Deprecated("Use Danger")
-val AccentPink = Danger
+// Accents.
+val Primary = Color(0xFFF2B65A)
+val PrimaryLight = Color(0xFFFFD594)
+val PrimarySoft = Color(0xFF332A1A)
+val OnPrimary = Color(0xFF2A1A00)
+val Success = Color(0xFF5FD3A1)
+val OnSuccess = Color(0xFF06281B)
+val Warning = Color(0xFFF2C94C)
+val Danger = Color(0xFFF2777F)
+val OnDanger = Color(0xFF2E0A0D)

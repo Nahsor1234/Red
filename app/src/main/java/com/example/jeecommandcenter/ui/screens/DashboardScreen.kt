@@ -263,8 +263,8 @@ fun DashboardScreen(
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { subjects.forEach { value -> JeeFilterChip(value, value == focusSubject) { focusSubject = value; selectedFocusId = null } } }
                 Text("Chapter", color = TextSecondary, fontSize = 12.sp)
                 LazyColumn(Modifier.fillMaxWidth().height(260.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    item { TextButton(onClick = { selectedFocusId = null }) { Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) { Text("Automatic recommendation", color = if (selectedFocusId == null) PrimaryLight else TextOnCard); if (selectedFocusId == null) Text("Selected", color = PrimaryLight, fontSize = 10.sp) } } }
-                    items(chapters, key = { it.id }) { chapter -> TextButton(onClick = { selectedFocusId = chapter.id }) { Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) { Text("${chapter.number}. ${chapter.name}", color = if (selectedFocusId == chapter.id) PrimaryLight else TextOnCard); if (selectedFocusId == chapter.id) Text("Selected", color = PrimaryLight, fontSize = 10.sp) } } }
+                    item { TextButton(onClick = { selectedFocusId = null }) { Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) { Text("Automatic recommendation", color = if (selectedFocusId == null) PrimaryLight else TextPrimary); if (selectedFocusId == null) Text("Selected", color = PrimaryLight, fontSize = 10.sp) } } }
+                    items(chapters, key = { it.id }) { chapter -> TextButton(onClick = { selectedFocusId = chapter.id }) { Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) { Text("${chapter.number}. ${chapter.name}", color = if (selectedFocusId == chapter.id) PrimaryLight else TextPrimary); if (selectedFocusId == chapter.id) Text("Selected", color = PrimaryLight, fontSize = 10.sp) } } }
                 }
             }
         }, confirmButton = { TextButton(onClick = { showFocusPicker = false }) { Text("Done") } })

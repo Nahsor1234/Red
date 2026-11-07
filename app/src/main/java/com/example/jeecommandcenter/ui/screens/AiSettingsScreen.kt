@@ -121,7 +121,7 @@ fun AiSettingsScreen(context: android.content.Context, onBack: () -> Unit) {
                         Column(Modifier.padding(16.dp)) {
                             Text("API endpoint", style = MaterialTheme.typography.titleLarge)
                             Text("Required for a custom OpenAI-compatible server.", color = TextMuted, fontSize = 11.sp)
-                            Text("The chosen host receives your API key and request content. Use only a server you trust.", color = AccentAmber, fontSize = 11.sp, lineHeight = 16.sp)
+                            Text("The chosen host receives your API key and request content. Use only a server you trust.", color = Warning, fontSize = 11.sp, lineHeight = 16.sp)
                             Spacer(Modifier.height(10.dp))
                             OutlinedTextField(value = endpoint, onValueChange = { endpoint = it }, modifier = Modifier.fillMaxWidth(), label = { Text("HTTPS endpoint") }, placeholder = { Text("https://your-host/v1/chat/completions") }, singleLine = true)
                         }
@@ -166,7 +166,7 @@ fun AiSettingsScreen(context: android.content.Context, onBack: () -> Unit) {
                             Icon(
                                 if (settings.hasApiKey()) Icons.Filled.CheckCircle else Icons.Filled.CloudOff,
                                 null,
-                                tint = if (settings.hasApiKey()) AccentGreen else TextMuted
+                                tint = if (settings.hasApiKey()) Success else TextMuted
                             )
                         },
                         colors = ListItemDefaults.colors(containerColor = Color.Transparent)
