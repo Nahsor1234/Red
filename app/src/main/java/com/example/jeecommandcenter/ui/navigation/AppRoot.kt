@@ -13,7 +13,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.platform.LocalContext
 import com.example.jeecommandcenter.data.AiChatHistoryRepository
-import com.example.jeecommandcenter.data.JeeCatalog
 import com.example.jeecommandcenter.data.JeeChapter
 import com.example.jeecommandcenter.data.JeeRepository
 import com.example.jeecommandcenter.data.LearningRepository

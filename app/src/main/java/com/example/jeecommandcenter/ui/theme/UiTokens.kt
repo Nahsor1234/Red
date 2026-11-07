@@ -14,15 +14,4 @@ object JeeShapes {
 object JeeSurfaceTokens {
     val borderWidth = 1.dp
     const val cardBorderAlpha = 0.8f
-    const val featuredBorderAlpha = 1f
-}
-
-/** 4dp-based spacing scale. */
-object JeeSpacing {
-    val xs = 4.dp
-    val sm = 8.dp
-    val md = 12.dp
-    val lg = 16.dp
-    val xl = 24.dp
-    val xxl = 32.dp
 }
