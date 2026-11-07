@@ -11,12 +11,6 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.provider.Settings
 import android.text.format.DateFormat
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.togetherWith
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -31,16 +25,16 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Alarm
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Today
+import androidx.compose.material.icons.rounded.Alarm
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Notifications
+import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Today
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -56,7 +50,6 @@ import androidx.core.content.ContextCompat
 import androidx.core.app.NotificationManagerCompat
 import com.example.jeecommandcenter.data.CustomReminder
 import com.example.jeecommandcenter.data.CustomReminderRepository
-import com.example.jeecommandcenter.data.QuietHours
 import com.example.jeecommandcenter.data.ReminderRule
 import com.example.jeecommandcenter.data.ReminderScheduler
 import com.example.jeecommandcenter.data.ReminderNotificationPublisher
@@ -64,7 +57,6 @@ import com.example.jeecommandcenter.data.ReminderSettingsRepository
 import com.example.jeecommandcenter.ui.components.JeeCard
 import com.example.jeecommandcenter.ui.components.JeeTopBar
 import com.example.jeecommandcenter.ui.theme.*
-import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
@@ -77,166 +69,7 @@ fun NotificationCenterScreen(onBack: () -> Unit, onOpenSettings: () -> Unit) {
     NotificationManagementScreen(onBack = onBack)
 }
 
-@Composable
-private fun CustomReminderSummaryCard(reminder: CustomReminder) {
-    JeeCard {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Surface(shape = RoundedCornerShape(12.dp), color = PrimarySoft) {
-                Icon(Icons.Filled.Notifications, null, tint = PrimaryLight, modifier = Modifier.padding(10.dp).size(20.dp))
-            }
-            Spacer(Modifier.width(11.dp))
-            Column(Modifier.weight(1f)) {
-                Text(reminder.title, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                if (reminder.message.isNotBlank()) {
-                    Text(reminder.message, color = TextMuted, fontSize = 11.sp, lineHeight = 15.sp, maxLines = 2)
-                }
-                Text(
-                    if (reminder.repeat == CustomReminder.REPEAT_ONCE && !reminder.scheduledDate.isNullOrBlank()) {
-                        "${formatReminderDate(reminder.scheduledDate)} · ${formatReminderTime(reminder.hour, reminder.minute)}"
-                    } else {
-                        formatReminderTime(reminder.hour, reminder.minute)
-                    },
-                    color = PrimaryLight,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun ReminderSummaryCard(
-    title: String,
-    subtitle: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    rule: ReminderRule,
-    masterEnabled: Boolean,
-    lastTriggered: Long,
-    onRefresh: () -> Unit
-) {
-    JeeCard {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Surface(shape = RoundedCornerShape(12.dp), color = PrimarySoft) {
-                Icon(icon, null, tint = PrimaryLight, modifier = Modifier.padding(10.dp).size(20.dp))
-            }
-            Spacer(Modifier.width(11.dp))
-            Column(Modifier.weight(1f)) {
-                Text(title, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                Text(subtitle, color = TextSecondary, fontSize = 11.sp, lineHeight = 15.sp)
-                Text(
-                    when {
-                        !rule.enabled -> "OFF · not scheduled"
-                        !masterEnabled -> "PAUSED · master switch is off"
-                        else -> "ON · ${formatReminderTime(rule.hour, rule.minute)} daily"
-                    },
-                    color = if (rule.enabled && masterEnabled) PrimaryLight else TextMuted,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-        }
-        if (lastTriggered > 0L) {
-            Spacer(Modifier.height(6.dp))
-            Text("Last delivered ${formatInstant(lastTriggered)}", color = TextMuted, fontSize = 10.sp)
-        }
-    }
-}
-
-@Composable
-private fun RecentReminderRow(title: String, timestamp: Long) {
-    Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-        Icon(if (timestamp > 0) Icons.Filled.CheckCircle else Icons.Filled.Notifications, null, tint = if (timestamp > 0) PrimaryLight else TextMuted, modifier = Modifier.size(18.dp))
-        Spacer(Modifier.width(9.dp))
-        Column(Modifier.weight(1f)) {
-            Text(title, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-            Text(if (timestamp > 0) formatInstant(timestamp) else "No reminder delivered yet", color = TextMuted, fontSize = 11.sp)
-        }
-    }
-}
-
  
-private data class DailyTimelineItem(
-    val title: String,
-    val message: String,
-    val hour: Int,
-    val minute: Int
-)
-
-@Composable
-private fun DailyReminderTimeline(
-    study: ReminderRule,
-    dailyLog: ReminderRule,
-    masterEnabled: Boolean,
-    customReminders: List<CustomReminder>
-) {
-    val items = buildList {
-        if (masterEnabled && study.enabled) {
-            add(DailyTimelineItem("Daily study", "Start a focused JEE study block.", study.hour, study.minute))
-        }
-        if (masterEnabled && dailyLog.enabled) {
-            add(DailyTimelineItem("Daily Progress", "Log today's work and close the loop.", dailyLog.hour, dailyLog.minute))
-        }
-        if (masterEnabled) {
-            customReminders
-                .filter { it.enabled && it.repeat == CustomReminder.REPEAT_DAILY }
-                .forEach { reminder ->
-                    add(
-                        DailyTimelineItem(
-                            reminder.title,
-                            reminder.message.ifBlank { "Your scheduled study reminder." },
-                            reminder.hour,
-                            reminder.minute
-                        )
-                    )
-                }
-        }
-    }.sortedWith(compareBy<DailyTimelineItem> { it.hour }.thenBy { it.minute }.thenBy { it.title.lowercase() })
-
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            Text("DAILY TIMELINE", color = TextMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-            Text("Your recurring reminders, in time order", color = TextSecondary, fontSize = 11.sp)
-        }
-        JeeCard {
-            if (items.isEmpty()) {
-                Text("No active daily reminders yet.", color = TextSecondary, fontSize = 12.sp)
-            } else {
-                items.forEachIndexed { index, item ->
-                    Row(
-                        Modifier.fillMaxWidth().padding(vertical = 7.dp),
-                        verticalAlignment = Alignment.Top
-                    ) {
-                        Text(
-                            formatReminderTime(item.hour, item.minute),
-                            modifier = Modifier.width(76.dp).padding(top = 1.dp),
-                            color = PrimaryLight,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            maxLines = 1
-                        )
-                        Column(
-                            Modifier.width(14.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Box(Modifier.size(8.dp).clip(RoundedCornerShape(50)).background(PrimaryLight))
-                            if (index < items.lastIndex) {
-                                Spacer(Modifier.width(1.dp).height(34.dp).background(BgDivider))
-                            }
-                        }
-                        Spacer(Modifier.width(7.dp))
-                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            Text(item.title, color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                            Text(item.message, color = TextSecondary, fontSize = 11.sp, lineHeight = 15.sp, maxLines = 2)
-                        }
-                    }
-                    if (index < items.lastIndex) HorizontalDivider(color = BgDivider.copy(alpha = .35f))
-                }
-            }
-        }
-    }
-}
-
 @Composable
 private fun NotificationManagementScreen(onBack: () -> Unit) {
     val context = LocalContext.current
@@ -349,7 +182,7 @@ private fun NotificationManagementScreen(onBack: () -> Unit) {
                 Text(
                     "YOUR STUDY ROUTINE",
                     color = TextMuted,
-                    fontSize = 10.sp,
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 1.1.sp
                 )
@@ -389,7 +222,7 @@ private fun NotificationManagementScreen(onBack: () -> Unit) {
                             "Test was blocked. Check notification permission and the Sigma JEE reminders channel."
                         }
                     }) {
-                        Icon(Icons.Filled.Notifications, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Rounded.Notifications, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(6.dp))
                         Text("Send test notification")
                     }
@@ -403,7 +236,7 @@ private fun NotificationManagementScreen(onBack: () -> Unit) {
                 Text(
                     if (!masterEnabled) "REMINDERS PAUSED" else "UP NEXT",
                     color = PrimaryLight,
-                    fontSize = 10.sp,
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 1.sp
                 )
@@ -425,7 +258,7 @@ private fun NotificationManagementScreen(onBack: () -> Unit) {
                         }
                         Spacer(Modifier.height(10.dp))
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Filled.Alarm, contentDescription = null, tint = PrimaryLight, modifier = Modifier.size(18.dp))
+                            Icon(Icons.Rounded.Alarm, contentDescription = null, tint = PrimaryLight, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(7.dp))
                             Text(
                                 formatReminderTime(nextUpcoming.at.hour, nextUpcoming.at.minute),
@@ -454,13 +287,13 @@ private fun NotificationManagementScreen(onBack: () -> Unit) {
                 FilledIconButton(
                     onClick = { editingCustomReminder = null; showCustomDialog = true },
                     modifier = Modifier.size(42.dp),
-                    shape = RoundedCornerShape(14.dp),
+                    shape = JeeShapes.medium,
                     colors = IconButtonDefaults.filledIconButtonColors(
                         containerColor = PrimaryLight,
                         contentColor = BgAppBase
                     )
                 ) {
-                    Icon(Icons.Filled.Add, contentDescription = "Add reminder", modifier = Modifier.size(23.dp))
+                    Icon(Icons.Rounded.Add, contentDescription = "Add reminder", modifier = Modifier.size(23.dp))
                 }
             }
 
@@ -477,7 +310,7 @@ private fun NotificationManagementScreen(onBack: () -> Unit) {
             if (!notificationsAllowed || !appNotificationsEnabled || !reminderChannelEnabled) {
                 JeeCard {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Filled.Notifications, null, tint = PrimaryLight, modifier = Modifier.size(22.dp))
+                        Icon(Icons.Rounded.Notifications, null, tint = PrimaryLight, modifier = Modifier.size(22.dp))
                         Spacer(Modifier.width(10.dp))
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                             Text("Notification delivery is blocked", fontWeight = FontWeight.SemiBold)
@@ -500,7 +333,7 @@ private fun NotificationManagementScreen(onBack: () -> Unit) {
                             }
                         },
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(13.dp)
+                        shape = JeeShapes.medium
                     ) {
                         Text(if (Build.VERSION.SDK_INT >= 33 && !notificationsAllowed) "Allow notifications" else "Open system notification settings")
                     }
@@ -510,7 +343,7 @@ private fun NotificationManagementScreen(onBack: () -> Unit) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !exactAlarmsAllowed) {
                 JeeCard {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Filled.Alarm, null, tint = PrimaryLight, modifier = Modifier.size(22.dp))
+                        Icon(Icons.Rounded.Alarm, null, tint = PrimaryLight, modifier = Modifier.size(22.dp))
                         Spacer(Modifier.width(10.dp))
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                             Text("Precise alarm access is off", fontWeight = FontWeight.SemiBold)
@@ -536,7 +369,7 @@ private fun NotificationManagementScreen(onBack: () -> Unit) {
                             }
                         },
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(13.dp)
+                        shape = JeeShapes.medium
                     ) { Text("Enable precise timing") }
                 }
             }
@@ -581,41 +414,6 @@ private fun NotificationManagementScreen(onBack: () -> Unit) {
 }
 
 @Composable
-private fun CustomReminderCard(
-    reminder: CustomReminder,
-    onToggleEnabled: (Boolean) -> Unit,
-    onEdit: () -> Unit,
-    onDelete: () -> Unit
-) {
-    JeeCard {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(reminder.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                if (reminder.message.isNotBlank()) {
-                    Text(reminder.message, color = TextSecondary, fontSize = 11.sp, lineHeight = 15.sp, maxLines = 2)
-                }
-                Text(
-                    if (reminder.repeat == CustomReminder.REPEAT_ONCE && !reminder.scheduledDate.isNullOrBlank()) {
-                        "${formatReminderDate(reminder.scheduledDate)} · ${formatReminderTime(reminder.hour, reminder.minute)}"
-                    } else {
-                        "${formatReminderTime(reminder.hour, reminder.minute)} · ${reminder.repeat.lowercase(Locale.getDefault())}"
-                    },
-                    color = if (reminder.enabled) PrimaryLight else TextMuted,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-            CustomReminderActions(
-                reminder = reminder,
-                onToggleEnabled = onToggleEnabled,
-                onEdit = onEdit,
-                onDelete = onDelete
-            )
-        }
-    }
-}
-
-@Composable
 private fun CustomReminderActions(
     reminder: CustomReminder,
     onToggleEnabled: (Boolean) -> Unit,
@@ -625,22 +423,22 @@ private fun CustomReminderActions(
     var menuExpanded by remember(reminder.id) { mutableStateOf(false) }
     Box {
         IconButton(onClick = { menuExpanded = true }, modifier = Modifier.size(30.dp)) {
-            Icon(Icons.Filled.MoreVert, contentDescription = "Reminder options", tint = TextSecondary, modifier = Modifier.size(19.dp))
+            Icon(Icons.Rounded.MoreVert, contentDescription = "Reminder options", tint = TextSecondary, modifier = Modifier.size(19.dp))
         }
         DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
             DropdownMenuItem(
                 text = { Text("Edit") },
-                leadingIcon = { Icon(Icons.Filled.Edit, null) },
+                leadingIcon = { Icon(Icons.Rounded.Edit, null) },
                 onClick = { menuExpanded = false; onEdit() }
             )
             DropdownMenuItem(
                 text = { Text(if (reminder.enabled) "Turn off" else "Turn on") },
-                leadingIcon = { Icon(Icons.Filled.Notifications, null) },
+                leadingIcon = { Icon(Icons.Rounded.Notifications, null) },
                 onClick = { menuExpanded = false; onToggleEnabled(!reminder.enabled) }
             )
             DropdownMenuItem(
                 text = { Text("Delete") },
-                leadingIcon = { Icon(Icons.Filled.Delete, null, tint = Danger) },
+                leadingIcon = { Icon(Icons.Rounded.Delete, null, tint = Danger) },
                 onClick = { menuExpanded = false; onDelete() }
             )
         }
@@ -657,58 +455,19 @@ private fun SystemReminderActions(
     var expanded by remember(title) { mutableStateOf(false) }
     Box {
         IconButton(onClick = { expanded = true }, modifier = Modifier.size(30.dp)) {
-            Icon(Icons.Filled.MoreVert, contentDescription = "$title options", tint = TextSecondary, modifier = Modifier.size(19.dp))
+            Icon(Icons.Rounded.MoreVert, contentDescription = "$title options", tint = TextSecondary, modifier = Modifier.size(19.dp))
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             DropdownMenuItem(
                 text = { Text("Change time") },
-                leadingIcon = { Icon(Icons.Filled.Alarm, null) },
+                leadingIcon = { Icon(Icons.Rounded.Alarm, null) },
                 onClick = { expanded = false; onChangeTime() }
             )
             DropdownMenuItem(
                 text = { Text(if (enabled) "Turn off" else "Turn on") },
-                leadingIcon = { Icon(Icons.Filled.Notifications, null) },
+                leadingIcon = { Icon(Icons.Rounded.Notifications, null) },
                 onClick = { expanded = false; onToggle(!enabled) }
             )
-        }
-    }
-}
-
-@Composable
-private fun DailyReminderTile(
-    modifier: Modifier = Modifier,
-    title: String,
-    subtitle: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    rule: ReminderRule,
-    onToggle: (Boolean) -> Unit,
-    onTimeClick: () -> Unit
-) {
-    JeeCard(modifier = modifier) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Surface(shape = RoundedCornerShape(10.dp), color = PrimarySoft) {
-                Icon(icon, contentDescription = null, tint = PrimaryLight, modifier = Modifier.padding(8.dp).size(18.dp))
-            }
-            Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, lineHeight = 16.sp)
-        }
-        Spacer(Modifier.height(7.dp))
-        Text(subtitle, color = TextSecondary, fontSize = 10.sp, lineHeight = 14.sp, minLines = 1, maxLines = 2)
-        Spacer(Modifier.height(8.dp))
-        Text(formatReminderTime(rule.hour, rule.minute), color = PrimaryLight, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.height(4.dp))
-        Text("Every day", color = TextMuted, fontSize = 10.sp)
-        TextButton(onClick = onTimeClick, contentPadding = PaddingValues(horizontal = 0.dp, vertical = 0.dp)) {
-            Icon(Icons.Filled.Alarm, contentDescription = null, modifier = Modifier.size(15.dp))
-            Spacer(Modifier.width(4.dp))
-            Text("Change time", fontSize = 11.sp)
-        }
-        Row(
-            Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(if (rule.enabled) "ON" else "OFF", color = if (rule.enabled) PrimaryLight else TextMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-            Switch(checked = rule.enabled, onCheckedChange = onToggle, modifier = Modifier.width(48.dp))
         }
     }
 }
@@ -861,7 +620,7 @@ private fun ReminderTimeline(
                             formatReminderTime(item.at.hour, item.at.minute),
                             modifier = Modifier.width(62.dp).padding(top = 12.dp),
                             color = if (item.enabled && masterEnabled) PrimaryLight else TextMuted,
-                            fontSize = 10.sp,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.SemiBold,
                             maxLines = 1
                         )
@@ -894,7 +653,7 @@ private fun ReminderTimeline(
                                 }
                                 item.systemType?.let { onSystemToggle(it, !item.enabled) }
                             },
-                            shape = RoundedCornerShape(14.dp),
+                            shape = JeeShapes.medium,
                             color = BgCard,
                             border = BorderStroke(1.dp, BgCardBorder)
                         ) {
@@ -928,7 +687,7 @@ private fun ReminderTimeline(
                                             else -> "DAILY · TAP TO TURN OFF"
                                         },
                                         color = if (masterEnabled && item.enabled) PrimaryLight else TextMuted,
-                                        fontSize = 10.sp,
+                                        fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
                                         letterSpacing = .35.sp
                                     )
@@ -1001,7 +760,7 @@ private fun CustomReminderDialog(
     ) {
         Surface(
             modifier = Modifier.fillMaxWidth(0.93f).widthIn(max = 420.dp).heightIn(max = 620.dp),
-            shape = RoundedCornerShape(26.dp),
+            shape = JeeShapes.large,
             color = BgCard,
             border = BorderStroke(1.dp, BgCardBorder)
         ) {
@@ -1022,7 +781,7 @@ private fun CustomReminderDialog(
                         Text("Add it to your study routine.", color = TextSecondary, fontSize = 12.sp)
                     }
                     IconButton(onClick = onDismiss) {
-                        Icon(Icons.Filled.Close, contentDescription = "Close reminder editor", tint = TextMuted)
+                        Icon(Icons.Rounded.Close, contentDescription = "Close reminder editor", tint = TextMuted)
                     }
                 }
 
@@ -1034,7 +793,7 @@ private fun CustomReminderDialog(
                     placeholder = { Text("e.g. Revise vectors", fontSize = 15.sp) },
                     textStyle = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp),
                     singleLine = true,
-                    shape = RoundedCornerShape(14.dp)
+                    shape = JeeShapes.medium
                 )
 
                 OutlinedTextField(
@@ -1046,7 +805,7 @@ private fun CustomReminderDialog(
                     textStyle = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp),
                     minLines = 1,
                     maxLines = 3,
-                    shape = RoundedCornerShape(14.dp)
+                    shape = JeeShapes.medium
                 )
 
                 Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
@@ -1057,7 +816,7 @@ private fun CustomReminderDialog(
                             onClick = { repeatMode = CustomReminder.REPEAT_DAILY },
                             label = { Text("Daily") },
                             leadingIcon = if (repeatMode == CustomReminder.REPEAT_DAILY) {
-                                { Icon(Icons.Filled.CheckCircle, null, modifier = Modifier.size(16.dp)) }
+                                { Icon(Icons.Rounded.CheckCircle, null, modifier = Modifier.size(16.dp)) }
                             } else null
                         )
                         FilterChip(
@@ -1065,7 +824,7 @@ private fun CustomReminderDialog(
                             onClick = { repeatMode = CustomReminder.REPEAT_ONCE },
                             label = { Text("Once") },
                             leadingIcon = if (repeatMode == CustomReminder.REPEAT_ONCE) {
-                                { Icon(Icons.Filled.CheckCircle, null, modifier = Modifier.size(16.dp)) }
+                                { Icon(Icons.Rounded.CheckCircle, null, modifier = Modifier.size(16.dp)) }
                             } else null
                         )
                     }
@@ -1102,9 +861,9 @@ private fun CustomReminderDialog(
                             },
                             modifier = Modifier.fillMaxWidth().height(48.dp),
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
-                            shape = RoundedCornerShape(13.dp)
+                            shape = JeeShapes.medium
                         ) {
-                            Icon(Icons.Filled.Today, null, modifier = Modifier.size(17.dp), tint = PrimaryLight)
+                            Icon(Icons.Rounded.Today, null, modifier = Modifier.size(17.dp), tint = PrimaryLight)
                             Spacer(Modifier.width(6.dp))
                             Text(
                                 scheduledDate.format(DateTimeFormatter.ofPattern("d MMM yy", Locale.getDefault())),
@@ -1119,9 +878,9 @@ private fun CustomReminderDialog(
                             onClick = { showTimePicker(context, hour, minute) { h, m -> hour = h; minute = m } },
                             modifier = Modifier.fillMaxWidth().height(48.dp),
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
-                            shape = RoundedCornerShape(13.dp)
+                            shape = JeeShapes.medium
                         ) {
-                            Icon(Icons.Filled.Alarm, null, modifier = Modifier.size(17.dp), tint = PrimaryLight)
+                            Icon(Icons.Rounded.Alarm, null, modifier = Modifier.size(17.dp), tint = PrimaryLight)
                             Spacer(Modifier.width(6.dp))
                             Text(formatReminderTime(hour, minute), fontSize = 12.sp, maxLines = 1)
                         }
@@ -1157,72 +916,13 @@ private fun CustomReminderDialog(
                                 )
                             )
                         },
-                        shape = RoundedCornerShape(13.dp),
+                        shape = JeeShapes.medium,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = PrimaryLight,
                             contentColor = BgAppBase
                         )
                     ) { Text("Save reminder", fontWeight = FontWeight.SemiBold) }
                 }
-            }
-        }
-    }
-}
-
-@Composable
-private fun QuietHoursCard(context: Context, hours: QuietHours, onChange: (QuietHours) -> Unit) {
-    JeeCard {
-        Text("Quiet hours", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-        Spacer(Modifier.height(3.dp))
-        Text("Alerts are suppressed during this window. Reminders scheduled inside it move to the quiet-hours end time.", color = TextSecondary, fontSize = 11.sp, lineHeight = 15.sp)
-        Spacer(Modifier.height(9.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-            Column(Modifier.weight(1f)) {
-                Text("Start", color = TextMuted, fontSize = 10.sp)
-                OutlinedButton(
-                    onClick = { showTimePicker(context, hours.startHour, hours.startMinute) { h, m -> onChange(hours.copy(startHour = h, startMinute = m)) } },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
-                ) { Text(formatReminderTime(hours.startHour, hours.startMinute), fontSize = 11.sp, maxLines = 1) }
-            }
-            Column(Modifier.weight(1f)) {
-                Text("End", color = TextMuted, fontSize = 10.sp)
-                OutlinedButton(
-                    onClick = { showTimePicker(context, hours.endHour, hours.endMinute) { h, m -> onChange(hours.copy(endHour = h, endMinute = m)) } },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
-                ) { Text(formatReminderTime(hours.endHour, hours.endMinute), fontSize = 11.sp, maxLines = 1) }
-            }
-        }
-    }
-}
-@Composable
-private fun ReminderSettingCard(
-    title: String,
-    subtitle: String,
-    rule: ReminderRule,
-    onToggle: (Boolean) -> Unit,
-    onTimeClick: () -> Unit
-) {
-    JeeCard {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                Spacer(Modifier.height(3.dp))
-                Text(subtitle, color = TextSecondary, fontSize = 11.sp, lineHeight = 15.sp)
-            }
-            Switch(checked = rule.enabled, onCheckedChange = onToggle)
-        }
-        Spacer(Modifier.height(8.dp))
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-            Column {
-                Text("Reminder time", color = TextMuted, fontSize = 10.sp)
-                Text(formatReminderTime(rule.hour, rule.minute), color = PrimaryLight, fontWeight = FontWeight.SemiBold)
-            }
-            OutlinedButton(onClick = onTimeClick, shape = RoundedCornerShape(12.dp)) {
-                Icon(Icons.Filled.Alarm, null, modifier = Modifier.size(17.dp))
-                Spacer(Modifier.width(6.dp))
-                Text("Change time")
             }
         }
     }
@@ -1242,12 +942,3 @@ private fun formatReminderTime(hour: Int, minute: Int): String {
     val displayHour = when (val h = hour % 12) { 0 -> 12; else -> h }
     return String.format(Locale.getDefault(), "%d:%02d %s", displayHour, minute, suffix)
 }
-
-private fun formatReminderDate(date: String?): String = runCatching {
-    LocalDate.parse(date).format(DateTimeFormatter.ofPattern("EEE, d MMM yyyy", Locale.getDefault()))
-}.getOrDefault("Specific date")
-
-private fun formatInstant(timeMillis: Long): String = runCatching {
-    DateTimeFormatter.ofPattern("d MMM, h:mm a", Locale.getDefault())
-        .withZone(ZoneId.systemDefault()).format(Instant.ofEpochMilli(timeMillis))
-}.getOrDefault("Recently")

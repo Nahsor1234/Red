@@ -100,8 +100,6 @@ class CloudJeeRepository(
         client.auth.currentSessionOrNull()?.user
     }
 
-    suspend fun hasAuthenticatedSession(): Boolean = currentUser() != null
-
     suspend fun subjects(): List<CloudSubject> =
         db["subjects"].select().decodeList<CloudSubject>().sortedBy { it.sortOrder }
 

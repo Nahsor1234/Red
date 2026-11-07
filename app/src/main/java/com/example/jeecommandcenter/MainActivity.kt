@@ -9,15 +9,12 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.lifecycleScope
 import com.example.jeecommandcenter.data.SupabaseClientProvider
 import com.example.jeecommandcenter.data.ReminderScheduler
-import com.example.jeecommandcenter.ui.components.JeeBackground
 import com.example.jeecommandcenter.ui.navigation.AppRoot
 import com.example.jeecommandcenter.ui.theme.BgAppBase
 import com.example.jeecommandcenter.ui.theme.JeePrepTheme
@@ -41,10 +38,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             JeePrepTheme {
                 Surface(modifier = Modifier.fillMaxSize(), color = BgAppBase) {
-                    Box(Modifier.fillMaxSize().background(BgAppBase)) {
-                        JeeBackground()
-                        AppRoot(initialTarget = launchTarget, launchRequestId = launchRequestId)
-                    }
+                    AppRoot(initialTarget = launchTarget, launchRequestId = launchRequestId)
                 }
             }
         }

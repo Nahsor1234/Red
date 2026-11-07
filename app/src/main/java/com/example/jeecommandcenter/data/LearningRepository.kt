@@ -48,22 +48,6 @@ class LearningRepository(private val context: Context) {
         }.getOrElse { normalizedQuestions(StarterQuestionBank.fallback) }
     }
 
-    fun selectQuestions(
-        mode: TestMode,
-        subject: String?,
-        count: Int
-    ): List<Question> {
-        val source = getQuestions().let { questions ->
-            when {
-                mode == TestMode.PRACTICE && !subject.isNullOrBlank() ->
-                    questions.filter { it.subject == subject }
-                else -> questions
-            }
-        }
-
-        return source.shuffled().take(count.coerceIn(1, source.size))
-    }
-
     fun saveQuestionAttempt(
         testId: String,
         question: Question,
