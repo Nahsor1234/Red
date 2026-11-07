@@ -4,8 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
@@ -16,8 +14,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.jeecommandcenter.data.*
 import com.example.jeecommandcenter.ui.components.*
 import com.example.jeecommandcenter.ui.theme.*
@@ -28,7 +27,6 @@ import kotlinx.coroutines.withContext
 @Composable
 fun SyllabusScreen(
     repo: JeeRepository,
-    onAiClick: () -> Unit = {},
     onOpenRevision: () -> Unit = {},
     onOpenChapter: (JeeChapter) -> Unit = {}
 ) {
@@ -92,237 +90,147 @@ fun SyllabusScreen(
             ?: 0f
     }
 
-    val models = if (cloudAvailable) {
-        cloudChapters.map { chapter ->
-            JeeChapter(
-                chapter.id,
-                subject,
-                chapter.number,
-                chapter.name,
-                chapter.difficulty,
-                chapter.estimatedMinutes
-            ) to progressFor(chapter.id)
-        }
-    } else {
-        localChapters.map { chapter ->
-            val id = "${chapter.subject.lowercase()}_${chapter.number}"
-            val model = JeeCatalog.forSubject(subject).firstOrNull { it.number == chapter.number }
-                ?: JeeChapter(id, chapter.subject, chapter.number, chapter.name)
-            model to chapter.progress
-        }
-    }.filter { (chapter, progress) ->
-        when (filter) {
-            "In progress" -> progress > 0f && progress < 1f
-            "Done" -> progress >= 1f
-            "Weak" -> weak.contains(chapter.id)
-            else -> true
+    // Built once per data change; progressFor scans topics, so this must not run on every recomposition.
+    val allModels = remember(cloudAvailable, cloudChapters, cloudProgress, cloudTopicProgress, localChapters, subject) {
+        if (cloudAvailable) {
+            cloudChapters.map { chapter ->
+                JeeChapter(
+                    chapter.id,
+                    subject,
+                    chapter.number,
+                    chapter.name,
+                    chapter.difficulty,
+                    chapter.estimatedMinutes
+                ) to progressFor(chapter.id)
+            }
+        } else {
+            localChapters.map { chapter ->
+                val id = "${chapter.subject.lowercase()}_${chapter.number}"
+                val model = JeeCatalog.forSubject(subject).firstOrNull { it.number == chapter.number }
+                    ?: JeeChapter(id, chapter.subject, chapter.number, chapter.name)
+                model to chapter.progress
+            }
         }
     }
+    val models = remember(allModels, filter, weak) {
+        allModels.filter { (chapter, progress) ->
+            when (filter) {
+                "In progress" -> progress > 0f && progress < 1f
+                "Done" -> progress >= 1f
+                "Weak" -> weak.contains(chapter.id)
+                else -> true
+            }
+        }
+    }
+    // The summary describes the whole subject, not the active filter.
+    val avg = remember(allModels) { if (allModels.isEmpty()) 0f else allModels.map { it.second }.average().toFloat() }
+    val attention = remember(allModels, weak) { allModels.firstOrNull { weak.contains(it.first.id) } }
 
-    val avg = if (models.isEmpty()) 0f else models.map { it.second }.average().toFloat()
-    val attention = models.firstOrNull { weak.contains(it.first.id) }
-
-    Box(Modifier.fillMaxSize()) {
-        Scaffold(
-            containerColor = BgApp
-        ) { padding ->
-            Column(
-                Modifier.fillMaxSize()
-                    .padding(padding)
-                    .padding(horizontal = 18.dp)
-            ) {
-                Spacer(Modifier.height(10.dp))
-
-                Row(
-                    Modifier.fillMaxWidth(),
-                    Arrangement.SpaceBetween,
-                    Alignment.CenterVertically
-                ) {
-                    Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("Syllabus", style = MaterialTheme.typography.headlineSmall)
-                            Spacer(Modifier.width(7.dp))
-                            Icon(
-                                if (cloudAvailable) Icons.Filled.Cloud else Icons.Filled.CloudOff,
-                                null,
-                                tint = if (cloudAvailable) PrimaryLight else TextMuted,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
-                        cloudError?.let {
-                            Text("Offline syllabus · local fallback", color = TextMuted, fontSize = 9.sp)
-                        }
-                    }
-                    TextButton(onClick = onOpenRevision) {
-                        Text("Notes", fontSize = 12.sp)
-                    }
-                }
-
-                Spacer(Modifier.height(12.dp))
-
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(listOf("Physics", "Chemistry", "Mathematics")) { value ->
-                        JeeFilterChip(value, value == subject) {
-                            subject = value
-                            filter = "All"
-                        }
-                    }
-                }
-
-                Spacer(Modifier.height(14.dp))
-
-                Column(
-                    Modifier.fillMaxWidth()
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(BgCardAlt)
-                        .border(
-                            JeeSurfaceTokens.borderWidth,
-                            BgCardBorder.copy(alpha = JeeSurfaceTokens.cardBorderAlpha),
-                            JeeShapes.medium
+    Scaffold(containerColor = BgApp) { padding ->
+        Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 18.dp)) {
+            Row(Modifier.fillMaxWidth().padding(top = 8.dp), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+                Column {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Syllabus", style = MaterialTheme.typography.headlineSmall)
+                        Spacer(Modifier.width(8.dp))
+                        Icon(
+                            if (cloudAvailable) Icons.Filled.Cloud else Icons.Filled.CloudOff,
+                            if (cloudAvailable) "Synced" else "Offline",
+                            tint = if (cloudAvailable) PrimaryLight else TextMuted,
+                            modifier = Modifier.size(16.dp)
                         )
-                        .padding(17.dp)
-                ) {
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        Arrangement.SpaceBetween,
-                        Alignment.CenterVertically
-                    ) {
-                        Column(Modifier.weight(1f)) {
-                            Text(subject.uppercase(), color = TextSecondary, fontSize = 12.sp)
-                            Text("${(avg * 100).toInt()}%", style = MaterialTheme.typography.displaySmall)
-                            Text(
-                                "${models.count { it.second >= 1f }} of ${models.size} chapters complete",
-                                color = TextMuted,
-                                fontSize = 12.sp
-                            )
-                        }
-                        Column(horizontalAlignment = Alignment.End) {
-                            Text(
-                                "${models.count { it.second > 0f && it.second < 1f }} active",
-                                color = PrimaryLight
-                            )
-                            Text(
-                                "${models.count { it.second == 0f }} not started",
-                                color = TextMuted,
-                                fontSize = 11.sp
-                            )
-                        }
                     }
-                    Spacer(Modifier.height(10.dp))
-                    LinearStatBar(avg)
+                    cloudError?.let { Text("Offline syllabus · local fallback", style = MaterialTheme.typography.labelSmall) }
                 }
-
-                Spacer(Modifier.height(14.dp))
-
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(listOf("All", "Weak", "In progress", "Done")) { value ->
-                        JeeFilterChip(value, value == filter) { filter = value }
-                    }
+                TextButton(onClick = onOpenRevision) {
+                    Text("Notes", style = MaterialTheme.typography.labelLarge, color = PrimaryLight)
                 }
+            }
 
-                Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(8.dp))
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(listOf("Physics", "Chemistry", "Mathematics")) { value ->
+                    JeeFilterChip(value, value == subject) { subject = value; filter = "All" }
+                }
+            }
 
-                LazyColumn(
-                    Modifier.weight(1f),
-                    contentPadding = PaddingValues(bottom = 12.dp)
-                ) {
-                    if (filter == "All" && attention != null) {
-                        item {
-                            Column(
-                                Modifier.fillMaxWidth()
-                                    .clip(RoundedCornerShape(18.dp))
-                                    .background(BgCard)
-                                    .border(
-                                        JeeSurfaceTokens.borderWidth,
-                                        BgCardBorder.copy(alpha = JeeSurfaceTokens.cardBorderAlpha),
-                                        JeeShapes.medium
-                                    )
-                                    .padding(15.dp)
-                            ) {
-                                Text("NEXT ATTENTION", color = TextSecondary, fontSize = 11.sp)
-                                Text(attention.first.name, style = MaterialTheme.typography.titleMedium)
-                                Text(
-                                    "Low confidence, incomplete or weak chapter",
-                                    color = TextMuted,
-                                    fontSize = 11.sp
-                                )
-                                Spacer(Modifier.height(8.dp))
-                                LinearStatBar(attention.second, height = 5.dp)
-                            }
-                            Spacer(Modifier.height(8.dp))
-                        }
+            Spacer(Modifier.height(14.dp))
+            JeeCard(featured = true) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    ProgressRing(progress = avg, diameter = 92.dp, strokeWidth = 9.dp) {
+                        Text("${(avg * 100).toInt()}%", style = MaterialTheme.typography.titleLarge)
                     }
-
-                    items(models, key = { it.first.id }) { (chapter, progress) ->
-                        Row(
-                            Modifier.fillMaxWidth()
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(BgCard)
-                                .border(
-                                    1.dp,
-                                    BgCardBorder.copy(alpha = JeeSurfaceTokens.cardBorderAlpha),
-                                    RoundedCornerShape(16.dp)
-                                )
-                                .premiumClick { onOpenChapter(chapter) }
-                                .padding(horizontal = 14.dp, vertical = 12.dp),
-                            Arrangement.SpaceBetween,
-                            Alignment.CenterVertically
-                        ) {
-                            Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
-                                Box(
-                                    Modifier.size(13.dp)
-                                        .clip(CircleShape)
-                                        .background(if (progress >= 1f) Success else BgDivider),
-                                    Alignment.Center
-                                ) {
-                                    if (progress >= 1f) {
-                                        Icon(
-                                            Icons.Filled.Check,
-                                            null,
-                                            tint = OnSuccess,
-                                            modifier = Modifier.size(9.dp)
-                                        )
-                                    }
-                                }
-                                Spacer(Modifier.width(12.dp))
-                                Column {
-                                    Text(
-                                        "${chapter.number}. ${chapter.name}",
-                                        color = TextPrimary,
-                                        fontSize = 14.sp
-                                    )
-                                    Text(
-                                        "${(progress * 100).toInt()}% · ${chapter.estimatedMinutes} min",
-                                        color = TextMuted,
-                                        fontSize = 10.sp
-                                    )
-                                    Spacer(Modifier.height(5.dp))
-                                    LinearStatBar(
-                                        progress,
-                                        Modifier.width(120.dp),
-                                        height = 3.dp
-                                    )
-                                }
-                            }
-
-                            Column(horizontalAlignment = Alignment.End) {
-                                if (due.contains(chapter.id)) {
-                                    Text("Review due", color = Warning, fontSize = 10.sp)
-                                } else if (weak.contains(chapter.id)) {
-                                    Text("Weak", color = PrimaryLight, fontSize = 10.sp)
-                                }
-                                Icon(
-                                    Icons.Filled.ChevronRight,
-                                    "Open chapter",
-                                    tint = TextMuted,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                        }
-                        Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.width(18.dp))
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(subject, style = MaterialTheme.typography.titleMedium)
+                        Text("${allModels.count { it.second >= 1f }} of ${allModels.size} chapters complete", style = MaterialTheme.typography.bodySmall)
+                        Text(
+                            "${allModels.count { it.second > 0f && it.second < 1f }} active · ${allModels.count { it.second == 0f }} not started",
+                            style = MaterialTheme.typography.bodySmall
+                        )
                     }
                 }
             }
+
+            Spacer(Modifier.height(12.dp))
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(listOf("All", "Weak", "In progress", "Done")) { value ->
+                    JeeFilterChip(value, value == filter) { filter = value }
+                }
+            }
+
+            LazyColumn(
+                Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(top = 12.dp, bottom = 16.dp)
+            ) {
+                if (filter == "All" && attention != null) {
+                    item(key = "attention") {
+                        JeeCard {
+                            Text("Next attention", style = MaterialTheme.typography.labelLarge, color = PrimaryLight)
+                            Text(attention.first.name, style = MaterialTheme.typography.titleMedium)
+                            Text("Low confidence, incomplete or weak chapter", style = MaterialTheme.typography.bodySmall)
+                            Spacer(Modifier.height(10.dp))
+                            LinearStatBar(attention.second, height = 5.dp)
+                        }
+                    }
+                }
+                items(models, key = { it.first.id }) { (chapter, progress) ->
+                    val badge = when {
+                        due.contains(chapter.id) -> "Review due" to Warning
+                        weak.contains(chapter.id) -> "Weak" to PrimaryLight
+                        else -> null
+                    }
+                    ChapterRow(chapter, progress, badge?.first, badge?.second ?: TextMuted) { onOpenChapter(chapter) }
+                }
+            }
         }
+    }
+}
+
+@Composable
+private fun ChapterRow(chapter: JeeChapter, progress: Float, badge: String?, badgeColor: Color, onClick: () -> Unit) {
+    val done = progress >= 1f
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(JeeShapes.medium)
+            .background(BgCard)
+            .border(1.dp, BgCardBorder.copy(alpha = JeeSurfaceTokens.cardBorderAlpha), JeeShapes.medium)
+            .premiumClick(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        ProgressRing(progress, diameter = 40.dp, strokeWidth = 4.dp, color = if (done) Success else Primary) {
+            if (done) Icon(Icons.Filled.Check, "Complete", tint = Success, modifier = Modifier.size(18.dp))
+            else Text(chapter.number.toString(), style = MaterialTheme.typography.labelMedium)
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(chapter.name, style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text("${(progress * 100).toInt()}% · ${chapter.estimatedMinutes} min", style = MaterialTheme.typography.labelSmall)
+        }
+        if (badge != null) Text(badge, style = MaterialTheme.typography.labelSmall, color = badgeColor, modifier = Modifier.padding(horizontal = 6.dp))
+        Icon(Icons.Filled.ChevronRight, "Open chapter", tint = TextMuted, modifier = Modifier.size(20.dp))
     }
 }

@@ -141,7 +141,6 @@ fun AppRoot(initialTarget: String? = null, launchRequestId: Int = 0) {
                         )
                         AppTab.SYLLABUS -> SyllabusScreen(
                             repo = repo,
-                            onAiClick = { openPage(SecondaryPage.AI_TUTOR) },
                             onOpenRevision = { openPage(SecondaryPage.REVISION) },
                             onOpenChapter = { chapter -> selectedChapter = chapter; openPage(SecondaryPage.CHAPTER_DETAIL) }
                         )
