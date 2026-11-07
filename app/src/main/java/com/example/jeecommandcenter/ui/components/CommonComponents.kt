@@ -246,8 +246,3 @@ fun BottomNavBar(selected: AppTab, onTabSelected: (AppTab) -> Unit) {
         }
     }
 }
-
-@Composable
-fun AnimatedBottomNavBar(selected: AppTab, onTabSelected: (AppTab) -> Unit, visible: Boolean) {
-    if (visible) BottomNavBar(selected, onTabSelected)
-}

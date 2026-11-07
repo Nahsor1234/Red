@@ -47,7 +47,7 @@ private enum class TimerPreset(val label: String, val sublabel: String, val minu
 }
 
 @Composable
-fun StudyTimerScreen(repo: JeeRepository, selectedTab: AppTab, onTabSelected: (AppTab) -> Unit, onAiClick: () -> Unit = {}) {
+fun StudyTimerScreen(repo: JeeRepository, onAiClick: () -> Unit = {}) {
     val initial = remember { repo.restoreTimerState() }
     var selected by remember { mutableStateOf(TimerPreset.values().firstOrNull { it.minutes * 60 == initial.totalSeconds }) }
     var custom by remember { mutableStateOf((initial.totalSeconds / 60).coerceAtLeast(1).toString()) }
@@ -105,7 +105,7 @@ fun StudyTimerScreen(repo: JeeRepository, selectedTab: AppTab, onTabSelected: (A
         view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
     }
 
-    Scaffold(containerColor = BgApp, bottomBar = { AnimatedBottomNavBar(selectedTab, onTabSelected, visible = selectedTab != AppTab.AI) }) { padding ->
+    Scaffold(containerColor = BgApp) { padding ->
         LazyColumn(
             Modifier.fillMaxSize().padding(padding).padding(horizontal = 18.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),

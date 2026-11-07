@@ -48,9 +48,6 @@ fun AiTutorScreen(
     conversationId: Long? = null,
     onConversationOpened: (Long) -> Unit = {},
     onConversationCleared: () -> Unit = {},
-    showMainNavigation: Boolean = false,
-    selectedTab: AppTab = AppTab.AI,
-    onTabSelected: (AppTab) -> Unit = {},
     initialQuestionContext: String? = null,
     initialQuestionRequestId: Int = 0,
     onInitialQuestionContextConsumed: () -> Unit = {}
@@ -218,7 +215,6 @@ fun AiTutorScreen(
                     IconButton(onClick = { send(input) }, enabled = input.isNotBlank() && !busy) { Icon(Icons.Filled.Send, "Ask coach", tint = if (input.isNotBlank() && !busy) PrimaryLight else TextMuted) }
                 }
             }
-            if (showMainNavigation) AnimatedBottomNavBar(selectedTab, onTabSelected, visible = selectedTab != AppTab.AI)
         }
     }) { padding ->
         LaunchedEffect(messages.lastOrNull()?.text, streamingText) { if (messages.isNotEmpty()) chatListState.animateScrollToItem(messages.lastIndex) }

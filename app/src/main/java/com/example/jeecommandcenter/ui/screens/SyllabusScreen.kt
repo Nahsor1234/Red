@@ -28,8 +28,6 @@ import kotlinx.coroutines.withContext
 @Composable
 fun SyllabusScreen(
     repo: JeeRepository,
-    selectedTab: AppTab,
-    onTabSelected: (AppTab) -> Unit,
     onAiClick: () -> Unit = {},
     onOpenRevision: () -> Unit = {},
     onOpenChapter: (JeeChapter) -> Unit = {}
@@ -126,8 +124,7 @@ fun SyllabusScreen(
 
     Box(Modifier.fillMaxSize()) {
         Scaffold(
-            containerColor = BgApp.copy(alpha = 0f),
-            bottomBar = { AnimatedBottomNavBar(selectedTab, onTabSelected, visible = selectedTab != AppTab.AI) }
+            containerColor = BgApp
         ) { padding ->
             Column(
                 Modifier.fillMaxSize()
