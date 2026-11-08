@@ -5,6 +5,12 @@ plugins {
     id 'org.jetbrains.kotlin.plugin.serialization'
 }
 
+// Base values live in gradle.properties; CI overrides them (-PversionCode / -PversionName) so
+// every published build has a strictly increasing versionCode. Computed here, not inline in
+// defaultConfig: `versionCode (x).toString()` would parse as `versionCode(x).toString()`.
+def appVersionCode = ((project.findProperty('versionCode') ?: project.findProperty('APP_VERSION_CODE')) as String).toInteger()
+def appVersionName = (project.findProperty('versionName') ?: project.findProperty('APP_VERSION_NAME')) as String
+
 android {
     namespace 'com.example.jeecommandcenter'
     compileSdk 35
@@ -13,10 +19,8 @@ android {
         applicationId 'com.sigmaje.app'
         minSdk 23
         targetSdk 35
-        // Base values live in gradle.properties; CI overrides them (-PversionCode / -PversionName)
-        // so every published build has a strictly increasing versionCode.
-        versionCode (project.findProperty('versionCode') ?: project.findProperty('APP_VERSION_CODE')).toString().toInteger()
-        versionName (project.findProperty('versionName') ?: project.findProperty('APP_VERSION_NAME')).toString()
+        versionCode appVersionCode
+        versionName appVersionName
 
         def supabaseUrl = project.findProperty("SUPABASE_URL") ?: "https://clirtdxtqtiatuqkitmy.supabase.co"
         def supabaseKey = project.findProperty("SUPABASE_PUBLISHABLE_KEY") ?: "sb_publishable_VjQYGoJjFoAQXHSGwOohtQ_XL1XWIjU"
