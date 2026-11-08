@@ -55,11 +55,4 @@ class TestIntegration(
         }
     }
 
-    fun performanceTrend(): Float? {
-        val tests = recent(6).reversed().filter { it.totalMarks > 0 }
-        if (tests.size < 2) return null
-        val first = tests.take(tests.size / 2).map { it.score * 100f / it.totalMarks }.average().toFloat()
-        val last = tests.drop(tests.size / 2).map { it.score * 100f / it.totalMarks }.average().toFloat()
-        return last - first
-    }
 }

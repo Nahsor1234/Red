@@ -80,8 +80,4 @@ class RevisionIntelligence(
         }.sortedByDescending { it.score }.take(limit)
     }
 
-    fun dueCount(): Int = signals(Int.MAX_VALUE).count { it.due }
-
-    fun highPriority(limit: Int = 5): List<RevisionSignal> =
-        signals(Int.MAX_VALUE).filter { it.priority == PriorityLevel.HIGH }.take(limit)
 }

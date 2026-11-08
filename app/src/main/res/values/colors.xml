@@ -1,16 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="cc_background">#151916</color>
-    <color name="cc_surface">#20251F</color>
-    <color name="cc_surface_high">#2B312A</color>
-    <color name="cc_surface_glass">#1AFFFFFF</color>
-    <color name="cc_outline">#444D43</color>
-    <color name="cc_primary">#A4D56A</color>
-    <color name="cc_primary_container">#2B312A</color>
-    <color name="cc_secondary">#CAF592</color>
-    <color name="cc_on_surface">#F2F6EF</color>
-    <color name="cc_on_surface_variant">#AEB7A7</color>
-    <color name="cc_success">#4EE986</color>
-    <color name="cc_warning">#FACC15</color>
-    <color name="cc_error">#EF4444</color>
+    <!-- Only what XML needs (window background, launcher icon). Compose colors live in ui/theme/Color.kt. -->
+    <color name="cc_background">#151719</color>
+    <color name="cc_primary">#D4DCE1</color>
 </resources>

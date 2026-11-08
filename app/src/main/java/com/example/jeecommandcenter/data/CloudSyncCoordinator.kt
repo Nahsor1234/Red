@@ -96,8 +96,6 @@ class CloudSyncCoordinator(
         )
     }
 
-    suspend fun hasAccount(): Boolean = cloud.hasAuthenticatedSession()
-
     fun lastSyncAt(userId: String? = null): Long {
         if (userId == null) return 0L
         return syncPrefs.getLong("last_sync_at_$userId", 0L)
