@@ -178,7 +178,7 @@ jobs:
           RELEASE_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD || 'android' }}
         run: |
           set +e
-          gradle assembleRelease --stacktrace --console=plain --profile \
+          gradle assembleRelease --stacktrace --console=plain \
             -PversionCode="$VERSION_CODE" -PversionName="$VERSION_NAME" 2>&1 | tee build.log
           status=${PIPESTATUS[0]}
           if [ "$status" -ne 0 ]; then
@@ -188,16 +188,6 @@ jobs:
             echo "::error title=BUILD-ERRORS::$msg"
           fi
           exit "$status"
-
-      # Temporary diagnostic run: capture task/configuration timings before removing this step.
-      - name: Upload Gradle performance profile
-        if: ${{ success() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: gradle-profile-${{ github.run_number }}
-          path: build/reports/profile/*.html
-          if-no-files-found: error
-          retention-days: 7
 
       # Never ship an APK that cannot update the installed app: check signer, package and version.
       - name: Verify APK signature and metadata
