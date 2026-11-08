@@ -8,28 +8,22 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.DeleteOutline
-import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.GridView
-import androidx.compose.material.icons.filled.LocalOffer
-import androidx.compose.material.icons.filled.NoteAdd
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.DeleteOutline
+import androidx.compose.material.icons.rounded.GridView
+import androidx.compose.material.icons.rounded.LocalOffer
+import androidx.compose.material.icons.rounded.NoteAdd
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -140,7 +134,7 @@ fun RevisionScreen(onBack: () -> Unit) {
                         }
                     }) {
                         Icon(
-                            imageVector = if (showEditor) Icons.Filled.GridView else Icons.Filled.Add,
+                            imageVector = if (showEditor) Icons.Rounded.GridView else Icons.Rounded.Add,
                             contentDescription = if (showEditor) "All notes" else "Create note",
                             tint = PrimaryLight
                         )
@@ -236,9 +230,9 @@ private fun NotesLibrary(
             onValueChange = onSearchChange,
             modifier = Modifier.fillMaxWidth(),
             placeholder = { Text("Search your notes…") },
-            leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null, tint = TextMuted) },
+            leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null, tint = TextMuted) },
             singleLine = true,
-            shape = RoundedCornerShape(28.dp),
+            shape = JeeShapes.large,
             colors = OutlinedTextFieldDefaults.colors(
                 unfocusedBorderColor = BgCardBorder,
                 focusedBorderColor = PrimaryLight
@@ -253,14 +247,13 @@ private fun NotesLibrary(
 
         if (filteredNotes.isEmpty()) {
             Column(
-                Modifier.weight(1f).fillMaxWidth().clip(RoundedCornerShape(20.dp))
+                Modifier.weight(1f).fillMaxWidth().clip(JeeShapes.large)
                     .background(BgCardAlt)
-                    .border(JeeSurfaceTokens.borderWidth, BgCardBorder.copy(alpha = JeeSurfaceTokens.cardBorderAlpha), JeeShapes.medium)
                     .padding(20.dp),
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Icon(Icons.Filled.NoteAdd, contentDescription = null, tint = PrimaryLight, modifier = Modifier.size(34.dp))
+                Icon(Icons.Rounded.NoteAdd, contentDescription = null, tint = PrimaryLight, modifier = Modifier.size(34.dp))
                 Spacer(Modifier.height(10.dp))
                 Text(if (notes.isEmpty()) "Your notes start here" else "No matching notes", style = MaterialTheme.typography.titleMedium)
                 Text(
@@ -268,7 +261,7 @@ private fun NotesLibrary(
                     color = TextSecondary, fontSize = 12.sp
                 )
                 Spacer(Modifier.height(12.dp))
-                Button(onClick = onNewNote) { Icon(Icons.Filled.Add, null, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text("New note") }
+                Button(onClick = onNewNote) { Icon(Icons.Rounded.Add, null, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text("New note") }
             }
         } else {
             LazyVerticalGrid(
@@ -287,9 +280,9 @@ private fun NotesLibrary(
         Button(
             onClick = onNewNote,
             modifier = Modifier.fillMaxWidth().height(52.dp),
-            shape = RoundedCornerShape(28.dp)
+            shape = JeeShapes.large
         ) {
-            Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(19.dp))
+            Icon(Icons.Rounded.Add, contentDescription = null, modifier = Modifier.size(19.dp))
             Spacer(Modifier.width(8.dp))
             Text("New note", fontWeight = FontWeight.Medium)
         }
@@ -300,9 +293,8 @@ private fun NotesLibrary(
 private fun NoteCard(note: RevisionNote, onClick: () -> Unit, onDelete: () -> Unit) {
     Column(
         Modifier.fillMaxWidth().heightIn(min = 150.dp)
-            .clip(RoundedCornerShape(18.dp))
+            .clip(JeeShapes.medium)
             .background(BgCard)
-            .border(JeeSurfaceTokens.borderWidth, BgCardBorder.copy(alpha = JeeSurfaceTokens.cardBorderAlpha), JeeShapes.medium)
             .clickable(onClick = onClick)
             .padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -317,7 +309,7 @@ private fun NoteCard(note: RevisionNote, onClick: () -> Unit, onDelete: () -> Un
                 overflow = TextOverflow.Ellipsis
             )
             IconButton(onClick = onDelete, modifier = Modifier.size(26.dp)) {
-                Icon(Icons.Filled.DeleteOutline, contentDescription = "Delete ${note.title}", tint = TextMuted, modifier = Modifier.size(17.dp))
+                Icon(Icons.Rounded.DeleteOutline, contentDescription = "Delete ${note.title}", tint = TextMuted, modifier = Modifier.size(17.dp))
             }
         }
         Text(
@@ -332,11 +324,11 @@ private fun NoteCard(note: RevisionNote, onClick: () -> Unit, onDelete: () -> Un
         val tag = note.subject.takeIf { it.isNotBlank() && it != "General" }
         if (tag != null) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                Icon(Icons.Filled.LocalOffer, contentDescription = null, tint = PrimaryLight, modifier = Modifier.size(13.dp))
-                Text(tag, color = PrimaryLight, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Icon(Icons.Rounded.LocalOffer, contentDescription = null, tint = PrimaryLight, modifier = Modifier.size(13.dp))
+                Text(tag, color = PrimaryLight, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         } else {
-            Text(SimpleDateFormat("dd MMM", Locale.getDefault()).format(Date(note.updatedAt)), color = TextMuted, fontSize = 10.sp)
+            Text(SimpleDateFormat("dd MMM", Locale.getDefault()).format(Date(note.updatedAt)), color = TextMuted, fontSize = 11.sp)
         }
     }
 }
@@ -361,7 +353,7 @@ private fun NoteEditor(
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                Icon(Icons.Filled.ArrowBack, contentDescription = null, tint = PrimaryLight, modifier = Modifier.size(19.dp))
+                Icon(Icons.Rounded.ArrowBack, contentDescription = null, tint = PrimaryLight, modifier = Modifier.size(19.dp))
                 Spacer(Modifier.width(8.dp))
                 TextButton(onClick = onBack, contentPadding = PaddingValues(0.dp)) { Text("All notes", color = PrimaryLight) }
             }
@@ -374,7 +366,7 @@ private fun NoteEditor(
             modifier = Modifier.fillMaxWidth(),
             placeholder = { Text("Note title") },
             singleLine = true,
-            shape = RoundedCornerShape(28.dp),
+            shape = JeeShapes.large,
             textStyle = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium),
             colors = OutlinedTextFieldDefaults.colors(
                 unfocusedContainerColor = BgCardAlt,
@@ -389,7 +381,7 @@ private fun NoteEditor(
             onValueChange = onContentChange,
             modifier = Modifier.weight(1f).fillMaxWidth(),
             placeholder = { Text("Start writing…") },
-            shape = RoundedCornerShape(18.dp),
+            shape = JeeShapes.medium,
             textStyle = MaterialTheme.typography.bodyLarge.copy(lineHeight = 25.sp),
             colors = OutlinedTextFieldDefaults.colors(
                 unfocusedBorderColor = BgCardBorder,
@@ -399,7 +391,7 @@ private fun NoteEditor(
 
         if (tagPickerOpen) {
             Column(
-                Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(BgCardAlt).padding(10.dp),
+                Modifier.fillMaxWidth().clip(JeeShapes.medium).background(BgCardAlt).padding(10.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Text("Optional tag", color = TextSecondary, fontSize = 11.sp, fontWeight = FontWeight.Medium)
@@ -416,14 +408,14 @@ private fun NoteEditor(
         }
 
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            OutlinedButton(onClick = onTagClick, shape = RoundedCornerShape(28.dp)) {
-                Icon(Icons.Filled.LocalOffer, contentDescription = null, tint = PrimaryLight, modifier = Modifier.size(17.dp))
+            OutlinedButton(onClick = onTagClick, shape = JeeShapes.large) {
+                Icon(Icons.Rounded.LocalOffer, contentDescription = null, tint = PrimaryLight, modifier = Modifier.size(17.dp))
                 Spacer(Modifier.width(6.dp))
                 Text(if (tag == "No tag") "Add tag" else "# $tag")
             }
             Spacer(Modifier.weight(1f))
-            Button(onClick = onSave, shape = RoundedCornerShape(28.dp), contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp)) {
-                Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(17.dp))
+            Button(onClick = onSave, shape = JeeShapes.large, contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp)) {
+                Icon(Icons.Rounded.Check, contentDescription = null, modifier = Modifier.size(17.dp))
                 Spacer(Modifier.width(6.dp))
                 Text("Save note")
             }
