@@ -1,13 +1,14 @@
 package com.example.jeecommandcenter.ui.screens
 
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material.icons.rounded.Email
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.PersonAdd
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -158,7 +159,7 @@ fun AuthScreen(
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 label = { Text("Email") },
-                leadingIcon = { Icon(Icons.Filled.Email, null) },
+                leadingIcon = { Icon(Icons.Rounded.Email, null) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                 enabled = !busy
             )
@@ -169,7 +170,7 @@ fun AuthScreen(
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 label = { Text("Password") },
-                leadingIcon = { Icon(Icons.Filled.Lock, null) },
+                leadingIcon = { Icon(Icons.Rounded.Lock, null) },
                 visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 enabled = !busy
@@ -182,15 +183,15 @@ fun AuthScreen(
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     label = { Text("Confirm password") },
-                    leadingIcon = { Icon(Icons.Filled.Lock, null) },
+                    leadingIcon = { Icon(Icons.Rounded.Lock, null) },
                     visualTransformation = PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     enabled = !busy
                 )
             }
 
-            error?.let { Text(it, color = Danger, fontSize = 12.sp) }
-            message?.let { Text(it, color = AccentGreen, fontSize = 12.sp) }
+            error?.let { StatusMessage(it, isError = true) }
+            message?.let { StatusMessage(it, isError = false) }
 
             Button(
                 onClick = ::submit,
@@ -199,7 +200,7 @@ fun AuthScreen(
             ) {
                 if (busy) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
                 else {
-                    Icon(if (mode == AuthMode.SIGN_UP) Icons.Filled.PersonAdd else Icons.Filled.Lock, null)
+                    Icon(if (mode == AuthMode.SIGN_UP) Icons.Rounded.PersonAdd else Icons.Rounded.Lock, null)
                     Spacer(Modifier.width(8.dp))
                     Text(if (mode == AuthMode.SIGN_IN) "Sign in" else "Create account")
                 }
@@ -211,7 +212,7 @@ fun AuthScreen(
                     enabled = !busy,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Icon(Icons.Filled.Email, null)
+                    Icon(Icons.Rounded.Email, null)
                     Spacer(Modifier.width(8.dp))
                     Text("Resend confirmation email")
                 }
@@ -233,7 +234,7 @@ fun AuthScreen(
             Text(
                 "You can keep using Sigma JE offline without an account. Cloud sync is available after authentication.",
                 color = TextMuted,
-                fontSize = 10.sp
+                fontSize = 11.sp
             )
         }
     }
@@ -241,3 +242,18 @@ fun AuthScreen(
 
 private fun CloudAuthMode.toInternal(): AuthMode =
     if (this == CloudAuthMode.SIGN_UP) AuthMode.SIGN_UP else AuthMode.SIGN_IN
+
+/** Status is conveyed by icon and wording as well as tone, so it never depends on colour alone. */
+@Composable
+private fun StatusMessage(text: String, isError: Boolean) {
+    Row(verticalAlignment = Alignment.Top) {
+        Icon(
+            if (isError) Icons.Rounded.ErrorOutline else Icons.Rounded.CheckCircle,
+            contentDescription = if (isError) "Error" else "Success",
+            tint = PrimaryLight,
+            modifier = Modifier.size(16.dp)
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(text, style = MaterialTheme.typography.bodySmall, color = TextPrimary)
+    }
+}

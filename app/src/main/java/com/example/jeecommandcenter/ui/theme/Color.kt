@@ -1,49 +1,45 @@
 package com.example.jeecommandcenter.ui.theme
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 
-// Warm Graphite palette
-val BgAppBase = Color(0xFF151916)
-// Screen scaffolds are transparent so the global academic wallpaper can sit behind them.
+// Brand palette. These six values are the only source colors in the app; every other
+// token below is a tonal variation derived from them with lerp().
+val PaletteBackground = Color(0xFF151719)
+val PaletteSurface = Color(0xFF24282B)
+val PalettePrimary = Color(0xFFA7B3BC)
+val PaletteSecondary = Color(0xFF858F97)
+val PaletteAccent = Color(0xFFD4DCE1)
+val PaletteText = Color(0xFFEDF0F2)
+
+// Surfaces, darkest to lightest. Cards, dialogs and sheets are tonal (no borders needed).
+val BgAppBase = PaletteBackground
+/** Screen scaffolds are transparent; the root surface in MainActivity paints [BgAppBase]. */
 val BgApp = Color.Transparent
-val BgCard = Color(0xFF20251F)
-val BgCardAlt = Color(0xFF2B312A)
-val BgCardBorder = Color(0xFF444D43)
-val BgDivider = Color(0xFF444D43)
-val BgPriority = Color(0xFF2B312A)
-val BorderPriority = Color(0xFF444D43)
-val BgPriorityBadge = Color(0xFF2B312A)
+val BgCard = PaletteSurface
+val BgCardAlt = lerp(PaletteSurface, PaletteText, 0.05f)
+val BgCardHigh = lerp(PaletteSurface, PaletteText, 0.10f)
+val BgCardBorder = lerp(PaletteSurface, PaletteText, 0.12f)
+val BgDivider = BgCardHigh
+/** Selected / active container: surface lifted toward Primary. */
+val PrimarySoft = lerp(PaletteSurface, PalettePrimary, 0.18f)
+val PrimaryContainerTone = lerp(PaletteSurface, PalettePrimary, 0.26f)
+/** Visible outline for interactive controls (3:1 against Surface). */
+val OutlineStrong = lerp(PaletteSurface, PaletteText, 0.38f)
 
-val TextPriorityBadge = Color(0xFFCAF592)
-val TextAmber = Color(0xFFCAF592)
-val TextPrimary = Color(0xFFF2F6EF)
-val TextSecondary = Color(0xFFAEB7A7)
-val TextMuted = Color(0xFF7F8979)
-val TextOnCard = Color(0xFFF2F6EF)
+// Text.
+val TextPrimary = PaletteText
+val TextSecondary = PalettePrimary
+/** Secondary lifted 25% toward Text so small captions keep 4.5:1 on raised surfaces. */
+val TextMuted = lerp(PaletteSecondary, PaletteText, 0.25f)
 
-// Semantic accent tokens. Prefer these names in new code.
-val Primary = Color(0xFFA4D56A)
-val PrimaryLight = Color(0xFFCAF592)
-val PrimarySoft = Color(0xFF2B312A)
-val Success = Color(0xFF4EE986)
-val SuccessDark = Color(0xFF151916)
-val Warning = Color(0xFFFACC15)
-val Danger = Color(0xFFEF4444)
-val ChipSelectedBg = Primary
-val ChipUnselectedBg = BgCard
+// Accents.
+val Primary = PalettePrimary
+val PrimaryLight = PaletteAccent
+val OnPrimary = PaletteBackground
 
-// Legacy aliases retained so existing screens can migrate incrementally.
-@Deprecated("Use Primary")
-val AccentBlue = Primary
-@Deprecated("Use PrimaryLight")
-val AccentBlueLight = PrimaryLight
-@Deprecated("Use PrimarySoft")
-val AccentBlueSoft = PrimarySoft
-@Deprecated("Use Success")
-val AccentGreen = Success
-@Deprecated("Use SuccessDark")
-val AccentGreenDark = SuccessDark
-@Deprecated("Use Warning")
-val AccentAmber = Warning
-@Deprecated("Use Danger")
-val AccentPink = Danger
+// Status is carried by brightness, labels and icons rather than extra hues.
+val Success = PaletteAccent
+val OnSuccess = PaletteBackground
+val Warning = PaletteText
+val Danger = PaletteText

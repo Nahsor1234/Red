@@ -27,30 +27,4 @@ class FinalIntelligence(
 
     fun unresolvedMistakes(): Int = learning.getMistakes().count { !it.resolved }
 
-    fun currentState(): StudentState {
-        val attempts = learning.getQuestionAttempts()
-        val testsCompleted = learning.getTestAttempts().size
-        val revisionSignals = revision.signals(Int.MAX_VALUE)
-        val weak = performance.weakChapters(Int.MAX_VALUE)
-        val highRevision = revisionSignals.count { it.priority == PriorityLevel.HIGH }
-        return StudentState(
-            questionAttempts = attempts.size,
-            questionAccuracy = questionAccuracy(),
-            unresolvedMistakes = unresolvedMistakes(),
-            highPriorityRevisions = highRevision,
-            weakChapterCount = weak.count { it.strengthScore < 50 },
-            testsCompleted = testsCompleted,
-            recentTestTrend = tests.performanceTrend()
-        )
-    }
-
-    data class StudentState(
-        val questionAttempts: Int,
-        val questionAccuracy: Float,
-        val unresolvedMistakes: Int,
-        val highPriorityRevisions: Int,
-        val weakChapterCount: Int,
-        val testsCompleted: Int,
-        val recentTestTrend: Float?
-    )
 }

@@ -1,16 +1,14 @@
 package com.example.jeecommandcenter.ui.screens
 
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -151,13 +149,13 @@ fun ChapterDetailScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.Rounded.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
                     Box {
                         IconButton(onClick = { showChapterMenu = true }) {
-                            Icon(Icons.Filled.MoreHoriz, contentDescription = "Chapter options", tint = TextSecondary)
+                            Icon(Icons.Rounded.MoreHoriz, contentDescription = "Chapter options", tint = TextSecondary)
                         }
                         DropdownMenu(
                             expanded = showChapterMenu,
@@ -169,7 +167,7 @@ fun ChapterDetailScreen(
                                     showChapterMenu = false
                                     markChapterComplete()
                                 },
-                                leadingIcon = { Icon(Icons.Filled.CheckCircle, null) }
+                                leadingIcon = { Icon(Icons.Rounded.CheckCircle, null) }
                             )
                         }
                     }
@@ -186,13 +184,8 @@ fun ChapterDetailScreen(
             item {
                 Column(
                     Modifier.fillMaxWidth()
-                        .clip(RoundedCornerShape(22.dp))
+                        .clip(JeeShapes.large)
                         .background(BgCardAlt.copy(alpha = .78f))
-                        .border(
-                            JeeSurfaceTokens.borderWidth,
-                            BgCardBorder.copy(alpha = JeeSurfaceTokens.cardBorderAlpha),
-                            RoundedCornerShape(22.dp)
-                        )
                         .padding(18.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
@@ -247,7 +240,7 @@ fun ChapterDetailScreen(
                     }
                     LinearProgressIndicator(
                         progress = { progress },
-                        modifier = Modifier.fillMaxWidth().height(5.dp).clip(RoundedCornerShape(99.dp)),
+                        modifier = Modifier.fillMaxWidth().height(5.dp).clip(JeeShapes.pill),
                         color = Primary,
                         trackColor = BgDivider
                     )
@@ -257,7 +250,7 @@ fun ChapterDetailScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
-                            if (cloudReady) Icons.Filled.Cloud else Icons.Filled.CloudOff,
+                            if (cloudReady) Icons.Rounded.Cloud else Icons.Rounded.CloudOff,
                             null,
                             tint = TextSecondary,
                             modifier = Modifier.size(20.dp)
@@ -278,21 +271,20 @@ fun ChapterDetailScreen(
             item {
                 Row(
                     Modifier.fillMaxWidth()
-                        .clip(RoundedCornerShape(20.dp))
+                        .clip(JeeShapes.large)
                         .background(BgCard.copy(alpha = .96f))
-                        .border(1.dp, BgCardBorder.copy(alpha = .9f), RoundedCornerShape(20.dp))
                         .clickable(enabled = questionCount > 0, onClick = onPracticeQuestions)
                         .padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(13.dp)
                 ) {
                     Box(
-                        Modifier.size(58.dp).clip(RoundedCornerShape(16.dp))
+                        Modifier.size(58.dp).clip(JeeShapes.medium)
                             .background(PrimarySoft),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            Icons.Filled.GpsFixed,
+                            Icons.Rounded.GpsFixed,
                             null,
                             tint = PrimaryLight,
                             modifier = Modifier.size(28.dp)
@@ -316,7 +308,7 @@ fun ChapterDetailScreen(
                         )
                     }
                     Icon(
-                        Icons.Filled.ChevronRight,
+                        Icons.Rounded.ChevronRight,
                         null,
                         tint = if (questionCount > 0) PrimaryLight else TextMuted,
                         modifier = Modifier.size(25.dp)
@@ -347,13 +339,13 @@ fun ChapterDetailScreen(
             items(topics, key = { it.id }) { topic ->
                 Row(
                     Modifier.fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
+                        .clip(JeeShapes.medium)
                         .background(BgCard.copy(alpha = .94f))
                         .border(
                             1.dp,
                             if (topic.completed) Primary.copy(alpha = .7f)
                             else BgCardBorder.copy(alpha = JeeSurfaceTokens.cardBorderAlpha),
-                            RoundedCornerShape(16.dp)
+                            JeeShapes.medium
                         )
                         .clickable { selectedTopic = topic }
                         .padding(14.dp),
@@ -361,12 +353,12 @@ fun ChapterDetailScreen(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Box(
-                        Modifier.size(34.dp).clip(RoundedCornerShape(11.dp))
+                        Modifier.size(34.dp).clip(JeeShapes.small)
                             .background(if (topic.completed) PrimarySoft else BgCardAlt),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            if (topic.completed) Icons.Filled.CheckCircle else Icons.Filled.PlayArrow,
+                            if (topic.completed) Icons.Rounded.CheckCircle else Icons.Rounded.PlayArrow,
                             null,
                             tint = if (topic.completed) PrimaryLight else TextSecondary,
                             modifier = Modifier.size(19.dp)
@@ -385,7 +377,7 @@ fun ChapterDetailScreen(
                             fontSize = 11.sp
                         )
                     }
-                    Icon(Icons.Filled.ChevronRight, null, tint = TextMuted)
+                    Icon(Icons.Rounded.ChevronRight, null, tint = TextMuted)
                 }
             }
 
