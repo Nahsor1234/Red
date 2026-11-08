@@ -126,6 +126,9 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.7'
+          # Same-repository PRs can populate their own PR-merge-ref cache.
+          # Fork PRs stay read-only because their code is untrusted.
+          cache-read-only: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
 
       # The permanent key comes from a GitHub Secret and is checked against the pinned fingerprint
       # before it is ever used. Fork pull requests get no secrets, so they sign with a throwaway key
@@ -175,7 +178,7 @@ jobs:
           RELEASE_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD || 'android' }}
         run: |
           set +e
-          gradle assembleRelease --stacktrace --console=plain \
+          gradle assembleRelease --stacktrace --console=plain --profile \
             -PversionCode="$VERSION_CODE" -PversionName="$VERSION_NAME" 2>&1 | tee build.log
           status=${PIPESTATUS[0]}
           if [ "$status" -ne 0 ]; then
@@ -185,6 +188,16 @@ jobs:
             echo "::error title=BUILD-ERRORS::$msg"
           fi
           exit "$status"
+
+      # Temporary diagnostic run: capture task/configuration timings before removing this step.
+      - name: Upload Gradle performance profile
+        if: ${{ success() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-profile-${{ github.run_number }}
+          path: build/reports/profile/*.html
+          if-no-files-found: error
+          retention-days: 7
 
       # Never ship an APK that cannot update the installed app: check signer, package and version.
       - name: Verify APK signature and metadata
