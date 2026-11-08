@@ -1,24 +1,101 @@
 name: Build APK
 
+# Build and publish signed release APKs.
+#
+#   push to main        -> signed release APK, published to the rolling "dev-latest" prerelease
+#   push of tag vX.Y.Z  -> signed release APK, published as a stable GitHub Release
+#   pull request        -> signed release APK as an Actions artifact + a draft-release dry run (never published)
+#
+# Nothing is published unless the build job succeeds, the APK verifies against the permanent
+# signing certificate, and the package/version metadata matches what we intended to ship.
+
 on:
   push:
     branches: [ main ]
+    tags: [ 'v*' ]
   pull_request:
     branches: [ main ]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 concurrency:
   group: android-build-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+env:
+  APP_ID: com.sigmaje.app
+  # Public SHA-256 fingerprint of the permanent Sigma JE signing certificate. Every APK that can
+  # be published must be signed by it, otherwise it could not update the installed app.
+  EXPECTED_CERT_SHA256: CE52869BCAEE870060F44DF125E79F6079E9E67E3A69FDF1ECB926B9CD381C94
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      mode: ${{ steps.meta.outputs.mode }}
+      version_name: ${{ steps.meta.outputs.version_name }}
+      version_code: ${{ steps.meta.outputs.version_code }}
+      apk_name: ${{ steps.dist.outputs.apk_name }}
     env:
-      HAS_PERSISTENT_SIGNING_KEY: ${{ secrets.ANDROID_DEBUG_KEYSTORE_BASE64 != '' }}
+      KEYSTORE_PATH: ${{ runner.temp }}/sigma-je-release.keystore
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # mode: dev | stable | dryrun | skip
+      #   skip   = pull request from a fork (no secrets, read-only token)
+      #   dryrun = anything that must be validated but never published
+      - name: Resolve version and release mode
+        id: meta
+        env:
+          PR_HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+        run: |
+          set -euo pipefail
+          BASE_NAME="$(sed -n 's/^APP_VERSION_NAME=//p' gradle.properties)"
+          [ -n "$BASE_NAME" ] || { echo "::error::APP_VERSION_NAME missing from gradle.properties"; exit 1; }
+
+          # Strictly increasing across every build of this workflow, so any APK can update an older one.
+          VERSION_CODE=$((100 + GITHUB_RUN_NUMBER))
+
+          case "$GITHUB_REF" in
+            refs/tags/v*)
+              TAG="$GITHUB_REF_NAME"
+              if ! [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]]; then
+                echo "::error::Tag '$TAG' is not a valid version tag (expected vMAJOR.MINOR.PATCH or vMAJOR.MINOR.PATCH-suffix)."
+                exit 1
+              fi
+              if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+                echo "::error::Tag '$TAG' is not on main. Stable releases must be tagged from main."
+                exit 1
+              fi
+              VERSION_NAME="${TAG#v}"
+              MODE=stable
+              ;;
+            refs/heads/main)
+              VERSION_NAME="${BASE_NAME}-dev.${GITHUB_RUN_NUMBER}"
+              MODE=dev
+              ;;
+            *)
+              VERSION_NAME="${BASE_NAME}-dev.${GITHUB_RUN_NUMBER}"
+              MODE=dryrun
+              ;;
+          esac
+
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ] && [ "$PR_HEAD_REPO" != "$GITHUB_REPOSITORY" ]; then
+            MODE=skip
+          fi
+
+          {
+            echo "mode=$MODE"
+            echo "version_name=$VERSION_NAME"
+            echo "version_code=$VERSION_CODE"
+          } >> "$GITHUB_OUTPUT"
+          echo "mode=$MODE version=$VERSION_NAME code=$VERSION_CODE"
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -39,39 +116,220 @@ jobs:
         with:
           gradle-version: '8.7'
 
-      # GitHub-hosted runners are ephemeral. Reuse one stable debug keystore so
-      # subsequent debug APKs can update the installed app instead of conflicting.
-      # Debug keys are for development APKs only; production releases need a dedicated
-      # private release keystore managed separately.
-      - name: Restore stable debug signing key
-        if: ${{ env.HAS_PERSISTENT_SIGNING_KEY != 'true' }}
-        uses: actions/cache@v4
-        with:
-          path: ~/.android/debug.keystore
-          key: sigma-je-debug-keystore-v1-${{ runner.os }}
-
-      # For stability across branch/merge boundaries, optionally provide the same
-      # development keystore as a GitHub Actions secret. If unset, the cached
-      # branch-local debug key remains in use.
-      - name: Use persistent debug signing key when configured
+      # The permanent key comes from a GitHub Secret and is checked against the pinned fingerprint
+      # before it is ever used. Fork pull requests get no secrets, so they sign with a throwaway key
+      # and are never published.
+      - name: Prepare signing key
         env:
-          ANDROID_DEBUG_KEYSTORE_BASE64: ${{ secrets.ANDROID_DEBUG_KEYSTORE_BASE64 }}
+          MODE: ${{ steps.meta.outputs.mode }}
+          KEYSTORE_B64: ${{ secrets.ANDROID_DEBUG_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD || 'android' }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS || 'androiddebugkey' }}
         run: |
-          if [ -n "$ANDROID_DEBUG_KEYSTORE_BASE64" ]; then
-            mkdir -p "$HOME/.android"
-            printf '%s' "$ANDROID_DEBUG_KEYSTORE_BASE64" | base64 --decode > "$HOME/.android/debug.keystore"
-          else
-            echo "No persistent keystore secret configured; using the cached debug keystore."
+          set -euo pipefail
+          if [ "$MODE" = "skip" ]; then
+            keytool -genkeypair \
+              -keystore "$KEYSTORE_PATH" -storepass android -keypass android -alias androiddebugkey \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -dname "CN=Android Debug,O=Android,C=US" -noprompt
+            echo "Using a throwaway key (fork pull request); this build will not be published."
+            exit 0
           fi
 
-      - name: Build APK
-        run: gradle assembleDebug
+          if [ -z "$KEYSTORE_B64" ]; then
+            echo "::error::Secret ANDROID_DEBUG_KEYSTORE_BASE64 is required to build a signed release."
+            exit 1
+          fi
+          printf '%s' "$KEYSTORE_B64" | base64 --decode > "$KEYSTORE_PATH"
+          test -s "$KEYSTORE_PATH"
 
-      - name: Upload APK
+          ACTUAL="$(keytool -list -v -keystore "$KEYSTORE_PATH" -storepass "$STORE_PASSWORD" -alias "$KEY_ALIAS" \
+            | sed -n 's/^[[:space:]]*SHA256: //p' | tr -d ':' | tr '[:lower:]' '[:upper:]')"
+          if [ "$ACTUAL" != "$EXPECTED_CERT_SHA256" ]; then
+            echo "::error::The signing secret is not the expected Sigma JE keystore (certificate fingerprint mismatch)."
+            echo "Expected: $EXPECTED_CERT_SHA256"
+            echo "Decoded:  $ACTUAL"
+            exit 1
+          fi
+          echo "Signing keystore fingerprint verified."
+
+      - name: Build signed release APK
+        env:
+          VERSION_NAME: ${{ steps.meta.outputs.version_name }}
+          VERSION_CODE: ${{ steps.meta.outputs.version_code }}
+          RELEASE_KEYSTORE_FILE: ${{ runner.temp }}/sigma-je-release.keystore
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD || 'android' }}
+          RELEASE_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS || 'androiddebugkey' }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD || 'android' }}
+        run: |
+          set +e
+          gradle assembleRelease --stacktrace --console=plain \
+            -PversionCode="$VERSION_CODE" -PversionName="$VERSION_NAME" 2>&1 | tee build.log
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            # Surface compiler errors in the run summary so failures are readable without opening logs.
+            grep -E -A6 '^e: |What went wrong|error:|AAPT' build.log | head -120 > errors.txt
+            msg="$(head -c 8000 errors.txt | sed ':a;N;$!ba;s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g')"
+            echo "::error title=BUILD-ERRORS::$msg"
+          fi
+          exit $status
+
+      # Never ship an APK that cannot update the installed app: check signer, package and version.
+      - name: Verify APK signature and metadata
+        env:
+          MODE: ${{ steps.meta.outputs.mode }}
+          VERSION_NAME: ${{ steps.meta.outputs.version_name }}
+          VERSION_CODE: ${{ steps.meta.outputs.version_code }}
+        run: |
+          set -euo pipefail
+          APK="app/build/outputs/apk/release/app-release.apk"
+          TOOLS="$ANDROID_HOME/build-tools/35.0.0"
+          test -f "$APK" || { echo "::error::Release APK not found (is it unsigned?)"; ls -R app/build/outputs/apk || true; exit 1; }
+
+          "$TOOLS/apksigner" verify --verbose --print-certs "$APK" | tee /tmp/apk-signing.txt
+          CERT="$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' /tmp/apk-signing.txt | tr -d ':' | tr '[:lower:]' '[:upper:]')"
+          echo "CERT_SHA256=$CERT" >> "$GITHUB_ENV"
+          if [ "$MODE" != "skip" ] && [ "$CERT" != "$EXPECTED_CERT_SHA256" ]; then
+            echo "::error::APK signing certificate does not match the permanent Sigma JE key."
+            echo "Expected: $EXPECTED_CERT_SHA256"
+            echo "Actual:   $CERT"
+            exit 1
+          fi
+
+          BADGING="$("$TOOLS/aapt2" dump badging "$APK")"
+          sed -n '1p' <<< "$BADGING"
+          # Here-strings (not echo | grep -q): under pipefail an early-exiting grep would fail the pipeline.
+          grep -q "^package: name='$APP_ID' versionCode='$VERSION_CODE' versionName='$VERSION_NAME'" <<< "$BADGING" \
+            || { echo "::error::APK package/version does not match the expected $APP_ID $VERSION_NAME ($VERSION_CODE)."; exit 1; }
+          if grep -q "application-debuggable" <<< "$BADGING"; then
+            echo "::error::Release APK is marked debuggable."; exit 1
+          fi
+          echo "APK verified: signer, package, version and non-debuggable flag."
+
+      - name: Prepare release assets and notes
+        id: dist
+        env:
+          MODE: ${{ steps.meta.outputs.mode }}
+          VERSION_NAME: ${{ steps.meta.outputs.version_name }}
+          VERSION_CODE: ${{ steps.meta.outputs.version_code }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          APK_NAME="JEECommandCenter-${VERSION_NAME}.apk"
+          cp app/build/outputs/apk/release/app-release.apk "dist/$APK_NAME"
+          APK_SHA="$(sha256sum "dist/$APK_NAME" | cut -d' ' -f1)"
+          SHORT="${GITHUB_SHA::7}"
+          CHANNEL="Development (rolling prerelease)"
+          [ "$MODE" = "stable" ] && CHANNEL="Stable"
+
+          # Changes since the previous stable tag, or the last 20 commits if there is none.
+          PREV_TAG="$(git describe --tags --abbrev=0 --match 'v[0-9]*' "${GITHUB_SHA}^" 2>/dev/null || true)"
+          if [ -n "$PREV_TAG" ]; then
+            RANGE="${PREV_TAG}..${GITHUB_SHA}"; SINCE="since ${PREV_TAG}"
+            CHANGES="$(git log --no-merges --pretty='- %s (%h)' "$RANGE" | head -50)"
+          else
+            SINCE="(last 20 commits)"
+            CHANGES="$(git log --no-merges --pretty='- %s (%h)' -n 20 "$GITHUB_SHA")"
+          fi
+          [ -n "$CHANGES" ] || CHANGES="- No code changes recorded."
+
+          {
+            echo "## JEE Command Center ${VERSION_NAME}"
+            echo
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Channel | ${CHANNEL} |"
+            echo "| Version | ${VERSION_NAME} (versionCode ${VERSION_CODE}) |"
+            echo "| Build | [#${GITHUB_RUN_NUMBER}](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}) |"
+            echo "| Commit | [\`${SHORT}\`](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/commit/${GITHUB_SHA}) on \`${GITHUB_REF_NAME}\` |"
+            echo "| Built | $(date -u '+%Y-%m-%d %H:%M UTC') |"
+            echo "| Package | \`${APP_ID}\` |"
+            echo "| Signing certificate SHA-256 | \`${CERT_SHA256}\` |"
+            echo "| APK SHA-256 | \`${APK_SHA}\` |"
+            echo
+            echo "Signed with the permanent Sigma JE key, so it installs as an **update over the existing app** and keeps your data."
+            echo
+            echo "### Changes ${SINCE}"
+            echo "${CHANGES}"
+          } > dist/release-notes.md
+
+          echo "apk_name=$APK_NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Upload release artifact
         uses: actions/upload-artifact@v4
         with:
-          name: JEECommandCenter-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: JEECommandCenter-release
+          path: dist/
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
 
-      # Verification build for the current implementation batch.
-      # Current app identity/state verification build.
+      - name: Remove signing key from runner
+        if: ${{ always() }}
+        run: rm -f "$KEYSTORE_PATH"
+
+  # Runs only after the build job succeeded. Needs write access, but never sees the signing secret.
+  publish:
+    needs: build
+    if: ${{ needs.build.result == 'success' && needs.build.outputs.mode != 'skip' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    concurrency:
+      group: release-publish
+      cancel-in-progress: false
+    env:
+      GH_TOKEN: ${{ github.token }}
+      MODE: ${{ needs.build.outputs.mode }}
+      VERSION_NAME: ${{ needs.build.outputs.version_name }}
+      APK_NAME: ${{ needs.build.outputs.apk_name }}
+    steps:
+      - name: Download build output
+        uses: actions/download-artifact@v4
+        with:
+          name: JEECommandCenter-release
+          path: dist
+
+      - name: Publish
+        run: |
+          set -euo pipefail
+          APK="dist/$APK_NAME"
+          NOTES="dist/release-notes.md"
+          test -s "$APK" && test -s "$NOTES"
+
+          case "$MODE" in
+            dev)
+              # One rolling prerelease: replace it so it always holds the newest successful build.
+              TAG="dev-latest"
+              gh release delete "$TAG" --yes --cleanup-tag --repo "$GITHUB_REPOSITORY" 2>/dev/null || true
+              gh release create "$TAG" "$APK" --repo "$GITHUB_REPOSITORY" \
+                --title "JEE Command Center dev build ${VERSION_NAME}" \
+                --notes-file "$NOTES" --prerelease --target "$GITHUB_SHA"
+              ;;
+            stable)
+              TAG="$GITHUB_REF_NAME"
+              FLAG="--latest"
+              case "$VERSION_NAME" in *-*) FLAG="--prerelease" ;; esac
+              if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+                gh release upload "$TAG" "$APK" --clobber --repo "$GITHUB_REPOSITORY"
+                gh release edit "$TAG" --title "JEE Command Center ${VERSION_NAME}" --notes-file "$NOTES" "$FLAG" --repo "$GITHUB_REPOSITORY"
+              else
+                gh release create "$TAG" "$APK" --repo "$GITHUB_REPOSITORY" \
+                  --title "JEE Command Center ${VERSION_NAME}" \
+                  --notes-file "$NOTES" --verify-tag "$FLAG"
+              fi
+              ;;
+            dryrun)
+              # Proves the publish path (permissions, upload, notes) without publishing anything:
+              # create a draft release, then delete it again.
+              TITLE="DRY RUN ${GITHUB_RUN_ID} - safe to delete"
+              gh release create "dryrun-${GITHUB_RUN_ID}" "$APK" --repo "$GITHUB_REPOSITORY" \
+                --draft --title "$TITLE" --notes-file "$NOTES" --target "$GITHUB_SHA"
+              ID="$(gh api "repos/${GITHUB_REPOSITORY}/releases" --paginate \
+                --jq ".[] | select(.draft and .name == \"${TITLE}\") | .id")"
+              [ -n "$ID" ] || { echo "::error::Dry-run draft release was not found after creation."; exit 1; }
+              for id in $ID; do gh api -X DELETE "repos/${GITHUB_REPOSITORY}/releases/${id}"; done
+              echo "Dry run OK: draft release created and removed. Nothing was published."
+              ;;
+          esac
