@@ -39,8 +39,6 @@ jobs:
       version_name: ${{ steps.meta.outputs.version_name }}
       version_code: ${{ steps.meta.outputs.version_code }}
       apk_name: ${{ steps.dist.outputs.apk_name }}
-    env:
-      KEYSTORE_PATH: ${{ runner.temp }}/sigma-je-release.keystore
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -127,6 +125,7 @@ jobs:
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS || 'androiddebugkey' }}
         run: |
           set -euo pipefail
+          KEYSTORE_PATH="$RUNNER_TEMP/sigma-je-release.keystore"
           if [ "$MODE" = "skip" ]; then
             keytool -genkeypair \
               -keystore "$KEYSTORE_PATH" -storepass android -keypass android -alias androiddebugkey \
@@ -172,7 +171,7 @@ jobs:
             msg="$(head -c 8000 errors.txt | sed ':a;N;$!ba;s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g')"
             echo "::error title=BUILD-ERRORS::$msg"
           fi
-          exit $status
+          exit "$status"
 
       # Never ship an APK that cannot update the installed app: check signer, package and version.
       - name: Verify APK signature and metadata
@@ -266,7 +265,7 @@ jobs:
 
       - name: Remove signing key from runner
         if: ${{ always() }}
-        run: rm -f "$KEYSTORE_PATH"
+        run: rm -f "$RUNNER_TEMP/sigma-je-release.keystore"
 
   # Runs only after the build job succeeded. Needs write access, but never sees the signing secret.
   publish:
@@ -329,7 +328,9 @@ jobs:
               ID="$(gh api "repos/${GITHUB_REPOSITORY}/releases" --paginate \
                 --jq ".[] | select(.draft and .name == \"${TITLE}\") | .id")"
               [ -n "$ID" ] || { echo "::error::Dry-run draft release was not found after creation."; exit 1; }
-              for id in $ID; do gh api -X DELETE "repos/${GITHUB_REPOSITORY}/releases/${id}"; done
+              while read -r id; do
+                [ -n "$id" ] && gh api -X DELETE "repos/${GITHUB_REPOSITORY}/releases/${id}"
+              done <<< "$ID"
               echo "Dry run OK: draft release created and removed. Nothing was published."
               ;;
           esac
