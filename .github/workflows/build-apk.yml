@@ -4,7 +4,7 @@ name: Build APK
 #
 #   push to main        -> signed release APK, published to the rolling "dev-latest" prerelease
 #   push of tag vX.Y.Z  -> signed release APK, published as a stable GitHub Release
-#   pull request        -> signed release APK as an Actions artifact + a draft-release dry run (never published)
+#   pull request        -> signed release APK + a separate branch-specific GitHub prerelease
 #
 # Nothing is published unless the build job succeeds, the APK verifies against the permanent
 # signing certificate, and the package/version metadata matches what we intended to ship.
@@ -39,23 +39,27 @@ jobs:
       version_name: ${{ steps.meta.outputs.version_name }}
       version_code: ${{ steps.meta.outputs.version_code }}
       apk_name: ${{ steps.dist.outputs.apk_name }}
+      branch_name: ${{ steps.meta.outputs.branch_name }}
+      release_tag: ${{ steps.meta.outputs.release_tag }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # mode: dev | stable | dryrun | skip
+      # mode: dev | stable | branch | skip
+      #   branch = non-main branch build, published as its own prerelease
       #   skip   = pull request from a fork (no secrets, read-only token)
-      #   dryrun = anything that must be validated but never published
       - name: Resolve version and release mode
         id: meta
         env:
           PR_HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
         run: |
           set -euo pipefail
           BASE_NAME="$(sed -n 's/^APP_VERSION_NAME=//p' gradle.properties)"
           [ -n "$BASE_NAME" ] || { echo "::error::APP_VERSION_NAME missing from gradle.properties"; exit 1; }
+          BRANCH_NAME="${PR_HEAD_REF:-$GITHUB_REF_NAME}"
 
           # Strictly increasing across every build of this workflow, so any APK can update an older one.
           VERSION_CODE=$((100 + GITHUB_RUN_NUMBER))
@@ -80,7 +84,7 @@ jobs:
               ;;
             *)
               VERSION_NAME="${BASE_NAME}-dev.${GITHUB_RUN_NUMBER}"
-              MODE=dryrun
+              MODE=branch
               ;;
           esac
 
@@ -88,10 +92,19 @@ jobs:
             MODE=skip
           fi
 
+          RELEASE_TAG=""
+          if [ "$MODE" = "branch" ]; then
+            SAFE_BRANCH="$(printf '%s' "$BRANCH_NAME" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9._-]/-/g; s/--*/-/g; s/^-//; s/-$//' | cut -c1-60)"
+            [ -n "$SAFE_BRANCH" ] || SAFE_BRANCH="branch"
+            RELEASE_TAG="branch-${SAFE_BRANCH}-build-${GITHUB_RUN_NUMBER}-attempt-${GITHUB_RUN_ATTEMPT}"
+          fi
+
           {
             echo "mode=$MODE"
             echo "version_name=$VERSION_NAME"
             echo "version_code=$VERSION_CODE"
+            echo "branch_name=$BRANCH_NAME"
+            echo "release_tag=$RELEASE_TAG"
           } >> "$GITHUB_OUTPUT"
           echo "mode=$MODE version=$VERSION_NAME code=$VERSION_CODE"
 
@@ -211,6 +224,7 @@ jobs:
           MODE: ${{ steps.meta.outputs.mode }}
           VERSION_NAME: ${{ steps.meta.outputs.version_name }}
           VERSION_CODE: ${{ steps.meta.outputs.version_code }}
+          BRANCH_NAME: ${{ steps.meta.outputs.branch_name }}
         run: |
           set -euo pipefail
           mkdir -p dist
@@ -220,6 +234,7 @@ jobs:
           SHORT="${GITHUB_SHA::7}"
           CHANNEL="Development (rolling prerelease)"
           [ "$MODE" = "stable" ] && CHANNEL="Stable"
+          [ "$MODE" = "branch" ] && CHANNEL="Development branch prerelease (${BRANCH_NAME})"
 
           # Changes since the previous stable tag, or the last 20 commits if there is none.
           PREV_TAG="$(git describe --tags --abbrev=0 --match 'v[0-9]*' "${GITHUB_SHA}^" 2>/dev/null || true)"
@@ -283,6 +298,8 @@ jobs:
       MODE: ${{ needs.build.outputs.mode }}
       VERSION_NAME: ${{ needs.build.outputs.version_name }}
       APK_NAME: ${{ needs.build.outputs.apk_name }}
+      RELEASE_TAG: ${{ needs.build.outputs.release_tag }}
+      BRANCH_NAME: ${{ needs.build.outputs.branch_name }}
     steps:
       - name: Download build output
         uses: actions/download-artifact@v4
@@ -319,18 +336,11 @@ jobs:
                   --notes-file "$NOTES" --verify-tag "$FLAG"
               fi
               ;;
-            dryrun)
-              # Proves the publish path (permissions, upload, notes) without publishing anything:
-              # create a draft release, then delete it again.
-              TITLE="DRY RUN ${GITHUB_RUN_ID} - safe to delete"
-              gh release create "dryrun-${GITHUB_RUN_ID}" "$APK" --repo "$GITHUB_REPOSITORY" \
-                --draft --title "$TITLE" --notes-file "$NOTES" --target "$GITHUB_SHA"
-              ID="$(gh api "repos/${GITHUB_REPOSITORY}/releases" --paginate \
-                --jq ".[] | select(.draft and .name == \"${TITLE}\") | .id")"
-              [ -n "$ID" ] || { echo "::error::Dry-run draft release was not found after creation."; exit 1; }
-              while read -r id; do
-                [ -n "$id" ] && gh api -X DELETE "repos/${GITHUB_REPOSITORY}/releases/${id}"
-              done <<< "$ID"
-              echo "Dry run OK: draft release created and removed. Nothing was published."
+            branch)
+              # Keep every successful non-main build as its own prerelease.
+              # The run/attempt suffix prevents collisions when a workflow run is re-run.
+              gh release create "$RELEASE_TAG" "$APK" --repo "$GITHUB_REPOSITORY" \
+                --title "JEE Command Center ${VERSION_NAME} — ${BRANCH_NAME} build #${GITHUB_RUN_NUMBER}" \
+                --notes-file "$NOTES" --prerelease --target "$GITHUB_SHA"
               ;;
           esac
