@@ -6,35 +6,53 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
+// Every Material 3 role is set explicitly so dialogs, sheets, text fields and menus
+// match the app instead of falling back to the stock baseline.
 private val JeeDarkColorScheme = darkColorScheme(
-    primary = AccentBlue,
-    onPrimary = Color.Black,
-    primaryContainer = AccentBlueSoft,
-    onPrimaryContainer = TextPrimary,
-    secondary = AccentGreen,
-    onSecondary = Color.Black,
-    secondaryContainer = Color(0xFF18181B),
-    onSecondaryContainer = TextPrimary,
-    tertiary = AccentBlueLight,
-    onTertiary = Color.Black,
-    tertiaryContainer = Color(0xFF1E1E21),
+    primary = Primary,
+    onPrimary = OnPrimary,
+    primaryContainer = PrimaryContainerTone,
+    onPrimaryContainer = PrimaryLight,
+    secondary = PaletteSecondary,
+    onSecondary = PaletteBackground,
+    secondaryContainer = PrimarySoft,
+    onSecondaryContainer = PrimaryLight,
+    tertiary = PaletteAccent,
+    onTertiary = PaletteBackground,
+    tertiaryContainer = PrimaryContainerTone,
     onTertiaryContainer = TextPrimary,
-    background = BgApp,
+    error = PaletteText,
+    onError = PaletteBackground,
+    errorContainer = PrimaryContainerTone,
+    onErrorContainer = TextPrimary,
+    background = BgAppBase,
     onBackground = TextPrimary,
-    surface = BgCard,
+    surface = BgAppBase,
     onSurface = TextPrimary,
     surfaceVariant = BgCardAlt,
     onSurfaceVariant = TextSecondary,
-    outline = BgCardBorder,
+    surfaceTint = Primary,
+    inverseSurface = TextPrimary,
+    inverseOnSurface = BgAppBase,
+    inversePrimary = PaletteSecondary,
+    outline = OutlineStrong,
     outlineVariant = BgCardBorder,
-    error = TextPriorityBadge,
-    onError = Color.White
+    scrim = Color.Black,
+    surfaceBright = BgCardHigh,
+    surfaceDim = BgAppBase,
+    surfaceContainerLowest = BgAppBase,
+    surfaceContainerLow = BgCard,
+    surfaceContainer = BgCard,
+    surfaceContainerHigh = BgCard,
+    surfaceContainerHighest = BgCardAlt
 )
 
 private val JeeMaterialShapes = Shapes(
+    extraSmall = JeeShapes.small,
     small = JeeShapes.small,
     medium = JeeShapes.medium,
-    large = JeeShapes.large
+    large = JeeShapes.large,
+    extraLarge = JeeShapes.large
 )
 
 @Composable
