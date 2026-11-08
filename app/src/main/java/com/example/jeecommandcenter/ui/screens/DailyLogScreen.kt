@@ -1,6 +1,5 @@
 package com.example.jeecommandcenter.ui.screens
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -10,16 +9,14 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.ChevronLeft
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.EventNote
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.ChevronLeft
+import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
@@ -28,14 +25,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.platform.LocalContext
 import com.example.jeecommandcenter.data.CloudJeeRepository
 import com.example.jeecommandcenter.data.CloudPreferenceSync
-import com.example.jeecommandcenter.data.DailyLogEntry
 import com.example.jeecommandcenter.data.DailyLogRepository
 import com.example.jeecommandcenter.data.ReminderScheduler
 import com.example.jeecommandcenter.ui.components.JeeCard
 import com.example.jeecommandcenter.ui.components.JeeTopBar
-import com.example.jeecommandcenter.ui.components.LinearStatBar
 import com.example.jeecommandcenter.ui.theme.*
-import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
@@ -133,7 +127,7 @@ fun DailyLogScreen(onBack: () -> Unit) {
                     Text(
                         "YOUR MONTH AT A GLANCE",
                         color = TextMuted,
-                        fontSize = 10.sp,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 1.1.sp
                     )
@@ -182,7 +176,7 @@ fun DailyLogScreen(onBack: () -> Unit) {
                                 Text(
                                     "CONSISTENCY",
                                     color = TextMuted,
-                                    fontSize = 7.sp,
+                                    fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
                                     letterSpacing = .25.sp,
                                     maxLines = 1
@@ -221,14 +215,14 @@ fun DailyLogScreen(onBack: () -> Unit) {
             JeeCard {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = { visibleMonth = visibleMonth.minusMonths(1); selectedDate = visibleMonth.atDay(1) }) {
-                        Icon(Icons.Filled.ChevronLeft, "Previous month", tint = TextPrimary)
+                        Icon(Icons.Rounded.ChevronLeft, "Previous month", tint = TextPrimary)
                     }
                     Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(visibleMonth.month.getDisplayName(TextStyle.FULL, Locale.getDefault()), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
                         Text(visibleMonth.year.toString(), color = TextMuted, fontSize = 11.sp)
                     }
                     IconButton(onClick = { visibleMonth = visibleMonth.plusMonths(1); selectedDate = visibleMonth.atDay(1) }) {
-                        Icon(Icons.Filled.ChevronRight, "Next month", tint = TextPrimary)
+                        Icon(Icons.Rounded.ChevronRight, "Next month", tint = TextPrimary)
                     }
                 }
                 Spacer(Modifier.height(8.dp))
@@ -249,7 +243,7 @@ fun DailyLogScreen(onBack: () -> Unit) {
                                 val isToday = date == today
                                 val cellColor = when {
                                     isSelected -> PrimarySoft
-                                    dateEntry.completed -> AccentGreen.copy(alpha = 0.14f)
+                                    dateEntry.completed -> Success.copy(alpha = 0.14f)
                                     else -> BgCard.copy(alpha = 0.68f)
                                 }
                                 val cellBorder = when {
@@ -261,9 +255,9 @@ fun DailyLogScreen(onBack: () -> Unit) {
                                     Modifier.weight(1f)
                                         .aspectRatio(0.92f)
                                         .padding(1.dp)
-                                        .clip(RoundedCornerShape(11.dp))
+                                        .clip(JeeShapes.small)
                                         .background(cellColor)
-                                        .border(1.dp, cellBorder, RoundedCornerShape(11.dp))
+                                        .border(1.dp, cellBorder, JeeShapes.small)
                                         .clickable { selectedDate = date }
                                         .padding(vertical = 4.dp),
                                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -273,7 +267,7 @@ fun DailyLogScreen(onBack: () -> Unit) {
                                     Spacer(Modifier.height(2.dp))
                                     if (dateEntry.completed) {
                                         Icon(
-                                            imageVector = Icons.Filled.Check,
+                                            imageVector = Icons.Rounded.Check,
                                             contentDescription = "Completed",
                                             tint = PrimaryLight,
                                             modifier = Modifier.size(13.dp)
@@ -287,7 +281,7 @@ fun DailyLogScreen(onBack: () -> Unit) {
                     }
                 }
                 Spacer(Modifier.height(7.dp))
-                Text("Check = completed · outlined date = today", color = TextMuted, fontSize = 10.sp)
+                Text("Check = completed · outlined date = today", color = TextMuted, fontSize = 11.sp)
             }
 
             JeeCard {
@@ -297,7 +291,7 @@ fun DailyLogScreen(onBack: () -> Unit) {
                     }
                     if (!selectedIsToday) {
                         Surface(shape = RoundedCornerShape(8.dp), color = BgCardAlt) {
-                            Text(if (selectedDate.isAfter(today)) "Upcoming" else if (entry.completed) "Complete" else if (entry.notes.isNotBlank()) "Notes saved" else "No record", color = TextSecondary, fontSize = 10.sp, modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp))
+                            Text(if (selectedDate.isAfter(today)) "Upcoming" else if (entry.completed) "Complete" else if (entry.notes.isNotBlank()) "Notes saved" else "No record", color = TextSecondary, fontSize = 11.sp, modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp))
                         }
                     }
                 }
@@ -311,7 +305,7 @@ fun DailyLogScreen(onBack: () -> Unit) {
                         )
                         Column(Modifier.weight(1f)) {
                             Text("I've completed my study today", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-                            Text("Tick only when you're done for today.", color = TextMuted, fontSize = 10.sp)
+                            Text("Tick only when you're done for today.", color = TextMuted, fontSize = 11.sp)
                         }
                     }
                 } else if (selectedDate.isAfter(today)) {
@@ -343,7 +337,7 @@ fun DailyLogScreen(onBack: () -> Unit) {
                 )
                 if (selectedIsToday) {
                     Spacer(Modifier.height(5.dp))
-                    Text("${entry.notes.length}/${DailyLogRepository.MAX_NOTE_LENGTH} characters · ${cloudBackupStatus ?: "Saved automatically on this device"}", color = if (cloudBackupStatus?.startsWith("Backed up") == true) AccentGreen else TextMuted, fontSize = 9.sp)
+                    Text("${entry.notes.length}/${DailyLogRepository.MAX_NOTE_LENGTH} characters · ${cloudBackupStatus ?: "Saved automatically on this device"}", color = if (cloudBackupStatus?.startsWith("Backed up") == true) Success else TextMuted, fontSize = 11.sp)
                 }
             }
             Spacer(Modifier.height(4.dp))

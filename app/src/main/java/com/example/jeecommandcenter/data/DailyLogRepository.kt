@@ -40,9 +40,6 @@ class DailyLogRepository(context: Context) {
             prefs.getBoolean(completedKey(month.atDay(day)), false)
         }
 
-    fun entriesFor(month: YearMonth): List<DailyLogEntry> =
-        (1..month.lengthOfMonth()).map { getEntry(month.atDay(it)) }
-
     private fun completedKey(date: LocalDate) = "completed_${date}"
     private fun notesKey(date: LocalDate) = "notes_${date}"
 

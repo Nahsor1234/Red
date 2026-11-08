@@ -45,8 +45,4 @@ class MistakeIntelligence(private val learning: LearningRepository) {
             .sortedByDescending { it.count }
     }
 
-    fun unresolvedForChapter(chapterId: String): List<MistakeRecord> =
-        learning.getMistakes().filter {
-            !it.resolved && JeeCatalog.normalizeChapterId(it.chapterId) == JeeCatalog.normalizeChapterId(chapterId)
-        }
 }

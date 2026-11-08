@@ -2,7 +2,7 @@ package com.example.jeecommandcenter.ui.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Assessment
+import androidx.compose.material.icons.rounded.Assessment
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -19,7 +19,7 @@ fun AssessmentResultScreen(attempt: TestAttemptRecord, onBack: () -> Unit) {
     Scaffold(containerColor = BgApp, topBar = { JeeTopBar(title = "Test result", onBack = onBack) }) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 18.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             JeeCard(featured = true) {
-                Icon(Icons.Filled.Assessment, null, tint = PrimaryLight, modifier = Modifier.size(28.dp)); Spacer(Modifier.height(8.dp))
+                Icon(Icons.Rounded.Assessment, null, tint = PrimaryLight, modifier = Modifier.size(28.dp)); Spacer(Modifier.height(8.dp))
                 Text(if (attempt.name.isBlank()) attempt.mode.name.lowercase().replace('_', ' ') else attempt.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.height(4.dp)); Text("${attempt.score} / ${attempt.totalMarks}", style = MaterialTheme.typography.displaySmall, color = PrimaryLight); Spacer(Modifier.height(5.dp))
                 Text("${attempt.correctCount} correct · ${attempt.incorrectCount} incorrect · ${attempt.skippedCount} skipped", color = TextSecondary, fontSize = 12.sp)

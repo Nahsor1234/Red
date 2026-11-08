@@ -1,13 +1,11 @@
 package com.example.jeecommandcenter.ui.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -51,15 +49,15 @@ fun MistakeBankScreen(learning: LearningRepository, onBack: () -> Unit, onOpenTu
         syncingCloudMistakes = false
     }
     Scaffold(containerColor = BgApp, topBar = {
-        JeeTopBar(title = "Mistake Bank", subtitle = if (syncingCloudMistakes) "Syncing saved attempts…" else "${mistakes.size} unresolved questions", onBack = onBack, trailing = { Text(mistakes.size.toString(), color = AccentAmber) })
+        JeeTopBar(title = "Mistake Bank", subtitle = if (syncingCloudMistakes) "Syncing saved attempts…" else "${mistakes.size} unresolved questions", onBack = onBack, trailing = { Text(mistakes.size.toString(), color = Warning) })
     }) { padding ->
         LazyColumn(Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             if (mistakes.isEmpty()) {
-                item { Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(BgCard).border(JeeSurfaceTokens.borderWidth,BgCardBorder.copy(alpha=JeeSurfaceTokens.cardBorderAlpha),JeeShapes.medium).padding(18.dp)) { Text("No unresolved mistakes", style = MaterialTheme.typography.titleMedium); Text("Incorrect answers from Chapter Practice, Tests & Mocks, and supported quizzes appear here automatically.", color = TextMuted, fontSize = 12.sp) } }
+                item { Column(Modifier.fillMaxWidth().clip(JeeShapes.medium).background(BgCard).padding(18.dp)) { Text("No unresolved mistakes", style = MaterialTheme.typography.titleMedium); Text("Incorrect answers from Chapter Practice, Tests & Mocks, and supported quizzes appear here automatically.", color = TextMuted, fontSize = 12.sp) } }
             } else items(mistakes, key = { it.id }) { mistake -> MistakeCard(mistake, learning) { refresh++ } }
             item {
                 Button(onClick = onOpenTutor, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Primary)) {
-                    Icon(Icons.Filled.AutoAwesome, null); Spacer(Modifier.width(7.dp)); Text("Ask AI about my mistakes")
+                    Icon(Icons.Rounded.AutoAwesome, null); Spacer(Modifier.width(7.dp)); Text("Ask AI about my mistakes")
                 }
             }
             item { Spacer(Modifier.height(24.dp)) }
@@ -73,14 +71,14 @@ private fun MistakeCard(mistake: MistakeRecord, learning: LearningRepository, on
     val chapterName = JeeCatalog.find(mistake.chapterId)?.name ?: mistake.chapterId.replace("_", " ").replaceFirstChar { it.uppercase() }
     val sourceLabel = when (mistake.source.lowercase()) { "practice" -> "Chapter Practice"; "assessment" -> "Tests & Mocks"; else -> mistake.source.replaceFirstChar { it.uppercase() } }
     var typeMenu by remember { mutableStateOf(false) }
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(BgCard).border(JeeSurfaceTokens.borderWidth,BgCardBorder.copy(alpha=JeeSurfaceTokens.cardBorderAlpha),JeeShapes.medium).padding(14.dp)) {
+    Column(Modifier.fillMaxWidth().clip(JeeShapes.medium).background(BgCard).padding(14.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Column(Modifier.weight(1f)) { Text(mistake.subject + " · " + chapterName + " · " + sourceLabel, color = AccentBlueLight, fontSize = 10.sp); Spacer(Modifier.height(4.dp)); MathMarkdownText(mistake.questionPrompt, modifier = Modifier.fillMaxWidth(), color = TextPrimary, fontSize = MaterialTheme.typography.titleMedium.fontSize, lineHeight = MaterialTheme.typography.titleMedium.lineHeight) }
-            Text("×" + mistake.count, color = if (mistake.count >= 2) AccentAmber else TextMuted)
+            Column(Modifier.weight(1f)) { Text(mistake.subject + " · " + chapterName + " · " + sourceLabel, color = PrimaryLight, fontSize = 11.sp); Spacer(Modifier.height(4.dp)); MathMarkdownText(mistake.questionPrompt, modifier = Modifier.fillMaxWidth(), color = TextPrimary, fontSize = MaterialTheme.typography.titleMedium.fontSize, lineHeight = MaterialTheme.typography.titleMedium.lineHeight) }
+            Text("×" + mistake.count, color = if (mistake.count >= 2) Warning else TextMuted)
         }
         Spacer(Modifier.height(8.dp))
         Box {
-            OutlinedButton(onClick = { typeMenu = true }, contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp), modifier = Modifier.height(36.dp)) { Text("Type: " + mistake.mistakeType.name.replace('_', ' '), fontSize = 10.sp) }
+            OutlinedButton(onClick = { typeMenu = true }, contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp), modifier = Modifier.height(36.dp)) { Text("Type: " + mistake.mistakeType.name.replace('_', ' '), fontSize = 11.sp) }
             DropdownMenu(expanded = typeMenu, onDismissRequest = { typeMenu = false }) {
                 MistakeType.entries.forEach { type -> DropdownMenuItem(text = { Text(type.name.replace('_', ' '), fontSize = 11.sp) }, onClick = { learning.updateMistakeType(mistake.id, type); typeMenu = false; onRefresh() }) }
             }
@@ -88,7 +86,7 @@ private fun MistakeCard(mistake: MistakeRecord, learning: LearningRepository, on
         if (expanded) {
             Spacer(Modifier.height(8.dp))
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) { Text("Your answer:", color = TextSecondary, fontSize = 12.sp); MathMarkdownText(mistake.lastSelectedAnswer, modifier = Modifier.fillMaxWidth(), color = TextSecondary, fontSize = 12.sp, lineHeight = 17.sp) }
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) { Text("Correct answer:", color = AccentGreen, fontSize = 12.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium); MathMarkdownText(mistake.correctAnswer, modifier = Modifier.fillMaxWidth(), color = AccentGreen, fontSize = 12.sp, lineHeight = 17.sp) }
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) { Text("Correct answer:", color = Success, fontSize = 12.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium); MathMarkdownText(mistake.correctAnswer, modifier = Modifier.fillMaxWidth(), color = Success, fontSize = 12.sp, lineHeight = 17.sp) }
             if (mistake.correction.isNotBlank()) {
                 Text("Solution", color = TextPrimary, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, fontSize = 12.sp)
                 MathMarkdownText(mistake.correction, modifier = Modifier.fillMaxWidth(), color = TextSecondary, fontSize = 12.sp, lineHeight = 18.sp)
